@@ -1,0 +1,12 @@
+python-dotenv
+
+sounddevice
+soundfile
+numpy
+
+faster-whisper
+openai
+kokoro-onnx
+webrtcvad
+pysbd
+rich
