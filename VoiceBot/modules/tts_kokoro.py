@@ -1,3 +1,10 @@
+"""
+Text-to-Speech Module.
+
+This module provides a high-performance implementation of the ITTSModel interface
+using the Kokoro-ONNX runtime. It generates extremely fast, natural-sounding
+speech locally without requiring a GPU or network access.
+"""
 # Path: modules/tts_kokoro.py
 import os
 import urllib.request
@@ -13,9 +20,18 @@ logger = get_logger(__name__)
 class KokoroTTS(ITTSModel):
     """
     High-performance TTS implementation using Kokoro-ONNX.
-    Provides sub-second latency on standard CPUs.
+    
+    Provides sub-second latency on standard CPUs. It manages the downloading
+    and loading of the ONNX models automatically upon instantiation.
     """
-    def __init__(self, lang: str = "a", voice: str = "af_heart"):
+    def __init__(self, lang: str = "a", voice: str = "af_heart") -> None:
+        """
+        Initializes the Kokoro TTS engine and ensures models are present.
+
+        Args:
+            lang (str): The language code (e.g., 'a' for American English).
+            voice (str): The specific voice model to use (e.g., 'af_heart').
+        """
         self.lang = "en-us" if lang == "a" else lang
         self.voice = voice
         
@@ -72,7 +88,17 @@ class KokoroTTS(ITTSModel):
 
     def synthesize(self, text: str, speed: float = 1.0) -> Iterator[bytes]:
         """
-        Synthesizes text into streaming audio bytes using ONNX.
+        Synthesizes text into streaming audio bytes using the ONNX model.
+
+        The model generates audio for the entire text instantly. It strips any
+        synthetic robotic silence from the edges before yielding the raw audio bytes.
+
+        Args:
+            text (str): The string of text to convert to speech.
+            speed (float): Playback speed multiplier (default: 1.0).
+
+        Yields:
+            bytes: The synthesized raw PCM audio data.
         """
         try:
             # Kokoro-ONNX creates the full audio for the chunk instantly

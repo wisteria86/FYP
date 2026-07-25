@@ -1,3 +1,9 @@
+"""
+Speech-to-Text Module.
+
+This module provides a concrete implementation of the ISTTModel interface
+using the `faster-whisper` library for rapid, local, offline transcription.
+"""
 # Path: modules/stt_whisper.py
 import io
 import numpy as np
@@ -11,8 +17,17 @@ logger = get_logger(__name__)
 class WhisperSTT(ISTTModel):
     """
     Concrete implementation of the STT interface using faster-whisper.
+
+    This class loads a pre-trained Whisper model and handles the conversion
+    of raw audio bytes into transcribed text strings.
     """
-    def __init__(self, model_size: str = "small.en"):
+    def __init__(self, model_size: str = "small.en") -> None:
+        """
+        Initializes the faster-whisper model.
+
+        Args:
+            model_size (str): The size/name of the Whisper model to load (e.g., 'tiny.en', 'small.en').
+        """
         self.model_size = model_size
         logger.info(f"Loading faster-whisper model ('{model_size}'). This might take a moment...")
         
@@ -27,6 +42,12 @@ class WhisperSTT(ISTTModel):
     def transcribe(self, audio_data: bytes) -> str:
         """
         Converts WAV audio bytes to text using the faster-whisper model.
+
+        Args:
+            audio_data (bytes): The raw WAV audio data to transcribe.
+
+        Returns:
+            str: The transcribed text. Returns an empty string on failure.
         """
         try:
             logger.debug("Decoding audio bytes for faster-whisper...")

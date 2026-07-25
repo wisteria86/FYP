@@ -1,3 +1,11 @@
+"""
+Main Entry Point for the Voice Assistant Application.
+
+This module is responsible for bootstrapping the application. It initializes all
+hardware interfaces (microphone, speaker) and machine learning models (STT, LLM, TTS),
+then injects them into the central orchestrator (ConversationManager) before
+starting the main event loop.
+"""
 # Path: main.py
 from config import Config
 from core.conversation_manager import ConversationManager
@@ -8,7 +16,16 @@ from io_interfaces.mic_recorder import MicRecorder
 from io_interfaces.speaker_player import SpeakerPlayer
 from utils.ui import CLI
 
-def main():
+def main() -> None:
+    """
+    Initializes and starts the voice assistant application.
+
+    This function performs the following steps:
+    1. Instantiates concrete implementations of audio interfaces (MicRecorder, SpeakerPlayer).
+    2. Loads the necessary AI models (Whisper STT, LLM Brain, Kokoro TTS).
+    3. Injects these dependencies into the ConversationManager.
+    4. Starts the main conversation loop.
+    """
     CLI.print_header("Voice Assistant Initialization")
     
     # 1. Initialize Concrete Implementations (Dependency Construction)

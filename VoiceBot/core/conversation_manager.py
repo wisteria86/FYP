@@ -14,8 +14,12 @@ logger = get_logger(__name__)
 
 class ConversationManager:
     """
-    Orchestrates the conversation flow. 
-    Notice how it depends on Abstractions (Interfaces), NOT concrete implementations.
+    Orchestrates the voice assistant's primary interaction loop.
+    
+    This manager handles capturing audio, routing it through Speech-to-Text (STT),
+    processing the text via a Large Language Model (LLM), and synthesizing the
+    response back to audio via Text-to-Speech (TTS). It relies on dependency injection,
+    using interface abstractions rather than concrete implementations for modularity.
     """
     def __init__(
         self, 
@@ -25,6 +29,16 @@ class ConversationManager:
         tts: ITTSModel, 
         audio_out: IAudioOutput
     ):
+        """
+        Initializes the ConversationManager with required hardware and model interfaces.
+
+        Args:
+            audio_in (IAudioInput): Interface for recording user audio.
+            stt (ISTTModel): Interface for Speech-to-Text transcription.
+            llm (ILLMModel): Interface for generating AI responses.
+            tts (ITTSModel): Interface for Text-to-Speech synthesis.
+            audio_out (IAudioOutput): Interface for playing audio to the user.
+        """
         self.audio_in = audio_in
         self.stt = stt
         self.llm = llm
@@ -38,8 +52,19 @@ class ConversationManager:
 
     def run_turn(self, interrupted_audio: Optional[bytes] = None, proactive_system_note: Optional[str] = None, timeout_tier: int = 0) -> Optional[bytes]:
         """
-        Executes a single turn of conversation.
-        Returns audio bytes if interrupted, else None.
+        Executes a single conversational turn between the user and the AI.
+
+        This involves listening to the user, transcribing the audio, generating a
+        response, and playing it back. It also handles barge-ins (interruptions)
+        and proactive system notes when the user is silent.
+
+        Args:
+            interrupted_audio (Optional[bytes]): Audio captured during an interruption, if any.
+            proactive_system_note (Optional[str]): A system prompt to trigger AI speech without user input.
+            timeout_tier (int): Tracks the level of silence timeout (0 = short, 1 = medium, 2 = long).
+
+        Returns:
+            Optional[bytes]: Remaining audio bytes if the AI was interrupted by the user, otherwise None.
         """
         try:
             user_text = ""
@@ -223,8 +248,14 @@ class ConversationManager:
             logger.error(f"Error during conversation turn: {e}")
             return None
 
-    def start_loop(self):
-        """Runs the conversation in a continuous loop."""
+    def start_loop(self) -> None:
+        """
+        Starts and maintains the continuous conversation loop.
+
+        This method triggers the initial greeting and then indefinitely calls `run_turn()`
+        until a KeyboardInterrupt (Ctrl+C) is caught. On interruption, it safely shuts
+        down the thread pool executor, summarizes the session, and exits gracefully.
+        """
         logger.info("Starting conversation loop. Press Ctrl+C to stop.")
         try:
             self.current_state = "Greeting"

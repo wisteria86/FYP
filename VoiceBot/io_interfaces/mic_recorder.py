@@ -1,3 +1,10 @@
+"""
+Microphone Audio Input Module.
+
+Provides a concrete implementation of the IAudioInput interface for capturing
+audio directly from the system's default microphone. Utilizes WebRTC VAD
+(Voice Activity Detection) to intelligently segment speech and detect silence.
+"""
 # Path: io_interfaces/mic_recorder.py
 import io
 import sounddevice as sd
@@ -16,7 +23,15 @@ class MicRecorder(IAudioInput):
     Concrete implementation of audio input using the sounddevice library
     and WebRTC VAD for silence detection.
     """
-    def __init__(self, sample_rate: int = 16000, channels: int = 1, record_seconds: int = 5):
+    def __init__(self, sample_rate: int = 16000, channels: int = 1, record_seconds: int = 5) -> None:
+        """
+        Initializes the microphone recorder with Voice Activity Detection (VAD).
+
+        Args:
+            sample_rate (int): Audio sampling rate in Hz (default: 16000, required by Whisper).
+            channels (int): Number of audio channels (default: 1 for mono).
+            record_seconds (int): Legacy parameter for fixed-length recording (default: 5).
+        """
         self.sample_rate = sample_rate
         self.channels = channels
         self.record_seconds = record_seconds # kept for compatibility
@@ -25,7 +40,32 @@ class MicRecorder(IAudioInput):
         self.frame_size = int(self.sample_rate * (self.frame_duration_ms / 1000.0))
         logger.info(f"Initialized MicRecorder with VAD (Rate: {self.sample_rate}Hz, Channels: {self.channels})")
 
-    def capture_audio(self, on_speech_started: Optional[Callable] = None, abort_event: Optional[threading.Event] = None, silence_timeout: Optional[float] = None, vad_threshold: float = 1.5) -> Optional[bytes]:
+    def capture_audio(
+        self, 
+        on_speech_started: Optional[Callable] = None, 
+        abort_event: Optional[threading.Event] = None, 
+        silence_timeout: Optional[float] = None, 
+        vad_threshold: float = 1.5
+    ) -> Optional[bytes]:
+        """
+        Captures audio from the microphone until silence is detected.
+
+        Uses WebRTC VAD to wait for speech to start, then records continuously until
+        `vad_threshold` seconds of silence are detected. If `silence_timeout` is reached
+        before any speech begins, a TimeoutError is raised.
+
+        Args:
+            on_speech_started (Optional[Callable]): Callback triggered when speech is first detected.
+            abort_event (Optional[threading.Event]): If set, immediately stops recording and returns None.
+            silence_timeout (Optional[float]): Max seconds to wait for speech before raising TimeoutError.
+            vad_threshold (float): Seconds of continuous silence required to finalize the recording.
+
+        Returns:
+            Optional[bytes]: The captured WAV audio data, or None if aborted/failed.
+        
+        Raises:
+            TimeoutError: If `silence_timeout` is exceeded before speech starts.
+        """
         audio_buffer = []
         started_recording = False
         silence_frames = 0

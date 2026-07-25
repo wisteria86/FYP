@@ -1,3 +1,11 @@
+"""
+Large Language Model Module.
+
+This module implements the ILLMModel interface, serving as the central
+"brain" of the voice assistant. It connects to an OpenAI-compatible API
+endpoint (like GroqCloud, xAI, or OpenAI itself) and manages conversation
+history, persona, and streaming text generation.
+"""
 # Path: modules/llm_brain.py
 from typing import Iterator
 from openai import OpenAI
@@ -9,9 +17,19 @@ logger = get_logger(__name__)
 class LLMBrain(ILLMModel):
     """
     Concrete implementation of the LLM interface using the OpenAI SDK.
+
     Configured to connect to GroqCloud, xAI, or any OpenAI-compatible endpoint.
+    Maintains a rolling conversation history and injects user profiles into the system prompt.
     """
-    def __init__(self, api_key: str, model_name: str, base_url: str):
+    def __init__(self, api_key: str, model_name: str, base_url: str) -> None:
+        """
+        Initializes the LLM client and loads the user profile.
+
+        Args:
+            api_key (str): The API key for the chosen LLM provider.
+            model_name (str): The specific model identifier (e.g., 'llama3-70b-8192').
+            base_url (str): The base URL of the OpenAI-compatible API.
+        """
         self.api_key = api_key
         self.model_name = model_name
         self.base_url = base_url
@@ -94,8 +112,13 @@ class LLMBrain(ILLMModel):
 
     def generate_response(self, text: str) -> Iterator[str]:
         """
-        Generates a text response based on user input and conversation history.
-        Streams the response back token by token.
+        Generates a streaming text response based on user input and conversation history.
+
+        Args:
+            text (str): The transcribed text from the user.
+
+        Yields:
+            str: The generated tokens streamed from the LLM.
         """
         self.conversation_history.append({"role": "user", "content": text})
         
@@ -128,8 +151,16 @@ class LLMBrain(ILLMModel):
 
     def generate_proactive_response(self, system_note: str) -> Iterator[str]:
         """
-        Generates a proactive response without a direct user message.
-        Adds a system note temporarily to prompt the model.
+        Generates a proactive response triggered by internal system events rather than user input.
+        
+        This temporarily appends a system note to prompt the model (e.g., for silence nudges
+        or session summaries) without waiting for a user utterance.
+
+        Args:
+            system_note (str): The internal directive for the AI (e.g., "Summarize the session").
+
+        Yields:
+            str: The generated tokens streamed from the LLM.
         """
         temp_message = {"role": "system", "content": system_note}
         messages = self.conversation_history + [temp_message]

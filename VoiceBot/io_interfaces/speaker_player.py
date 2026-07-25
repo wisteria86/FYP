@@ -1,3 +1,10 @@
+"""
+Speaker Audio Output Module.
+
+Provides a concrete implementation of the IAudioOutput interface for playing
+audio out of the system's default speakers using the `sounddevice` library.
+Supports both one-shot playback and real-time streaming playback.
+"""
 # Path: io_interfaces/speaker_player.py
 import io
 import sounddevice as sd
@@ -15,14 +22,22 @@ class SpeakerPlayer(IAudioOutput):
     Concrete implementation for playing audio out of speakers
     using the sounddevice library.
     """
-    def __init__(self):
+    def __init__(self) -> None:
+        """
+        Initializes the SpeakerPlayer with a standard sample rate (24kHz) and mono channels.
+        """
         self.sample_rate = 24000
         self.channels = 1
         logger.info("Initialized SpeakerPlayer.")
 
     def play_audio(self, audio_data: bytes) -> None:
         """
-        Plays WAV formatted audio bytes through the default system speakers.
+        Plays WAV formatted audio bytes or raw PCM through the default system speakers.
+
+        This method blocks until the entire audio snippet finishes playing.
+
+        Args:
+            audio_data (bytes): The raw WAV or PCM audio bytes to play.
         """
         if not audio_data:
             logger.warning("No audio data provided to play.")
@@ -47,8 +62,14 @@ class SpeakerPlayer(IAudioOutput):
 
     def play_stream(self, audio_stream: Iterator[bytes], cancel_event: Optional[threading.Event] = None) -> None:
         """
-        Plays streaming raw PCM audio chunks via speakers.
-        Abortable in real-time if cancel_event is set.
+        Plays streaming raw PCM audio chunks via speakers continuously.
+        
+        The audio chunks are sliced into smaller 50ms segments. This allows the playback
+        to be aborted nearly instantaneously if `cancel_event` is set (e.g., during barge-in).
+
+        Args:
+            audio_stream (Iterator[bytes]): An iterator yielding raw PCM audio chunks.
+            cancel_event (Optional[threading.Event]): A thread event to halt playback immediately when set.
         """
         try:
             with sd.OutputStream(samplerate=self.sample_rate, channels=self.channels, dtype='float32') as stream:
