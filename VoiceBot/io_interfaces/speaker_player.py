@@ -22,13 +22,18 @@ class SpeakerPlayer(IAudioOutput):
     Concrete implementation for playing audio out of speakers
     using the sounddevice library.
     """
-    def __init__(self) -> None:
+    def __init__(self, sample_rate: int = 24000) -> None:
         """
-        Initializes the SpeakerPlayer with a standard sample rate (24kHz) and mono channels.
+        Initializes the SpeakerPlayer.
+
+        Args:
+            sample_rate (int): Playback sample rate in Hz. Defaults to 24000 (Kokoro native).
+                               Pass the TTS model's ``output_sample_rate`` here to avoid
+                               any resampling overhead (e.g. 22050 for VitsJaTTS).
         """
-        self.sample_rate = 24000
+        self.sample_rate = sample_rate
         self.channels = 1
-        logger.info("Initialized SpeakerPlayer.")
+        logger.info(f"Initialized SpeakerPlayer (sample_rate={self.sample_rate} Hz).")
 
     def play_audio(self, audio_data: bytes) -> None:
         """
@@ -51,7 +56,7 @@ class SpeakerPlayer(IAudioOutput):
             except Exception as format_err:
                 logger.warning(f"WAV header not recognized, falling back to raw PCM ({format_err})")
                 audio_array = np.frombuffer(audio_data, dtype=np.float32)
-                sample_rate = 24000
+                sample_rate = self.sample_rate
             
             sd.play(audio_array, sample_rate)
             sd.wait()

@@ -137,3 +137,12 @@ Thumbs.db
 VoiceBot/models/
 *.onnx
 *.bin
+
+# VITS Japanese TTS model cache (downloaded at runtime, not committed)
+VoiceBot/models/vits_ja/
+
+# Smoke test output
+VoiceBot/test_vits_ja_output.wav
+
+# LLM session state (user-specific, not committed)
+VoiceBot/user_profile.json

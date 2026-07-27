@@ -58,26 +58,33 @@ class LLMBrain(ILLMModel):
         if os.path.exists(self.profile_path):
             with open(self.profile_path, 'r') as f:
                 self.user_profile = json.load(f)
+            # Back-fill any fields added since the profile was created
+            self.user_profile.setdefault("language", "English")
         else:
             self.user_profile = {
                 "name": "User",
                 "subject": "General Programming",
                 "weak_areas": "None identified",
                 "last_session_summary": "No previous sessions.",
-                "goals": "Unknown"
+                "goals": "Unknown",
+                "language": "English",
             }
 
-    def save_profile(self, new_summary: str, new_goal: str = None):
+    def save_profile(self, new_summary: str, new_goal: str = None, language: str = None):
         import json
         if new_summary:
             self.user_profile["last_session_summary"] = new_summary
         if new_goal:
             self.user_profile["goals"] = new_goal
+        if language:
+            self.user_profile["language"] = language
         with open(self.profile_path, 'w') as f:
             json.dump(self.user_profile, f, indent=4)
         self._update_system_prompt()
 
     def _update_system_prompt(self):
+        language = self.user_profile.get("language", "English")
+
         persona = (
             "You are a very blunt, strict, no-nonsense coach and teacher. "
             "Because your responses will be spoken out loud via Text-to-Speech, "
@@ -85,6 +92,15 @@ class LLMBrain(ILLMModel):
             "Do not use filler words to soften your tone. Be direct, challenging, and hold the user accountable. "
             "Avoid long lists, markdown formatting, or overly complex sentences."
         )
+
+        # Inject language instruction when the user has selected a non-English engine
+        if language and language.lower() != "english":
+            persona += (
+                f" The user is practicing {language}. "
+                f"You MUST respond entirely in {language} at all times, "
+                "even when the user writes to you in English. Never switch back to English."
+            )
+
         context = (
             f"\n\n[Session Context]\n"
             f"User: {self.user_profile.get('name', 'Unknown')}\n"
@@ -92,9 +108,10 @@ class LLMBrain(ILLMModel):
             f"Weak Areas: {self.user_profile.get('weak_areas', 'None identified')}\n"
             f"Last Session: {self.user_profile.get('last_session_summary', 'Unknown')}\n"
             f"Today's Goal: {self.user_profile.get('goals', 'Unknown')}\n"
+            f"Language: {language}\n"
         )
         self.system_prompt = {
-            "role": "system", 
+            "role": "system",
             "content": persona + context
         }
         if len(self.conversation_history) > 0 and self.conversation_history[0]["role"] == "system":

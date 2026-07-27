@@ -10,3 +10,15 @@ kokoro-onnx
 webrtcvad
 pysbd
 rich
+
+# --- Japanese VITS TTS engine (TTS_ENGINE=vits_ja) ---
+# HuggingFace model download
+huggingface_hub
+# ONNX inference runtime (may already be a transitive dep of faster-whisper/kokoro-onnx)
+onnxruntime
+# Japanese grapheme-to-phoneme conversion
+pyopenjtalk
+# ONNX quantization utilities (ships inside onnxruntime package, listed for clarity)
+# onnxruntime-tools  # only needed on older ORT versions; omit if onnxruntime>=1.16
+# WAV file I/O for smoke test (already pulled in by soundfile dep chain)
+# soundfile  # already listed above
