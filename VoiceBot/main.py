@@ -9,6 +9,8 @@ starting the main event loop.
 TTS engine is selected via the TTS_ENGINE environment variable (see config.py):
   - "kokoro"  → KokoroTTS (default, English)
   - "vits_ja" → VitsJaTTS (Japanese, requires HuggingFace download on first run)
+  - "vits_ar" → VitsArTTS (Arabic, requires HuggingFace download on first run
+                 + espeak-ng system binary for G2P)
 """
 # Path: main.py
 from config import Config
@@ -30,8 +32,8 @@ def main() -> None:
     Steps:
     1. Load STT and LLM models (hardware-agnostic, order-independent).
     2. Load TTS model (engine selected by Config.TTS_ENGINE).
-    3. Optionally update the LLM language persona if Japanese engine is active.
-    4. Initialize audio I/O, passing TTS sample rate to SpeakerPlayer.
+    3. Update the LLM language persona to match the selected engine's language.
+    4. Initialize audio I/O, passing TTS native sample rate to SpeakerPlayer.
     5. Wire everything into ConversationManager and start the loop.
     """
     CLI.print_header("Voice Assistant Initialization")
@@ -84,6 +86,34 @@ def main() -> None:
         # Wire Japanese language into the LLM persona (persisted to user_profile.json)
         with CLI.status("Configuring Japanese persona..."):
             llm_model.save_profile(new_summary=None, language="Japanese")
+
+    elif Config.TTS_ENGINE == "vits_ar":
+        # --- Arabic VITS ONNX path ---
+        from modules.model_downloader import download_vits_ar_model
+        from modules.tts_vits_ar import VitsArTTS
+
+        onnx_path, config_path = download_vits_ar_model(
+            repo_id         = Config.VITS_AR_HF_REPO_ID,
+            onnx_filename   = Config.VITS_AR_ONNX_FILE,
+            config_filename = Config.VITS_AR_CONFIG_FILE,
+            cache_dir       = Config.VITS_AR_CACHE_DIR,
+            revision        = Config.VITS_AR_HF_REVISION,
+            quantize        = Config.VITS_AR_QUANTIZE,
+        )
+
+        with CLI.status("Loading VITS Arabic TTS..."):
+            tts_model = VitsArTTS(
+                onnx_path   = onnx_path,
+                config_path = config_path,
+                speaker_id  = Config.VITS_AR_SPEAKER_ID,
+            )
+
+        # Use the model's declared native rate (22050 Hz for kareem-medium) — no resampling
+        tts_sample_rate = tts_model.output_sample_rate
+
+        # Wire Arabic language into the LLM persona (persisted to user_profile.json)
+        with CLI.status("Configuring Arabic persona..."):
+            llm_model.save_profile(new_summary=None, language="Arabic")
 
     else:
         # --- Default: Kokoro English path (unchanged behaviour) ---

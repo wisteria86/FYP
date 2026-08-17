@@ -32,6 +32,8 @@ class Config:
     # "kokoro"  → use KokoroTTS (default, English). No extra downloads.
     # "vits_ja" → use VitsJaTTS (Japanese). Auto-downloads model from HuggingFace
     #             on first run into VITS_JA_CACHE_DIR (gitignored).
+    # "vits_ar" → use VitsArTTS (Arabic). Auto-downloads model from HuggingFace
+    #             on first run into VITS_AR_CACHE_DIR (gitignored).
     TTS_ENGINE = os.getenv("TTS_ENGINE", "kokoro")
 
     # ---------------------------------------------------------------------------
@@ -69,3 +71,39 @@ class Config:
     # ONNX Runtime thread allocation for InferenceSession (0 = auto-detect cores).
     ORT_INTRA_THREADS    = int(os.getenv("ORT_INTRA_THREADS", "0"))
     ORT_INTER_THREADS    = int(os.getenv("ORT_INTER_THREADS", "0"))
+
+    # ---------------------------------------------------------------------------
+    # VITS Arabic TTS Settings  (only active when TTS_ENGINE=vits_ar)
+    # ---------------------------------------------------------------------------
+    # Model: rhasspy/piper-voices — ar/ar_JO/kareem/medium on HuggingFace.
+    # Dialect: Jordanian Arabic (ar_JO), broadly intelligible as Modern Standard Arabic.
+    # Phonemizer: espeak-ng 'ar' voice (baked into piper config).
+    #   Handles undiacritized Arabic text via letter-to-sound rules — no separate
+    #   diacritization step is required for inference with this voice.
+    #
+    # ⚠ LICENSE NOTICE: The Kareem voice is trained on the Arabic Speech Corpus
+    #   by Nawar Halabi, released under CC BY 4.0. Attribution is required:
+    #   http://en.arabicspeechcorpus.com/
+    #   The piper-voices repository license is MIT.
+    #   HuggingFace repo: https://huggingface.co/rhasspy/piper-voices
+    #
+    # PRECISION: The kareem-medium model ships as fp32 ONNX — preferred for CPU
+    # inference (no fp16 penalty). VITS_AR_QUANTIZE=True (default) generates an
+    # int8 copy via onnxruntime dynamic quantization on first run for even faster
+    # CPU throughput (3-4x speedup). Set to False to use the native fp32 model.
+    VITS_AR_HF_REPO_ID   = os.getenv("VITS_AR_HF_REPO_ID",  "rhasspy/piper-voices")
+    VITS_AR_ONNX_FILE    = os.getenv("VITS_AR_ONNX_FILE",   "ar/ar_JO/kareem/medium/ar_JO-kareem-medium.onnx")
+    VITS_AR_CONFIG_FILE  = os.getenv("VITS_AR_CONFIG_FILE",  "ar/ar_JO/kareem/medium/ar_JO-kareem-medium.onnx.json")
+    VITS_AR_HF_REVISION  = os.getenv("VITS_AR_HF_REVISION",  "main")
+    VITS_AR_CACHE_DIR    = os.getenv("VITS_AR_CACHE_DIR",    "models/vits_ar")
+    VITS_AR_SPEAKER_ID   = int(os.getenv("VITS_AR_SPEAKER_ID",  "0"))
+
+    # Native audio sample rate of the kareem-medium model (22050 Hz, standard piper rate).
+    # SpeakerPlayer is initialized with this value directly — no resampling needed.
+    VITS_AR_SAMPLE_RATE  = int(os.getenv("VITS_AR_SAMPLE_RATE", "22050"))
+
+    # When True, onnxruntime.quantization.quantize_dynamic() converts the
+    # downloaded fp32 model to int8 and saves a local "*-int8.onnx" cache.
+    # The int8 model is used for all subsequent inference (3-4x faster on CPU).
+    # fp32 → int8 quantization is fast (runs once, offline, ~30s for a 64MB model).
+    VITS_AR_QUANTIZE     = os.getenv("VITS_AR_QUANTIZE", "True").lower() == "true"

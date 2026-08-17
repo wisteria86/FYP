@@ -146,3 +146,11 @@ VoiceBot/test_vits_ja_output.wav
 
 # LLM session state (user-specific, not committed)
 VoiceBot/user_profile.json
+
+# Web Frontend (React/Vite)
+node_modules/
+dist/
+dist-ssr/
+*.local
+VoiceBot/frontend/node_modules/
+VoiceBot/frontend/dist/

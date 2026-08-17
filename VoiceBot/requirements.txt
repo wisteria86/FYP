@@ -1,5 +1,12 @@
 python-dotenv
 
+# --- Web API server (api/server.py → React frontend) ---
+fastapi
+uvicorn[standard]
+python-multipart   # for future audio upload support
+
+
+
 sounddevice
 soundfile
 numpy
@@ -22,3 +29,11 @@ pyopenjtalk
 # onnxruntime-tools  # only needed on older ORT versions; omit if onnxruntime>=1.16
 # WAV file I/O for smoke test (already pulled in by soundfile dep chain)
 # soundfile  # already listed above
+
+# --- Arabic VITS TTS engine (TTS_ENGINE=vits_ar) ---
+# Python wrapper for espeak-ng used for Arabic G2P (text → IPA phonemes)
+# ⚠ REQUIRES espeak-ng system binary — NOT a pure-Python package.
+#   Windows : download installer from https://github.com/espeak-ng/espeak-ng/releases
+#   Linux   : sudo apt install espeak-ng
+#   macOS   : brew install espeak-ng
+phonemizer
