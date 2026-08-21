@@ -83,13 +83,14 @@ class LLMBrain(ILLMModel):
         self._update_system_prompt()
 
     def _update_system_prompt(self):
-        language = self.user_profile.get("language", "English")
+        from config import Config
+        language = Config.COMMUNICATION_LANGUAGE if Config.COMMUNICATION_LANGUAGE else self.user_profile.get("language", "English")
 
         persona = (
-            "You are a very blunt, strict, no-nonsense coach and teacher. "
+            "You are a friendly, casual, and easygoing chat partner. "
             "Because your responses will be spoken out loud via Text-to-Speech, "
             "you MUST keep your answers concise, natural, and conversational. "
-            "Do not use filler words to soften your tone. Be direct, challenging, and hold the user accountable. "
+            "Act like a close friend hanging out with the user. "
             "Avoid long lists, markdown formatting, or overly complex sentences."
         )
 
@@ -166,6 +167,26 @@ class LLMBrain(ILLMModel):
             self.conversation_history.pop() 
             yield "I'm sorry, I'm having trouble connecting to my brain right now."
 
+    def translate_text(self, text: str) -> str:
+        """Translates text to English using a fast one-off LLM call."""
+        if not text.strip(): return ""
+        try:
+            response = self.client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[{"role": "system", "content": "You are a translator. Translate the following text to English. Output ONLY the English translation, without quotes or conversational filler."},
+                          {"role": "user", "content": text}],
+                temperature=0.3,
+                max_tokens=256
+            )
+            import re
+            content = response.choices[0].message.content.strip()
+            # Strip both complete <think>...</think> and incomplete <think>... tags
+            content = re.sub(r"<think>.*?(?:</think>|$)", "", content, flags=re.DOTALL).strip()
+            return content
+        except Exception as e:
+            logger.error(f"Translation error: {e}")
+            return ""
+
     def generate_proactive_response(self, system_note: str) -> Iterator[str]:
         """
         Generates a proactive response triggered by internal system events rather than user input.
@@ -179,7 +200,7 @@ class LLMBrain(ILLMModel):
         Yields:
             str: The generated tokens streamed from the LLM.
         """
-        temp_message = {"role": "system", "content": system_note}
+        temp_message = {"role": "user", "content": f"[SYSTEM DIRECTIVE] {system_note}"}
         messages = self.conversation_history + [temp_message]
         
         try:

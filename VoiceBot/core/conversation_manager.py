@@ -107,7 +107,12 @@ class ConversationManager:
                     logger.info("No speech detected.")
                     return None
 
-                logger.info(f"[bold green]User:[/bold green] {user_text}")
+                # Synchronous translate for user (it's fast enough)
+                en_text = self.llm.translate_text(user_text)
+                if en_text:
+                    logger.info(f"[bold green]Input:[/bold green] {user_text} [dim green][{en_text}][/dim green]", extra={"markup": True})
+                else:
+                    logger.info(f"[bold green]Input:[/bold green] {user_text}", extra={"markup": True})
                 
                 # Check for goal statements
                 lower_text = user_text.lower()
@@ -156,16 +161,13 @@ class ConversationManager:
                             if parts[0].strip():
                                 sentence_queue.put(parts[0].strip())
                             buffer = parts[1] if len(parts) > 1 else ""
-                            logger.info("[dim]Thinking...[/dim]", extra={"markup": True})
+                            buffer = parts[1] if len(parts) > 1 else ""
                     
                     if is_thinking:
                         if "</think>" in buffer:
                             is_thinking = False
                             parts = buffer.split("</think>")
                             thought_content = parts[0].strip()
-                            if thought_content:
-                                logger.info(f"[dim]{thought_content}[/dim]", extra={"markup": True})
-                            
                             buffer = parts[1] if len(parts) > 1 else ""
                     
                     if not is_thinking:
@@ -189,9 +191,15 @@ class ConversationManager:
                         break
                     
                     try:
-                        speed = 1.1 if self.current_state in ["Greeting", "Waiting for Answer"] else 0.95
+                        from config import Config
+                        base_speed = getattr(Config, "TTS_SPEED", 1.0)
+                        speed = (1.1 if self.current_state in ["Greeting", "Waiting for Answer"] else 0.95) * base_speed
+                        
+                        # Translate in the background pipeline
+                        en_text = self.llm.translate_text(sentence)
+                        
                         ai_audio_stream = self.tts.synthesize(sentence, speed=speed)
-                        audio_queue.put((sentence, ai_audio_stream))
+                        audio_queue.put((sentence, en_text, ai_audio_stream))
                     except Exception as e:
                         if not cancel_event.is_set():
                             logger.error(f"TTS Error on sentence '{sentence}': {e}")
@@ -215,15 +223,18 @@ class ConversationManager:
                 if item is None or cancel_event.is_set():
                     break
                 
-                sentence, ai_audio_stream = item
+                sentence, en_text, ai_audio_stream = item
                 
                 if first_sentence:
                     first_sentence = False
                     status.stop()
-                    logger.info("[bold blue]AI:[/bold blue] (Speaking...)")
                 
                 if not cancel_event.is_set():
-                    logger.info(f"  [cyan]{sentence}[/cyan]", extra={"markup": True})
+                    if en_text:
+                        logger.info(f"[bold cyan]Output:[/bold cyan] {sentence} [dim cyan][{en_text}][/dim cyan]", extra={"markup": True})
+                    else:
+                        logger.info(f"[bold cyan]Output:[/bold cyan] {sentence}", extra={"markup": True})
+                    
                     self.audio_out.play_stream(ai_audio_stream, cancel_event=cancel_event)
             
             if first_sentence and not cancel_event.is_set():

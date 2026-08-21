@@ -118,9 +118,7 @@ class MicRecorder(IAudioInput):
                 return None
                 
             audio_data = np.concatenate(audio_buffer, axis=0)
-            wav_io = io.BytesIO()
-            sf.write(wav_io, audio_data, self.sample_rate, format='WAV', subtype='PCM_16')
-            return wav_io.getvalue()
+            return audio_data.tobytes()
             
         except TimeoutError:
             raise

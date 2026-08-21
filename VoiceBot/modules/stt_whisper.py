@@ -52,21 +52,37 @@ class WhisperSTT(ISTTModel):
         try:
             logger.debug("Decoding audio bytes for faster-whisper...")
             
-            wav_io = io.BytesIO(audio_data)
-            audio_array, sample_rate = sf.read(wav_io)
-
-            if audio_array.ndim > 1:
-                audio_array = np.mean(audio_array, axis=1)
-            
-            audio_array = audio_array.astype(np.float32)
-
-            if sample_rate != 16000:
-                logger.warning(f"Audio sample rate is {sample_rate}Hz, but Whisper expects 16000Hz. "
-                               "Transcription accuracy may be degraded.")
+            # Read raw 16-bit PCM bytes (16kHz, 1-channel expected)
+            audio_array = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
 
             logger.info("Transcribing audio...")
             
-            segments, info = self.model.transcribe(audio_array, beam_size=5)
+            from config import Config
+            lang = Config.COMMUNICATION_LANGUAGE.lower() if Config.COMMUNICATION_LANGUAGE else None
+            
+            # Map full names to ISO codes for Whisper
+            lang_map = {
+                "english": "en", "japanese": "ja", "spanish": "es", "french": "fr",
+                "german": "de", "chinese": "zh", "korean": "ko", "italian": "it",
+                "russian": "ru", "portuguese": "pt", "dutch": "nl", "arabic": "ar"
+            }
+            if lang in lang_map:
+                lang = lang_map[lang]
+                
+            if lang == "auto" or lang not in lang_map.values():
+                # Fallback to auto-detect if the string isn't a known ISO code
+                if len(lang) != 2:
+                    lang = None
+                
+            segments, info = self.model.transcribe(
+                audio_array, 
+                beam_size=5, 
+                language=lang,
+                condition_on_previous_text=False,
+                initial_prompt="日常会話です。よろしくお願いします。",
+                vad_filter=True,
+                vad_parameters=dict(threshold=0.2, min_speech_duration_ms=200)
+            )
             # Hallucination guard: ignore segments with very low confidence
             good_segments = [s for s in segments if s.avg_logprob > -1.0]
             text = "".join([s.text for s in good_segments]).strip()

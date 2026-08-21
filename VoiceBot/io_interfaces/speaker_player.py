@@ -54,7 +54,7 @@ class SpeakerPlayer(IAudioOutput):
                 wav_io = io.BytesIO(audio_data)
                 audio_array, sample_rate = sf.read(wav_io)
             except Exception as format_err:
-                logger.warning(f"WAV header not recognized, falling back to raw PCM ({format_err})")
+                # Expected when passing raw PCM bytes (e.g. from TTS)
                 audio_array = np.frombuffer(audio_data, dtype=np.float32)
                 sample_rate = self.sample_rate
             

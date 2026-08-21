@@ -11,6 +11,7 @@ class Config:
     LLM_API_KEY = os.getenv("LLM_API_KEY", "your-default-key-here")
     LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "qwen/qwen3-32b")
     LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1") # GroqCloud base URL
+    COMMUNICATION_LANGUAGE = os.getenv("COMMUNICATION_LANGUAGE", "English")
 
     # Whisper Settings
     # NOTE: When using TTS_ENGINE=vits_ja, change this to "small" (multilingual)
@@ -33,6 +34,7 @@ class Config:
     # "vits_ja" → use VitsJaTTS (Japanese). Auto-downloads model from HuggingFace
     #             on first run into VITS_JA_CACHE_DIR (gitignored).
     TTS_ENGINE = os.getenv("TTS_ENGINE", "kokoro")
+    TTS_SPEED = float(os.getenv("TTS_SPEED", "1.0"))
 
     # ---------------------------------------------------------------------------
     # VITS Japanese TTS Settings  (only active when TTS_ENGINE=vits_ja)

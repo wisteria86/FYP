@@ -210,7 +210,7 @@ class VitsJaTTS(ITTSModel):
         noise_scale = 0.667
         length_scale = 1.0 / max(speed, 0.1)                   # higher = slower
         noise_scale_w = 0.8
-        scales = np.array([[noise_scale, length_scale, noise_scale_w]], dtype=np.float32)
+        scales = np.array([noise_scale, length_scale, noise_scale_w], dtype=np.float32)
 
         # Build a candidate set for common Piper input name variants
         candidate_feed: dict = {
@@ -229,6 +229,12 @@ class VitsJaTTS(ITTSModel):
             candidate_feed["sid"] = sid
             candidate_feed["speaker_id"] = sid
             candidate_feed["spk_id"] = sid
+
+        # Piper-plus multi-speaker / multi-lingual features (dummy values)
+        candidate_feed["lid"] = np.array([0], dtype=np.int64)
+        candidate_feed["prosody_features"] = np.zeros((1, len(ids), 3), dtype=np.int64)
+        candidate_feed["speaker_embedding"] = np.zeros((1, 256), dtype=np.float32)
+        candidate_feed["speaker_embedding_mask"] = np.zeros((1, 1), dtype=np.int64)
 
         # Only pass tensors whose names actually exist in the graph
         feed = {name: candidate_feed[name]
