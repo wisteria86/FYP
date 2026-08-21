@@ -54,7 +54,7 @@ class SpeakerPlayer(IAudioOutput):
                 wav_io = io.BytesIO(audio_data)
                 audio_array, sample_rate = sf.read(wav_io)
             except Exception as format_err:
-                # Expected when passing raw PCM bytes (e.g. from TTS)
+                logger.warning(f"WAV header not recognized, falling back to raw PCM ({format_err})")
                 audio_array = np.frombuffer(audio_data, dtype=np.float32)
                 sample_rate = self.sample_rate
             
@@ -65,37 +65,24 @@ class SpeakerPlayer(IAudioOutput):
         except Exception as e:
             logger.error(f"Failed to play audio through speakers: {e}")
 
-    def play_stream(self, audio_stream: Iterator[bytes], cancel_event: Optional[threading.Event] = None) -> None:
+    def play_stream(self, audio_stream: Iterator[bytes]) -> None:
         """
         Plays streaming raw PCM audio chunks via speakers continuously.
         
-        The audio chunks are sliced into smaller 50ms segments. This allows the playback
-        to be aborted nearly instantaneously if `cancel_event` is set (e.g., during barge-in).
-
         Args:
             audio_stream (Iterator[bytes]): An iterator yielding raw PCM audio chunks.
-            cancel_event (Optional[threading.Event]): A thread event to halt playback immediately when set.
         """
         try:
             with sd.OutputStream(samplerate=self.sample_rate, channels=self.channels, dtype='float32') as stream:
                 for chunk in audio_stream:
-                    if cancel_event and cancel_event.is_set():
-                        break
-                        
-                    # Slice the chunk into tiny segments (e.g. 50ms) to allow rapid cancellation mid-chunk
                     chunk_np = np.frombuffer(chunk, dtype=np.float32)
                     segment_size = int(self.sample_rate * 0.05)
                     
                     for i in range(0, len(chunk_np), segment_size):
-                        if cancel_event and cancel_event.is_set():
-                            break
                         segment = chunk_np[i:i+segment_size]
                         # Ensure correct shape (N, channels)
                         segment = segment.reshape(-1, 1)
                         stream.write(segment)
-                        
-                    if cancel_event and cancel_event.is_set():
-                        break
                         
         except Exception as e:
             logger.error(f"Error playing audio stream: {e}")

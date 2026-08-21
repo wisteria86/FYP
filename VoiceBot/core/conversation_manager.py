@@ -8,7 +8,6 @@ import pysbd
 from core.interfaces import IAudioInput, ISTTModel, ILLMModel, ITTSModel, IAudioOutput
 from utils.logger import get_logger
 from utils.ui import CLI
-from utils.hardware import is_safe_for_barge_in
 
 logger = get_logger(__name__)
 
@@ -44,11 +43,18 @@ class ConversationManager:
         self.llm = llm
         self.tts = tts
         self.audio_out = audio_out
-        self.barge_in_enabled = is_safe_for_barge_in()
+        self.barge_in_enabled = False
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
         self.current_state = "Idle"
-        # Pre-generate a short 'hmm' for audio filler
-        self.thinking_audio_bytes = b"".join([chunk for chunk in self.tts.synthesize("Hmm.", speed=1.1)])
+        self.silence_tier = 0
+        # Eager synthesis causes a large ChatTTS inference allocation at startup.
+        # Keep the optional filler off by default on memory-constrained machines.
+        from config import Config
+        self.thinking_audio_bytes = (
+            b"".join(self.tts.synthesize("Hmm.", speed=1.1))
+            if Config.ENABLE_THINKING_AUDIO
+            else b""
+        )
 
     def run_turn(self, interrupted_audio: Optional[bytes] = None, proactive_system_note: Optional[str] = None, timeout_tier: int = 0) -> Optional[bytes]:
         """
@@ -64,17 +70,15 @@ class ConversationManager:
             timeout_tier (int): Tracks the level of silence timeout (0 = short, 1 = medium, 2 = long).
 
         Returns:
-            Optional[bytes]: Remaining audio bytes if the AI was interrupted by the user, otherwise None.
+            None
         """
         try:
             user_text = ""
             if not proactive_system_note:
-                if interrupted_audio:
-                    user_audio = interrupted_audio
-                else:
-                    with CLI.status("Listening for user input...", spinner="point"):
+                timeout_tier = self.silence_tier
+                with CLI.status("Listening for user input...", spinner="point"):
                         try:
-                            vad_t = 3.0 if self.current_state == "Waiting for Answer" else 1.5
+                            vad_t = 2.0
                             if timeout_tier == 0:
                                 timeout_sec = 15.0
                             elif timeout_tier == 1:
@@ -86,126 +90,118 @@ class ConversationManager:
                             logger.info(f"Silence timeout triggered (Tier {timeout_tier}).")
                             if timeout_tier == 0:
                                 self.current_state = "Waiting for Answer"
-                                note = f"[System Note: User silent for 15s. Current State: {self.current_state}. Give a soft nudge, ask if they are still there or need time.]"
-                                return self.run_turn(proactive_system_note=note, timeout_tier=1)
+                                proactive_system_note = f"[System Note: User silent for 15s. Current State: {self.current_state}. Give a soft nudge, ask if they are still there or need time.]"
+                                self.silence_tier = 1
                             elif timeout_tier == 1:
                                 self.current_state = "Waiting for Answer"
-                                note = f"[System Note: User silent for 45s. Current State: {self.current_state}. Bluntly challenge them on why they are quiet.]"
-                                return self.run_turn(proactive_system_note=note, timeout_tier=2)
+                                proactive_system_note = f"[System Note: User silent for 45s. Current State: {self.current_state}. Bluntly challenge them on why they are quiet.]"
+                                self.silence_tier = 2
                             else:
                                 self.current_state = "Idle"
-                                note = f"[System Note: User silent for 90s. Announce you are pausing the session and they can come back when ready.]"
-                                return self.run_turn(proactive_system_note=note, timeout_tier=0)
-                    
-                if not user_audio:
-                    return None
+                                proactive_system_note = f"[System Note: User silent for 90s. Announce you are pausing the session and they can come back when ready.]"
+                                self.silence_tier = 0
+                            user_audio = None
+                if not proactive_system_note:
+                    if not user_audio:
+                        return None
                 
-                with CLI.status("Transcribing audio...", spinner="bouncingBar"):
-                    user_text = self.stt.transcribe(user_audio)
+                    with CLI.status("Transcribing audio...", spinner="bouncingBar"):
+                        user_text = self.stt.transcribe(user_audio)
                     
-                if not user_text.strip():
-                    logger.info("No speech detected.")
-                    return None
+                    if not user_text.strip():
+                        logger.info("No speech detected.")
+                        return None
 
-                # Synchronous translate for user (it's fast enough)
-                en_text = self.llm.translate_text(user_text)
-                if en_text:
-                    logger.info(f"[bold green]Input:[/bold green] {user_text} [dim green][{en_text}][/dim green]", extra={"markup": True})
-                else:
-                    logger.info(f"[bold green]Input:[/bold green] {user_text}", extra={"markup": True})
+                    # Explicit console output to show mic code is working
+                    print(f"\n---> You said: {user_text}\n")
+                    logger.info(f"[bold green]User:[/bold green] {user_text}")
                 
-                # Check for goal statements
-                lower_text = user_text.lower()
-                if "goal" in lower_text or "want to work on" in lower_text or "focus on" in lower_text:
-                    self.llm.save_profile(new_summary=None, new_goal=user_text)
-                    logger.info("Goal updated in profile.")
+                    # Check for goal statements
+                    lower_text = user_text.lower()
+                    if "goal" in lower_text or "want to work on" in lower_text or "focus on" in lower_text:
+                        self.llm.save_profile(new_summary=None, new_goal=user_text)
+                        logger.info("Goal updated in profile.")
                     
-                self.current_state = "Explaining"
+                    self.current_state = "Explaining"
+                    self.silence_tier = 0
 
-            
-            cancel_event = threading.Event()
-            mic_abort_event = threading.Event()
-            interruption_future = None
-            
-            if self.barge_in_enabled:
-                interruption_future = self.executor.submit(
-                    self.audio_in.capture_audio,
-                    on_speech_started=cancel_event.set,
-                    abort_event=mic_abort_event
-                )
-            
             # The streaming architecture
-            sentence_queue = queue.Queue()
-            audio_queue = queue.Queue()
+            sentence_queue = queue.Queue(maxsize=4)
+            audio_queue = queue.Queue(maxsize=2)
+            worker_errors = queue.Queue()
             
             def llm_producer():
-                is_thinking = False
-                buffer = ""
-                segmenter = pysbd.Segmenter(language="en", clean=False)
-                
-                if proactive_system_note:
-                    token_stream = self.llm.generate_proactive_response(proactive_system_note)
-                else:
-                    token_stream = self.llm.generate_response(user_text)
-                
-                for token in token_stream:
-                    if cancel_event.is_set():
-                        break
-                        
-                    buffer += token
+                try:
+                    is_thinking = False
+                    buffer = ""
+                    # Covers Latin, Arabic and CJK terminators without assuming English.
+                    boundary = re.compile(r"(?<=[.!?؟。！？])\s*")
+
+                    token_stream = (
+                        self.llm.generate_proactive_response(proactive_system_note)
+                        if proactive_system_note
+                        else self.llm.generate_response(user_text)
+                    )
+
+                    for token in token_stream:
+                        buffer += token
                     
-                    if not is_thinking:
-                        if "<think>" in buffer:
+                        if not is_thinking and "<think>" in buffer:
                             is_thinking = True
-                            parts = buffer.split("<think>")
+                            parts = buffer.split("<think>", 1)
                             if parts[0].strip():
                                 sentence_queue.put(parts[0].strip())
                             buffer = parts[1] if len(parts) > 1 else ""
-                            buffer = parts[1] if len(parts) > 1 else ""
+                            logger.info("[dim]Thinking...[/dim]", extra={"markup": True})
                     
-                    if is_thinking:
-                        if "</think>" in buffer:
+                        if is_thinking and "</think>" in buffer:
                             is_thinking = False
-                            parts = buffer.split("</think>")
+                            parts = buffer.split("</think>", 1)
                             thought_content = parts[0].strip()
+                            if thought_content:
+                                logger.info(f"[dim]{thought_content}[/dim]", extra={"markup": True})
+                            
                             buffer = parts[1] if len(parts) > 1 else ""
                     
-                    if not is_thinking:
-                        sentences = segmenter.segment(buffer)
-                        if len(sentences) > 1:
-                            for sentence in sentences[:-1]:
-                                if sentence.strip():
-                                    sentence_queue.put(sentence.strip())
-                            buffer = sentences[-1]
+                        if not is_thinking:
+                            sentences = boundary.split(buffer)
+                            if len(sentences) > 1:
+                                for sentence in sentences[:-1]:
+                                    if sentence.strip():
+                                        sentence_queue.put(sentence.strip())
+                                buffer = sentences[-1]
                 
-                if not is_thinking and buffer.strip() and not cancel_event.is_set():
-                    sentence_queue.put(buffer.strip())
-                
-                sentence_queue.put(None)
+                    if not is_thinking and buffer.strip():
+                        sentence_queue.put(buffer.strip())
+                except Exception as exc:
+                    worker_errors.put(exc)
+                finally:
+                    if is_thinking:
+                        logger.error("LLM generation ended while still inside a <think> block! (Hit max_tokens or API timeout)")
+                        sentence_queue.put("すまない、考えすぎて頭がフリーズした。もう一度言ってくれ。")
+                    sentence_queue.put(None)
             
             def tts_worker():
-                while not cancel_event.is_set():
+                while True:
                     sentence = sentence_queue.get()
-                    if sentence is None or cancel_event.is_set():
+                    if sentence is None:
                         audio_queue.put(None)
                         break
                     
                     try:
-                        from config import Config
-                        base_speed = getattr(Config, "TTS_SPEED", 1.0)
-                        speed = (1.1 if self.current_state in ["Greeting", "Waiting for Answer"] else 0.95) * base_speed
-                        
-                        # Translate in the background pipeline
-                        en_text = self.llm.translate_text(sentence)
-                        
-                        ai_audio_stream = self.tts.synthesize(sentence, speed=speed)
-                        audio_queue.put((sentence, en_text, ai_audio_stream))
+                        speed = 1.1 if self.current_state in ["Greeting", "Waiting for Answer"] else 0.95
+                        chunk_queue = queue.Queue(maxsize=8)
+                        audio_queue.put((sentence, chunk_queue))
+                        for chunk in self.tts.synthesize(sentence, speed=speed):
+                            chunk_queue.put(chunk)
+                        chunk_queue.put(None)
                     except Exception as e:
-                        if not cancel_event.is_set():
-                            logger.error(f"TTS Error on sentence '{sentence}': {e}")
+                        worker_errors.put(e)
+                        if 'chunk_queue' in locals():
+                            chunk_queue.put(None)
             
-            producer_thread = threading.Thread(target=llm_producer)
-            tts_thread = threading.Thread(target=tts_worker)
+            producer_thread = threading.Thread(target=llm_producer, daemon=True)
+            tts_thread = threading.Thread(target=tts_worker, daemon=True)
             
             producer_thread.start()
             tts_thread.start()
@@ -218,41 +214,40 @@ class ConversationManager:
             if not proactive_system_note and self.thinking_audio_bytes:
                 threading.Thread(target=self.audio_out.play_audio, args=(self.thinking_audio_bytes,), daemon=True).start()
             
-            while not cancel_event.is_set():
-                item = audio_queue.get()
-                if item is None or cancel_event.is_set():
+            while True:
+                try:
+                    item = audio_queue.get(timeout=0.1)
+                except queue.Empty:
+                    if not producer_thread.is_alive() and not tts_thread.is_alive() and audio_queue.empty():
+                        break
+                    continue
+                if item is None:
                     break
                 
-                sentence, en_text, ai_audio_stream = item
+                sentence, chunk_queue = item
                 
                 if first_sentence:
                     first_sentence = False
                     status.stop()
+                    logger.info("[bold blue]AI:[/bold blue] (Speaking...)")
                 
-                if not cancel_event.is_set():
-                    if en_text:
-                        logger.info(f"[bold cyan]Output:[/bold cyan] {sentence} [dim cyan][{en_text}][/dim cyan]", extra={"markup": True})
-                    else:
-                        logger.info(f"[bold cyan]Output:[/bold cyan] {sentence}", extra={"markup": True})
-                    
-                    self.audio_out.play_stream(ai_audio_stream, cancel_event=cancel_event)
+                logger.info(f"  [cyan]{sentence}[/cyan]", extra={"markup": True})
+                def queued_audio():
+                    while True:
+                        chunk = chunk_queue.get()
+                        if chunk is None:
+                            return
+                        yield chunk
+                self.audio_out.play_stream(queued_audio())
             
-            if first_sentence and not cancel_event.is_set():
+            if first_sentence:
                 status.stop()
                 
-            was_interrupted = cancel_event.is_set()
+            producer_thread.join(timeout=2)
+            tts_thread.join(timeout=2)
+            if not worker_errors.empty():
+                raise worker_errors.get()
             
-            cancel_event.set() # Ensure threads terminate
-            producer_thread.join()
-            tts_thread.join()
-            
-            if was_interrupted and interruption_future:
-                with CLI.status("Listening to interruption...", spinner="point"):
-                    return interruption_future.result()
-            elif interruption_future:
-                mic_abort_event.set()
-                interruption_future.result()
-                
             return None
             
         except Exception as e:
@@ -279,10 +274,11 @@ class ConversationManager:
         except KeyboardInterrupt:
             logger.info("Closing session...")
             self.executor.shutdown(wait=False, cancel_futures=True)
-            self.barge_in_enabled = False
             self.current_state = "Wrapping up"
             self.run_turn(proactive_system_note="[System Note: The session is ending abruptly. Summarize what was covered in 1 sentence, and tell the user one thing to practice.]")
             summary_stream = self.llm.generate_proactive_response("[System: Write a 1 sentence summary of this session for your internal notes. No greetings.]")
             summary = "".join([s for s in summary_stream])
+            import re
+            summary = re.sub(r'<think>.*?</think>', '', summary, flags=re.DOTALL).strip()
             self.llm.save_profile(summary)
             logger.info("Session ended gracefully.")

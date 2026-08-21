@@ -84,14 +84,18 @@ class LLMBrain(ILLMModel):
 
     def _update_system_prompt(self):
         from config import Config
-        language = Config.COMMUNICATION_LANGUAGE if Config.COMMUNICATION_LANGUAGE else self.user_profile.get("language", "English")
+        language = getattr(Config, "COMMUNICATION_LANGUAGE", self.user_profile.get("language", "English"))
+        self.user_profile["language"] = language
 
         persona = (
-            "You are a friendly, casual, and easygoing chat partner. "
+            "You are a very blunt, strict, no-nonsense coach and teacher. "
             "Because your responses will be spoken out loud via Text-to-Speech, "
             "you MUST keep your answers concise, natural, and conversational. "
-            "Act like a close friend hanging out with the user. "
-            "Avoid long lists, markdown formatting, or overly complex sentences."
+            "Do not use filler words to soften your tone. Be direct, challenging, and hold the user accountable. "
+            "Avoid long lists, markdown formatting, or overly complex sentences.\n"
+            "CRITICAL NOTE: The user is a beginner learning Japanese. Their speech is transcribed by an AI. "
+            "Because of their poor pronunciation, the transcription might contain weird, phonetically similar words or complete garbage. "
+            "If their input seems nonsensical or slightly off, use context to infer what they MEANT to say, and correct their pronunciation or grammar."
         )
 
         # Inject language instruction when the user has selected a non-English engine
@@ -147,7 +151,7 @@ class LLMBrain(ILLMModel):
                 model=self.model_name,
                 messages=self.conversation_history,
                 temperature=0.7,   # Slightly creative, good for conversation
-                max_tokens=1024,   # Increased to allow the model to finish its <think> block
+                max_tokens=4096,   # Lowered from 8192 to stay under the 8000 TPM limit, but still 4x higher than original 1024
                 stream=True        # Enable streaming!
             )
             
@@ -167,26 +171,6 @@ class LLMBrain(ILLMModel):
             self.conversation_history.pop() 
             yield "I'm sorry, I'm having trouble connecting to my brain right now."
 
-    def translate_text(self, text: str) -> str:
-        """Translates text to English using a fast one-off LLM call."""
-        if not text.strip(): return ""
-        try:
-            response = self.client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[{"role": "system", "content": "You are a translator. Translate the following text to English. Output ONLY the English translation, without quotes or conversational filler."},
-                          {"role": "user", "content": text}],
-                temperature=0.3,
-                max_tokens=256
-            )
-            import re
-            content = response.choices[0].message.content.strip()
-            # Strip both complete <think>...</think> and incomplete <think>... tags
-            content = re.sub(r"<think>.*?(?:</think>|$)", "", content, flags=re.DOTALL).strip()
-            return content
-        except Exception as e:
-            logger.error(f"Translation error: {e}")
-            return ""
-
     def generate_proactive_response(self, system_note: str) -> Iterator[str]:
         """
         Generates a proactive response triggered by internal system events rather than user input.
@@ -200,7 +184,13 @@ class LLMBrain(ILLMModel):
         Yields:
             str: The generated tokens streamed from the LLM.
         """
-        temp_message = {"role": "user", "content": f"[SYSTEM DIRECTIVE] {system_note}"}
+        # Groq/Qwen chat templates require at least one user message. Treat this
+        # internal event as a synthetic user turn while the main system persona
+        # remains the first message.
+        temp_message = {
+            "role": "user",
+            "content": f"Internal voice-assistant event. Follow this instruction now: {system_note}",
+        }
         messages = self.conversation_history + [temp_message]
         
         try:
@@ -210,7 +200,7 @@ class LLMBrain(ILLMModel):
                 model=self.model_name,
                 messages=messages,
                 temperature=0.7,
-                max_tokens=1024,
+                max_tokens=4096,
                 stream=True
             )
             

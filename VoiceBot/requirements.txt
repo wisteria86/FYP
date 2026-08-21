@@ -1,4 +1,17 @@
 python-dotenv
+setuptools<81  # webrtcvad imports the legacy pkg_resources module
+
+# RTX 50-series CUDA build (driver supports CUDA 13.x)
+--extra-index-url https://download.pytorch.org/whl/cu130
+torch==2.13.0+cu130
+torchaudio==2.11.0+cu130
+
+# --- Web API server (api/server.py → React frontend) ---
+fastapi
+uvicorn[standard]
+python-multipart   # for future audio upload support
+
+
 
 sounddevice
 soundfile
@@ -7,6 +20,11 @@ numpy
 faster-whisper
 openai
 kokoro-onnx
+misaki[ja]
+unidic-lite
+ChatTTS
+transformers==4.41.2  # ChatTTS 0.2.5 is incompatible with Transformers 5.x
+requests  # required at ChatTTS import time but omitted by ChatTTS 0.2.5 metadata
 webrtcvad
 pysbd
 rich
@@ -22,3 +40,11 @@ pyopenjtalk
 # onnxruntime-tools  # only needed on older ORT versions; omit if onnxruntime>=1.16
 # WAV file I/O for smoke test (already pulled in by soundfile dep chain)
 # soundfile  # already listed above
+
+# --- Arabic VITS TTS engine (TTS_ENGINE=vits_ar) ---
+# Python wrapper for espeak-ng used for Arabic G2P (text → IPA phonemes)
+# ⚠ REQUIRES espeak-ng system binary — NOT a pure-Python package.
+#   Windows : download installer from https://github.com/espeak-ng/espeak-ng/releases
+#   Linux   : sudo apt install espeak-ng
+#   macOS   : brew install espeak-ng
+phonemizer

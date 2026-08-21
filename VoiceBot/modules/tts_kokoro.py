@@ -24,6 +24,11 @@ class KokoroTTS(ITTSModel):
     Provides sub-second latency on standard CPUs. It manages the downloading
     and loading of the ONNX models automatically upon instantiation.
     """
+    
+    @property
+    def output_sample_rate(self) -> int:
+        return 24000
+        
     def __init__(self, lang: str = "a", voice: str = "af_heart") -> None:
         """
         Initializes the Kokoro TTS engine and ensures models are present.
@@ -101,12 +106,25 @@ class KokoroTTS(ITTSModel):
             bytes: The synthesized raw PCM audio data.
         """
         try:
+            text_or_phonemes = text
+            is_phonemes = False
+
+            if self.lang == "j":
+                try:
+                    from misaki import ja
+                    g2p = ja.JAG2P()
+                    text_or_phonemes, _ = g2p(text)
+                    is_phonemes = True
+                except ImportError:
+                    logger.warning("misaki[ja] is not installed. Japanese TTS may fail. Please run `pip install misaki[ja] unidic-lite`.")
+
             # Kokoro-ONNX creates the full audio for the chunk instantly
             samples, sample_rate = self.kokoro.create(
-                text,
+                text_or_phonemes,
                 voice=self.voice,
                 speed=speed,
-                lang=self.lang
+                lang=self.lang,
+                is_phonemes=is_phonemes
             )
             
             # The samples are already a numpy array of floats
