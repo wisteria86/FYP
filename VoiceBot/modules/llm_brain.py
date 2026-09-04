@@ -42,7 +42,9 @@ class LLMBrain(ILLMModel):
         try:
             self.client = OpenAI(
                 api_key=self.api_key,
-                base_url=self.base_url
+                base_url=self.base_url,
+                max_retries=0,
+                timeout=12.0,
             )
             logger.info(f"Initialized LLM client (Model: {self.model_name}, URL: {self.base_url})")
         except Exception as e:
@@ -88,23 +90,13 @@ class LLMBrain(ILLMModel):
         self.user_profile["language"] = language
 
         persona = (
-            "You are a very blunt, strict, no-nonsense coach and teacher. "
+            "You are Hikari, a supportive but direct workplace-skills coach. "
             "Because your responses will be spoken out loud via Text-to-Speech, "
             "you MUST keep your answers concise, natural, and conversational. "
-            "Do not use filler words to soften your tone. Be direct, challenging, and hold the user accountable. "
-            "Avoid long lists, markdown formatting, or overly complex sentences.\n"
-            "CRITICAL NOTE: The user is a beginner learning Japanese. Their speech is transcribed by an AI. "
-            "Because of their poor pronunciation, the transcription might contain weird, phonetically similar words or complete garbage. "
-            "If their input seems nonsensical or slightly off, use context to infer what they MEANT to say, and correct their pronunciation or grammar."
+            "Be specific, constructive and concise. Avoid markdown, long lists and complex sentences. "
+            "The user is practising professional English through realistic workplace roleplay. "
+            "Speech is transcribed automatically, so use context to resolve small recognition errors and ask for clarification when meaning is genuinely unclear."
         )
-
-        # Inject language instruction when the user has selected a non-English engine
-        if language and language.lower() != "english":
-            persona += (
-                f" The user is practicing {language}. "
-                f"You MUST respond entirely in {language} at all times, "
-                "even when the user writes to you in English. Never switch back to English."
-            )
 
         context = (
             f"\n\n[Session Context]\n"
@@ -217,3 +209,24 @@ class LLMBrain(ILLMModel):
         except Exception as e:
             logger.error(f"Error generating proactive LLM response: {e}")
             yield "I seem to be having an internal issue right now."
+
+    def generate_contextual_response(self, instruction: str) -> Iterator[str]:
+        """Generate a stateless roleplay reply without contaminating global chat history."""
+        messages = [
+            {"role": "system", "content": "You are Hikari, an English-first workplace roleplay trainer."},
+            {"role": "user", "content": instruction},
+        ]
+        response = self.client.chat.completions.create(
+            model=self.model_name,
+            messages=messages,
+            temperature=0.65,
+            max_tokens=80,
+            stream=True,
+            # Qwen reasoning is useful internally but must never become the
+            # roleplay dialogue or be handed to speech synthesis.
+            extra_body={"reasoning_effort": "none", "reasoning_format": "hidden"}
+            if "groq.com" in self.base_url and "qwen" in self.model_name.lower() else None,
+        )
+        for chunk in response:
+            if chunk.choices and chunk.choices[0].delta.content is not None:
+                yield chunk.choices[0].delta.content

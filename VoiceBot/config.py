@@ -32,22 +32,10 @@ class Config:
     # ---------------------------------------------------------------------------
     # TTS Engine Selection
     # ---------------------------------------------------------------------------
-    # "kokoro"  → use KokoroTTS (default, English). No extra downloads.
-    # "vits_ja" → use VitsJaTTS (Japanese). Auto-downloads model from HuggingFace
-    # "vits_ar" → use VitsArTTS (Arabic). Auto-downloads model from HuggingFace
-    # ChatTTS is preserved, but we dynamically select the best TTS engine for the language.
-    if COMMUNICATION_LANGUAGE.lower() == "japanese":
-        TTS_ENGINE = os.getenv("TTS_ENGINE", "kokoro")
-        KOKORO_LANG = os.getenv("KOKORO_LANG", "j")
-        KOKORO_VOICE = os.getenv("KOKORO_VOICE", "jf_alpha")
-    elif COMMUNICATION_LANGUAGE.lower() == "arabic":
-        TTS_ENGINE = os.getenv("TTS_ENGINE", "vits_ar")
-        KOKORO_LANG = os.getenv("KOKORO_LANG", "a")
-        KOKORO_VOICE = os.getenv("KOKORO_VOICE", "af_heart")
-    else:
-        TTS_ENGINE = os.getenv("TTS_ENGINE", "chattts")
-        KOKORO_LANG = os.getenv("KOKORO_LANG", "a")
-        KOKORO_VOICE = os.getenv("KOKORO_VOICE", "af_heart")
+    # ChatTTS remains the default; the dashboard can switch engines at runtime.
+    TTS_ENGINE = os.getenv("TTS_ENGINE", "chattts").lower()
+    KOKORO_LANG = os.getenv("KOKORO_LANG", "a")
+    KOKORO_VOICE = os.getenv("KOKORO_VOICE", "af_heart")
     
     CHAT_TTS_PERSONAS = {
         "English": 42,
@@ -60,6 +48,7 @@ class Config:
     CHAT_TTS_CACHE_DIR = os.getenv("CHAT_TTS_CACHE_DIR", "models/chattts")
     CHAT_TTS_MAX_NEW_TOKENS = int(os.getenv("CHAT_TTS_MAX_NEW_TOKENS", "512"))
     CHAT_TTS_CPU_THREADS = int(os.getenv("CHAT_TTS_CPU_THREADS", "4"))
+    # Moderate batches balance low time-to-first-audio with smooth playback.
     CHAT_TTS_STREAM_BATCH = int(os.getenv("CHAT_TTS_STREAM_BATCH", "12"))
     # Required by ChatTTS 0.2.5 generation; token/thread limits bound its memory use.
     CHAT_TTS_ENABLE_CACHE = True

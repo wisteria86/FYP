@@ -10,6 +10,9 @@ torchaudio==2.11.0+cu130
 fastapi
 uvicorn[standard]
 python-multipart   # for future audio upload support
+pypdf              # organization policy PDF extraction
+python-docx        # organization policy DOCX extraction
+psutil             # local CPU, RAM and process telemetry for the monitor
 
 
 

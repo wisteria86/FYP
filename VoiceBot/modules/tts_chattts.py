@@ -95,6 +95,7 @@ class ChatTTSModel(ITTSModel):
         import re
         text = re.sub(r'[\n\r\t]', ' ', text)
         text = re.sub(r'[:;：；]', ',', text) # Replace colon/semicolon with comma
+        text = re.sub(r'[!?？。！？]', '.', text)
         text = re.sub(r'[\[\]\(\)\{\}\*~_#$^&|<>\'"「」『』【】+=\-\\/]', '', text) # Strip symbols and markdown
         text = text.strip()
         
@@ -110,27 +111,43 @@ class ChatTTSModel(ITTSModel):
                 spk_emb=self.speaker,
                 max_new_token=token_limit,
                 show_tqdm=False,
-                stream_batch=self.stream_batch,
-                pass_first_n_batches=1,
             )
             with self._lock, torch.inference_mode():
+                # The API sends one complete WAV per short roleplay response.
+                # Non-streaming inference avoids repeated generator/batch overhead
+                # and is substantially faster for this delivery mode.
                 generated = self.chat.infer(
                     [text.strip()],
-                    stream=True,
+                    stream=False,
                     split_text=False,
                     params_infer_code=params,
                     skip_refine_text=True,
                 )
-                produced = False
-                for batch in generated:
-                    audio = np.asarray(batch[0], dtype=np.float32).reshape(-1)
-                    if audio.size:
-                        produced = True
-                        yield np.ascontiguousarray(audio).tobytes()
-                if not produced:
+                audio = np.asarray(generated[0], dtype=np.float32).reshape(-1) if len(generated) else np.array([], dtype=np.float32)
+                if audio.size:
+                    yield np.ascontiguousarray(audio).tobytes()
+                else:
                     logger.warning("ChatTTS returned no audio.")
         except Exception:
             logger.exception("Error during ChatTTS synthesis")
+
+    def synthesize_streaming(self, text: str, speed: float = 1.0) -> Iterator[bytes]:
+        """Yield one complete response buffer for uninterrupted playback.
+
+        ChatTTS token streaming is slower than real-time on the target GPU. Its
+        tiny chunks repeatedly starve browser playback and sound broken. A
+        complete non-streamed buffer guarantees sample-continuous voice output.
+        """
+        if not text or not text.strip():
+            return
+        import re
+        text = re.sub(r'[\n\r\t]', ' ', text)
+        text = re.sub(r'[:;：；]', ',', text)
+        text = re.sub(r'[!?？。！？]', '.', text)
+        text = re.sub(r'[\[\]\(\)\{\}\*~_#$^&|<>\'"「」『』【】+=\-\\/]', '', text).strip()
+        if not text:
+            return
+        yield from self.synthesize(text, speed)
 
     def interrupt(self) -> None:
         """Cancel an in-flight ChatTTS generation."""

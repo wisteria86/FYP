@@ -222,6 +222,7 @@ __marimo__/
 node_modules/
 .pnpm-store/
 VoiceBot/models/
+VoiceBot/data/*.db*
 *.onnx
 *.bin
 *.safetensors
