@@ -1,0 +1,5 @@
+# Optional NVIDIA streaming STT runtime. Keeps PyTorch/ChatTTS dependencies intact.
+--find-links https://k2-fsa.github.io/sherpa/onnx/cuda.html
+sherpa-onnx==1.13.8+cuda12.cudnn9; platform_system == "Windows" or platform_system == "Linux"
+nvidia-cufft-cu12; platform_system == "Windows"
+nvidia-cuda-runtime-cu12; platform_system == "Windows"

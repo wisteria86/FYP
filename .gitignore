@@ -223,6 +223,7 @@ node_modules/
 .pnpm-store/
 VoiceBot/models/
 VoiceBot/data/*.db*
+VoiceBot/data/runtime_settings.json
 *.onnx
 *.bin
 *.safetensors

@@ -12,7 +12,6 @@ retained in the project but are not selected at runtime.
 # Path: main.py
 from config import Config
 from core.conversation_manager import ConversationManager
-from modules.stt_whisper import WhisperSTT
 from modules.llm_brain import LLMBrain
 from io_interfaces.mic_recorder import MicRecorder
 from io_interfaces.speaker_player import SpeakerPlayer
@@ -49,13 +48,9 @@ def main() -> None:
     # ------------------------------------------------------------------ #
     # 1. Speech-to-Text                                                   #
     # ------------------------------------------------------------------ #
-    with CLI.status("Loading Whisper STT (This may take a moment)..."):
-        stt_model = WhisperSTT(
-            model_size=Config.WHISPER_MODEL_SIZE,
-            cpu_threads=Config.WHISPER_CPU_THREADS,
-            num_workers=Config.WHISPER_WORKERS,
-            device=Config.WHISPER_DEVICE,
-        )
+    with CLI.status("Loading speech recognition (This may take a moment)..."):
+        from modules.stt_router import create_stt
+        stt_model = create_stt()
 
     # ------------------------------------------------------------------ #
     # 2. LLM Brain                                                        #

@@ -1,5 +1,6 @@
 # Path: config.py
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 
@@ -7,17 +8,43 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
+    ADMIN_EMAILS = {email.strip().lower() for email in os.getenv('ADMIN_EMAILS', '').split(',') if email.strip()}
+    EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2')
+    EMBEDDING_CACHE_DIR = os.getenv('EMBEDDING_CACHE_DIR', 'models/embeddings')
     """Central configuration class."""
+    BASE_DIR = Path(__file__).resolve().parent
+    APP_ENV = os.getenv("APP_ENV", "development")
+    API_VERSION = "3.0.0"
+    _database_value = Path(os.getenv("DATABASE_PATH", str(BASE_DIR / "data" / "hikari.db")))
+    DATABASE_PATH = _database_value if _database_value.is_absolute() else BASE_DIR / _database_value
+    AUTH_COOKIE_NAME = os.getenv("AUTH_COOKIE_NAME", "hikari_session")
+    AUTH_SESSION_HOURS = int(os.getenv("AUTH_SESSION_HOURS", "168"))
+    ALLOW_DEMO_ACCESS = os.getenv("ALLOW_DEMO_ACCESS", "false").lower() == "true"
+    CORS_ORIGINS = [
+        origin.strip()
+        for origin in os.getenv(
+            "CORS_ORIGINS",
+            "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000",
+        ).split(",")
+        if origin.strip()
+    ]
     # LLM Settings
     COMMUNICATION_LANGUAGE = os.getenv("COMMUNICATION_LANGUAGE", "English")
     LLM_API_KEY = os.getenv("LLM_API_KEY", "your-default-key-here")
-    LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "qwen/qwen3-32b")
+    LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "qwen/qwen3.8-27b")
     LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1") # GroqCloud base URL
 
     # Whisper Settings
+    STT_ENGINE = os.getenv('STT_ENGINE', 'auto').lower()
+    NEMOTRON_MODEL_DIR = os.getenv('NEMOTRON_MODEL_DIR', 'models/nemotron/sherpa-onnx-nemotron-speech-streaming-en-0.6b-560ms-int8-2026-04-25')
+    STT_DEVICE = os.getenv('STT_DEVICE', 'auto')
+    STT_CPU_THREADS = max(1, min(6, int(os.getenv('STT_CPU_THREADS', '4'))))
+    WHISPER_ONNX_CACHE_DIR = os.getenv('WHISPER_ONNX_CACHE_DIR', 'models/whisper_onnx')
     # Memory-safe multilingual default. Override with "small" for more accuracy.
-    WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "small")
+    WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "medium")
     WHISPER_DEVICE = os.getenv("WHISPER_DEVICE", "auto")
+    WHISPER_COMPUTE_TYPE = os.getenv("WHISPER_COMPUTE_TYPE", "auto")
+    WHISPER_CACHE_DIR = os.getenv("WHISPER_CACHE_DIR", "models/whisper")
     WHISPER_CPU_THREADS = int(os.getenv("WHISPER_CPU_THREADS", "4"))
     WHISPER_WORKERS = int(os.getenv("WHISPER_WORKERS", "1"))
 
@@ -28,12 +55,10 @@ class Config:
     MIC_DEVICE = os.getenv("MIC_DEVICE") or None  # input device index or name
 
     # ---------------------------------------------------------------------------
-
-    # ---------------------------------------------------------------------------
     # TTS Engine Selection
     # ---------------------------------------------------------------------------
-    # ChatTTS remains the default; the dashboard can switch engines at runtime.
-    TTS_ENGINE = os.getenv("TTS_ENGINE", "chattts").lower()
+    # Kokoro is the default high-performance engine; the dashboard can switch engines at runtime.
+    TTS_ENGINE = os.getenv("TTS_ENGINE", "kokoro").lower()
     KOKORO_LANG = os.getenv("KOKORO_LANG", "a")
     KOKORO_VOICE = os.getenv("KOKORO_VOICE", "af_heart")
     

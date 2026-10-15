@@ -1,14 +1,16 @@
 # Hikari Employee Trainer
 
-Hikari is an English-first workplace-skills prototype that runs locally. It combines spoken AI roleplay, ChatTTS voice responses, structured assessment, adaptive proficiency tracking, organization-document grounding, and optional posture indicators.
+Hikari is an integrated AI-powered employee-training application. It combines authenticated learner workspaces, spoken roleplay, local speech models, persistent training data, organization-document grounding, and optional posture indicators.
 
 ## What works
 
 - Ten workplace training areas, including communication, listening, conflict resolution, negotiation, interviews, presentations, critical thinking, responsible AI use, and defensive social-engineering awareness.
+- Account registration and login with scrypt password hashing, revocable browser sessions, and owner-scoped private training records.
+- Scenario preparation briefings with roles, objectives, target skills, difficulty, duration, and participant structure before a session is created.
 - Adaptive beginner, intermediate, and advanced roleplay scenarios.
-- Browser microphone capture with local Whisper transcription.
+- Browser microphone capture with selectable Whisper Small ONNX, Whisper Medium ONNX, and NVIDIA Nemotron streaming recognition (CUDA or CPU), plus automatic Whisper fallback.
 - Adaptive speech detection with a live input meter, automatic silence stop, microphone selection, and automatic submission.
-- ChatTTS speech for every generated response. Text appears as soon as the LLM finishes; voice uses one continuous, edge-faded buffer so it cannot underrun or click. A **Play response** control remains available if browser sound policy blocks automatic playback. Older TTS modules are preserved but are not active.
+- Kokoro is the low-latency default speech engine. ChatTTS and installed VITS providers can be selected in Settings. A **Play response** control remains available if browser sound policy blocks automatic playback.
 - Two roleplay modes: **Voice call** is the default continuous hands-free loop, while **Chat** keeps typed messages, voice-message transcription, and replay controls.
 - Qwen reasoning is disabled and hidden at the provider, then filtered again before any response can be displayed, stored, or spoken.
 - Persistent SQLite history, scores, skill proficiency, recommendations, and three-session training plans.
@@ -39,8 +41,7 @@ Useful test modes:
 
 Allow microphone access for spoken responses and camera access only if you want posture feedback.
 
-The first backend start loads Whisper and ChatTTS and may take longer. The dashboard remains usable in a degraded text-only mode when an optional model fails to load.
-ChatTTS is warmed during startup so the first real roleplay response does not pay its one-time GPU setup cost.
+The first backend start loads the available speech recognizer and selected TTS engine and may take longer. NVIDIA setup and CPU fallback are documented in [NVIDIA_SPEECH.md](docs/NVIDIA_SPEECH.md). The dashboard remains usable in a degraded text-only mode when an optional model fails to load.
 
 ## Runtime monitor
 
@@ -62,16 +63,28 @@ Copy `.env.template` to `.env` and set at least:
 
 ```env
 LLM_API_KEY=your_key
-LLM_MODEL_NAME=qwen/qwen3.6-27b
+LLM_MODEL_NAME=qwen/qwen3.8-27b
 LLM_BASE_URL=https://api.groq.com/openai/v1
 COMMUNICATION_LANGUAGE=English
-TTS_ENGINE=chattts
+TTS_ENGINE=kokoro
 WHISPER_MODEL_SIZE=small
 WHISPER_DEVICE=auto
 CHAT_TTS_DEVICE=auto
 ```
 
-`TTS_ENGINE` is intentionally fixed to ChatTTS by the application. The setting remains documented so older environments are clear about the active engine.
+Use `CHAT_TTS_DEVICE=cuda:0` to require NVIDIA CUDA acceleration. Hikari verifies that ChatTTS's GPT, DVAE, decoder, embedding, and vocoder modules are actually on CUDA and reports their devices through `/api/health` and `/api/tts/engines`.
+
+ChatTTS buffers each speaker's complete reply as one continuous utterance, avoiding gaps when generating the next sentence takes longer than playing the current sentence. Faster TTS engines retain sentence streaming. ChatTTS uses BF16 for its transformer on compatible CUDA GPUs; audio decoders retain their original precision. `CHAT_TTS_SPEAKER_SEED=9001` selects the higher-pitched speaker preset. ChatTTS samples speaker embeddings rather than providing a guaranteed gender selector.
+
+Speech recognition uses multilingual Whisper `medium` on CUDA with `WHISPER_COMPUTE_TYPE=int8_float16` to leave GPU memory for ChatTTS. Recognition explicitly uses transcription rather than translation, with deterministic decoding. `/api/health` reports `stt_runtime` model, device, and precision; GPU initialization runs at startup. Runtime errors are reported as service failures, not misleading "no speech" results.
+
+On Windows, faster-whisper requires separate CUDA 12 cuBLAS/cuDNN libraries even when PyTorch uses CUDA 13. These are included in `requirements.txt`, and the STT module registers their DLL directories. To smoke-test the running app, use `.venv\Scripts\python.exe scripts\check_voice_latency.py` (synthesizes two sentences and transcribes the first; does not access the microphone).
+
+The selected engine and Kokoro voice can also be changed from the Settings screen.
+
+## Database migrations
+
+Database changes are applied automatically from `database/migrations` when the application starts. Applied versions are recorded in `schema_migrations`; existing data is preserved while the normalized application model evolves.
 
 ## Tests
 
@@ -83,8 +96,20 @@ npm run build
 
 ## Local data and privacy
 
-Runtime records are stored in `data/hikari.db` and ignored by Git. Uploaded document text stays in that local database. Browser camera frames are not uploaded; when supported, the browser derives four numeric alignment indicators and only those scores are sent to the local API.
+Runtime records are stored in `data/hikari.db` and ignored by Git. Organization documents stay in local relational/vector storage, but retrieved excerpts and conversation text may be sent to the configured external AI provider. The learner sees a first-use disclosure. Browser camera frames are not uploaded: numeric body landmarks are sent to the local API for optional alignment indicators.
 
-## Prototype boundaries
+## Prototype learning acceptance
 
-This is not an enterprise deployment. It intentionally excludes SSO, unrestricted multilingual training, psychological diagnosis, emotion/personality assessment, identity recognition, comprehensive gesture analysis, and offensive social-engineering instruction.
+Learners must demonstrate lesson objectives with distinct meaningful answers before completion. A premature finish leaves the session active; **End Session** cancels without awarding mastery. Typed chat never depends on voice synthesis. If TTS fails during a call, the AI text remains usable. AI outages activate lesson-specific guided practice.
+
+English recommendations progress through the 30-lesson sequence instead of repeatedly selecting lesson one. Assessment shows transcript evidence; grammar and fluency grades require the AI assessor and are omitted in offline fallback rather than fabricated. These are prototype training estimates, not certified proficiency tests. Microphone pronunciation is not inferred from text.
+
+Speech models warm up during startup (`TTS_WARMUP=false` disables TTS warmup). Keep Whisper `medium` on CUDA as configured. The current TTS selection is preserved.
+
+See [prototype acceptance results](docs/PROTOTYPE_ACCEPTANCE.md) for automated, live-pipeline and UI verification, and remaining physical-device acceptance checks.
+
+See [12 October completion verification](docs/PROTOTYPE_COMPLETION_2026-10-12.md) for lesson-scoped RAG, optional posture, immutable scenario snapshots, additional workplace lessons, real-site checks and honest validation limits.
+
+## Application status
+
+The primary learner journey is integrated: create an account, review a persistent dashboard, select and prepare a scenario, complete a voice or chat roleplay, receive an assessment, and continue from updated proficiency, progress, recommendations, and training plans. Demo access is disabled by default; set `ALLOW_DEMO_ACCESS=true` only for isolated development fixtures.

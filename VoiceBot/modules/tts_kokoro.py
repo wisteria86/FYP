@@ -7,6 +7,7 @@ speech locally without requiring a GPU or network access.
 """
 # Path: modules/tts_kokoro.py
 import os
+import threading
 import urllib.request
 import numpy as np
 from typing import Iterator
@@ -39,6 +40,7 @@ class KokoroTTS(ITTSModel):
         """
         self.lang = "en-us" if lang == "a" else lang
         self.voice = voice
+        self._inference_lock=threading.Lock()
         
         # Ensure models directory exists
         self.models_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models")
@@ -51,7 +53,15 @@ class KokoroTTS(ITTSModel):
         
         try:
             with CLI.status("Loading Kokoro-ONNX TTS Model...", spinner="dots"):
-                self.kokoro = Kokoro(self.model_path, self.voices_path)
+                if hasattr(Kokoro,'from_session'):
+                    import onnxruntime as ort
+                    options=ort.SessionOptions()
+                    options.intra_op_num_threads=max(1,min(8,int(os.getenv('KOKORO_CPU_THREADS','4'))))
+                    options.inter_op_num_threads=1
+                    session=ort.InferenceSession(self.model_path,sess_options=options,providers=['CPUExecutionProvider'])
+                    self.kokoro=Kokoro.from_session(session,self.voices_path)
+                else:
+                    self.kokoro=Kokoro(self.model_path,self.voices_path)
             logger.info("Initialized Kokoro-ONNX TTS Engine.")
         except Exception as e:
             logger.error(f"Failed to initialize Kokoro-ONNX: {e}")
@@ -118,14 +128,13 @@ class KokoroTTS(ITTSModel):
                 except ImportError:
                     logger.warning("misaki[ja] is not installed. Japanese TTS may fail. Please run `pip install misaki[ja] unidic-lite`.")
 
-            # Kokoro-ONNX creates the full audio for the chunk instantly
-            samples, sample_rate = self.kokoro.create(
-                text_or_phonemes,
-                voice=self.voice,
-                speed=speed,
-                lang=self.lang,
-                is_phonemes=is_phonemes
-            )
+            # Bound CPU work and avoid overlapping inference on the shared
+            # voice engine when several playback requests arrive together.
+            with self._inference_lock:
+                samples, sample_rate = self.kokoro.create(
+                    text_or_phonemes,voice=self.voice,speed=speed,
+                    lang=self.lang,is_phonemes=is_phonemes
+                )
             
             # The samples are already a numpy array of floats
             audio_np = np.array(samples, dtype=np.float32)

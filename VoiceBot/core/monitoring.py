@@ -1,4 +1,4 @@
-"""Lightweight, privacy-safe runtime telemetry for local prototype testing."""
+"""Lightweight, privacy-safe runtime telemetry for local operation and testing."""
 from __future__ import annotations
 
 import os
@@ -101,8 +101,8 @@ class MetricsCollector:
                     "tts_chunks": matching_tts.get("chunks"),
                     "tts_realtime_factor": matching_tts.get("tts_realtime_factor"),
                     "tts_ok": matching_tts.get("ok"),
-                    "first_audio_total_ms": _round(float(latest_roleplay.get("response_ready_ms", 0)) + float(matching_tts.get("first_audio_ms") or 0)),
-                    "full_pipeline_ms": _round(float(latest_roleplay.get("response_ready_ms", 0)) + float(matching_tts.get("duration_ms") or 0)),
+                    "first_audio_total_ms": _round((0 if matching_tts.get("overlaps_response") else float(latest_roleplay.get("response_ready_ms", 0))) + float(matching_tts.get("first_audio_ms") or 0)),
+                    "full_pipeline_ms": _round((0 if matching_tts.get("overlaps_response") else float(latest_roleplay.get("response_ready_ms", 0))) + float(matching_tts.get("duration_ms") or 0)),
                 })
         return {
             "timestamp": _utc_now(),

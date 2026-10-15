@@ -21,6 +21,8 @@ soundfile
 numpy
 
 faster-whisper
+sherpa-onnx==1.13.8  # CPU ONNX recognition; optional CUDA wheel matches this version
+# Optional NVIDIA GPU streaming recognition: requirements-nemotron.txt
 openai
 kokoro-onnx
 misaki[ja]
@@ -51,3 +53,7 @@ pyopenjtalk
 #   Linux   : sudo apt install espeak-ng
 #   macOS   : brew install espeak-ng
 phonemizer
+
+# Windows faster-whisper runtime (CTranslate2 uses CUDA 12 / cuDNN 9).
+nvidia-cublas-cu12; sys_platform == "win32"
+nvidia-cudnn-cu12; sys_platform == "win32"
