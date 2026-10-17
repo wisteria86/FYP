@@ -43,6 +43,38 @@ Allow microphone access for spoken responses and camera access only if you want 
 
 The first backend start loads the available speech recognizer and selected TTS engine and may take longer. NVIDIA setup and CPU fallback are documented in [NVIDIA_SPEECH.md](docs/NVIDIA_SPEECH.md). The dashboard remains usable in a degraded text-only mode when an optional model fails to load.
 
+## Run locally on Linux
+
+From the `VoiceBot` directory, create a **Linux** virtual environment (do not reuse
+a Windows `.venv`) and install the dependencies:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+cp .env.template .env  # First setup only; configure your API key and Linux cache paths.
+cd frontend
+npm install
+npm run build
+cd ..
+bash start_hikari.sh
+```
+
+The Linux launcher uses the same supervisor and supports the same options:
+
+```bash
+bash start_hikari.sh --check
+bash start_hikari.sh --no-browser
+bash start_hikari.sh --dev
+```
+
+For direct execution, run `chmod +x start_hikari.sh` once, then `./start_hikari.sh`.
+Normal mode serves both the API and compiled frontend at `http://localhost:8000`;
+Ctrl+C stops the app. Node.js/npm are needed to build the frontend or use `--dev`,
+not to serve an already-built dashboard. Install system audio/FFmpeg dependencies
+and platform-appropriate GPU libraries for your selected speech engines; adding
+this launcher does not install them. Windows drive paths in a copied `.env` must
+be replaced with Linux paths.
+
 ## Runtime monitor
 
 Select **Monitor** in the sidebar during a test run. It refreshes every two seconds and reports:

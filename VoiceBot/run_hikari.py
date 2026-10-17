@@ -16,7 +16,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 FRONTEND = ROOT / "frontend"
-VENV_PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
+def venv_python(platform: str = os.name) -> Path:
+    return ROOT / '.venv' / ('Scripts/python.exe' if platform == 'nt' else 'bin/python')
+
+
+VENV_PYTHON = venv_python()
 
 
 def command_path(name: str) -> str | None:
@@ -37,7 +41,7 @@ def preflight(require_frontend_tools: bool = False) -> tuple[Path, str | None]:
     probe = "import importlib.util,sys; names=('fastapi','uvicorn','psutil','ChatTTS','faster_whisper'); sys.exit(0 if all(importlib.util.find_spec(n) for n in names) else 1)"
     check = subprocess.run([str(python), "-c", probe], cwd=ROOT)
     if check.returncode:
-        raise RuntimeError("Python packages are incomplete. Run: .venv\\Scripts\\python.exe -m pip install -r requirements.txt")
+        raise RuntimeError(f'Python packages are incomplete. Run: "{python}" -m pip install -r requirements.txt')
     npm = command_path("npm")
     if require_frontend_tools and not npm:
         raise RuntimeError("Development mode needs Node.js/npm. Install Node.js 20 or newer.")
@@ -90,7 +94,9 @@ def main() -> int:
         if args.check:
             print("Hikari preflight passed: Python, voice packages and the compiled dashboard are ready.")
             return 0
-        if Path(sys.executable).resolve() != python.resolve():
+        # POSIX venv interpreters are commonly symlinks to system Python.
+        # Resolving them would incorrectly skip entering the virtual environment.
+        if os.path.normcase(os.path.abspath(sys.executable)) != os.path.normcase(os.path.abspath(python)):
             os.execv(str(python), [str(python), str(Path(__file__).resolve()), *sys.argv[1:]])
         ports = (8000, 5173) if args.dev else (8000,)
         busy = [str(port) for port in ports if not port_is_free(port)]
