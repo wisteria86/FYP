@@ -4,6 +4,7 @@ import './Monitor.css'
 import Administration from './Administration'
 import { IncrementalTranscriber } from './incrementalTranscriber.mjs'
 import { StreamingTranscriber } from './streamingTranscriber.mjs'
+import { monitorMicrophone } from './micMonitor.mjs'
 
 const API = '/api'
 const api = async (path, options = {}) => {
@@ -260,7 +261,7 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
   const micStream = useRef(null), micContext = useRef(null), micFrame = useRef(null), speechSeen = useRef(false), lastSpeech = useRef(0), peakLevel = useRef(0), lastLevelReport = useRef(0), noiseFloor = useRef(.003)
   useEffect(() => { chatEnd.current?.scrollIntoView({behavior:'smooth'}) }, [session.turns, busy])
   useEffect(()=>{const update=()=>setElapsed(Math.max(0,Math.floor((Date.now()-Date.parse(session.created_at))/1000)));update();const timer=setInterval(update,1000);return()=>clearInterval(timer)},[session.created_at])
-  useEffect(() => () => { streamingCapture.current?.cancel();incrementalCapture.current?.cancel();media.current?.getTracks().forEach(t => t.stop()); micStream.current?.getTracks().forEach(t => t.stop()); if(micFrame.current)cancelAnimationFrame(micFrame.current); micContext.current?.close(); playbackContext.current?.close() }, [])
+  useEffect(() => () => { streamingCapture.current?.cancel();incrementalCapture.current?.cancel();media.current?.getTracks().forEach(t => t.stop()); micStream.current?.getTracks().forEach(t => t.stop()); micFrame.current?.(); micContext.current?.close(); playbackContext.current?.close() }, [])
   useEffect(() => {
     const refreshMicrophones = async () => {
       if (!navigator.mediaDevices?.enumerateDevices) return
@@ -438,16 +439,15 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
       const track=stream.getAudioTracks()[0], settings=track.getSettings(), device=track.label||'Default microphone'
       const devices=(await navigator.mediaDevices.enumerateDevices()).filter(item=>item.kind==='audioinput')
       setMicOptions(devices);if(!selectedMic&&settings.deviceId){setSelectedMic(settings.deviceId);localStorage.setItem('hikari-mic-id',settings.deviceId)}
-      setMicDevice(device); setMicState('listening'); setMicLevel(0); speechSeen.current=false; lastSpeech.current=0; peakLevel.current=0;lastLevelReport.current=0;noiseFloor.current=.001
+      setMicDevice(device); setMicState('listening'); setMicLevel(0); speechSeen.current=false; lastSpeech.current=0; peakLevel.current=0;lastLevelReport.current=0;noiseFloor.current=.0003
       reportMic({event:'connected',device,state:'ready',sample_rate:settings.sampleRate,channel_count:settings.channelCount})
       const AudioContext=window.AudioContext||window.webkitAudioContext
-      const context=new AudioContext(), analyser=context.createAnalyser(), source=context.createMediaStreamSource(stream)
-      analyser.fftSize=1024; analyser.smoothingTimeConstant=.35; source.connect(analyser); micContext.current=context
+      const context=new AudioContext(), source=context.createMediaStreamSource(stream)
+      micContext.current=context
       if(context.state==='suspended')await context.resume()
       if(!callActiveRef.current||mutedRef.current||modeRef.current!=='voice'){
         stream.getTracks().forEach(track=>track.stop());await context.close();micStream.current=null;micContext.current=null;return false
       }
-      const samples=new Float32Array(analyser.fftSize)
       const preferredMime=['audio/webm;codecs=opus','audio/webm'].find(type=>MediaRecorder.isTypeSupported?.(type))
       const r = preferredMime?new MediaRecorder(stream,{mimeType:preferredMime}):new MediaRecorder(stream); chunks.current=[]; started.current=performance.now(); recorder.current=r
       const decodeCapture=(blob,signal)=>{
@@ -476,7 +476,7 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
         const stoppedAt=performance.now()
         latencyTrial.current=latencyTest.current&&speechSeen.current?{speechEnd:lastSpeech.current,stopped:stoppedAt,reported:false}:null
         const captureMs=performance.now()-started.current
-        if(micFrame.current)cancelAnimationFrame(micFrame.current); micFrame.current=null
+        micFrame.current?.(); micFrame.current=null
         setRecording(false)
         if(speechSeen.current&&!discardCapture.current)setBusy(true)
         let liveResult=null
@@ -493,7 +493,13 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
           if(callActiveRef.current&&!mutedRef.current&&modeRef.current==='voice')beginListening.current?.()
         },350)
         // Quiet capture rotation must not transcribe silence or strand a connected call.
-        if(!speechSeen.current){incremental.cancel();setMicState('listening');resumeCapture();return}
+        if(!speechSeen.current){
+          incremental.cancel();setMicState('listening')
+          const warning=track.muted||peakLevel.current<.05
+            ? `No microphone audio is arriving from ${device}. Check the selected device and its hardware mute switch.`
+            : `Audio is arriving from ${device}, but speech was too quiet to detect. Check its input volume or choose another microphone.`
+          setError(warning);reportMic({event:'error',device,state:'no speech',peak_percent:peakLevel.current,error:warning});resumeCapture();return
+        }
         setMicState('transcribing');setBusy(true)
         reportMic({event:'stopped',device,state:'transcribing',duration_ms:captureMs,peak_percent:peakLevel.current})
         try {
@@ -521,23 +527,28 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
           setMicState('error');setError(e.message);reportMic({event:'error',device,state:'error',duration_ms:captureMs,peak_percent:peakLevel.current,error:e.message});setBusy(false);resumeCapture()
         }
       }
-      const analyse=()=>{
-        analyser.getFloatTimeDomainData(samples)
-        const rms=Math.sqrt(samples.reduce((sum,value)=>sum+value*value,0)/samples.length)
+      const analyse=rms=>{
+        if(r.state!=='recording')return
         const level=Math.min(100,rms*500);peakLevel.current=Math.max(peakLevel.current,level);setMicLevel(level)
         const now=performance.now()
         const elapsed=now-started.current
-        if(elapsed<350&&!speechSeen.current)noiseFloor.current=noiseFloor.current*.8+rms*.2
-        const threshold=Math.max(.0012,Math.min(.012,noiseFloor.current*1.8)),thresholdPercent=Math.min(100,threshold*500)
+        // Do not calibrate the learner's first words as background noise.
+        if(elapsed<350&&!speechSeen.current&&rms<.0006)noiseFloor.current=noiseFloor.current*.8+rms*.2
+        const threshold=Math.max(.0006,Math.min(.006,noiseFloor.current*1.8)),thresholdPercent=Math.min(100,threshold*500)
         if(now-lastLevelReport.current>500){lastLevelReport.current=now;reportMic({event:'level',device,state:speechSeen.current?'speech detected':'listening',duration_ms:elapsed,level_percent:level,peak_percent:peakLevel.current,threshold_percent:thresholdPercent})}
-        if(elapsed>250&&rms>threshold){lastSpeech.current=now;if(!speechSeen.current){speechSeen.current=true;setMicState('speech detected');reportMic({event:'speech_detected',device,state:'recording',duration_ms:elapsed,level_percent:level,threshold_percent:thresholdPercent})}}
+        if(rms>threshold){lastSpeech.current=now;if(!speechSeen.current){speechSeen.current=true;setError('');setMicState('speech detected');reportMic({event:'speech_detected',device,state:'recording',duration_ms:elapsed,level_percent:level,threshold_percent:thresholdPercent})}}
         if(speechSeen.current&&now-lastSpeech.current>500&&elapsed>1200&&r.state==='recording')r.stop()
         else if(speechSeen.current&&elapsed>maxAnswerMs&&r.state==='recording')r.stop()
         else if(!speechSeen.current&&elapsed>8000&&r.state==='recording')r.stop()
-        else micFrame.current=requestAnimationFrame(analyse)
       }
-      r.start(100); setRecording(true);reportMic({event:'listening',device,state:'listening'});micFrame.current=requestAnimationFrame(analyse);return true
+      started.current=performance.now()
+      r.start(100); setRecording(true);reportMic({event:'listening',device,state:'listening'})
+      micFrame.current=monitorMicrophone(context,source,analyse,error=>{
+        setError(error.message);reportMic({event:'error',device,state:'error',error:error.message})
+        if(r.state==='recording')r.stop()
+      });return true
     } catch(e) {
+      micFrame.current?.();micFrame.current=null
       micStream.current?.getTracks().forEach(track=>track.stop());micStream.current=null
       if(micContext.current)await micContext.current.close().catch(()=>{});micContext.current=null
       setMicState('error');setError(`Microphone unavailable: ${e.message}`);reportMic({event:'error',state:'error',error:e.message});return false
@@ -642,7 +653,7 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
     <div className="session-body">
       <section className="session-call-area">
         {error&&<div className="session-error">{error}</div>}
-        {sessionProgress&&<div className={`session-progress ${sessionProgress.outcome}`}><strong>{sessionProgress.outcome==='success'?'Mastered':'Keep learning'}</strong><span>{sessionProgress.progress_percent}% · {sessionProgress.meaningful_turns}/{sessionProgress.minimum_turns} meaningful responses{sessionProgress.missing?.length?` · Next: ${sessionProgress.missing[0]}`:''}</span></div>}
+        {sessionProgress&&<div className={`session-progress ${sessionProgress.outcome}`}><strong>{sessionProgress.outcome==='success'?'Objectives achieved':'Keep learning'}</strong><span>{sessionProgress.criteria?.filter(item=>item.met).length || 0}/{sessionProgress.criteria?.length || 0} objectives{sessionProgress.missing?.length?` · Next: ${sessionProgress.missing[0]}`:''}{sessionProgress.evaluation_mode?` · ${sessionProgress.evaluation_mode}`:''}</span></div>}
         {mode==='voice'?<div className={`participant-stage ${multipleAI?'participant-grid':'single-participant'}`}>
           {multipleAI?<>{aiParticipants.map((person,index)=>participantTile(person,index))}{participantTile(participants.find(person=>person.participant_type==='learner')||{display_name:'You'},aiParticipants.length,true)}</>:<>
             <div className={`hero-participant ${voiceState==='speaking'||voiceState==='streaming'?'speaking':''}`}><div className="hero-rings"><span>●</span></div><b>{callStatus}</b><small>{aiParticipants[0]?.display_name||session.counterpart}</small></div>

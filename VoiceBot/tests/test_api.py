@@ -18,6 +18,49 @@ from services.auth_service import AuthService
 
 
 class ApiTests(unittest.TestCase):
+    def test_semantic_completion_is_used_for_stream_reply_and_persisted_assessment(self):
+        quote='Good day! Call me Visteria. It was a pleasure meeting you; take care.'
+        class Judge:
+            def evaluate_objectives(self,prompt):
+                return {'criteria':[{'name':name,'met':True,'evidence':[quote]} for name in json.loads(prompt)['criteria']]}
+            def generate_contextual_response(self,prompt):
+                raise AssertionError('Do not ask another question after semantic success')
+        class FakeTTS:
+            def synthesize_streaming(self,text,speed=1.0):
+                yield np.zeros(2400,dtype=np.float32).tobytes()
+        server._llm_model=Judge();server._tts_model=FakeTTS()
+        created=self.client.post('/api/sessions',json={'skill_id':'english-speaking','activity_id':'english-01'}).json()
+        response=self.client.post(f"/api/sessions/{created['id']}/voice-stream",json={'text':quote})
+        events=[json.loads(line) for line in response.text.splitlines() if line]
+        result=next(event['result'] for event in events if event['type']=='result')
+        self.assertEqual(result['session_progress']['evaluation_mode'],'meaning-based review')
+        self.assertEqual(result['session_progress']['outcome'],'success')
+        self.assertNotIn('?',result['text'])
+        self.assertTrue(result['assessment'])
+        self.assertEqual(server.training.session(created['id'])['status'],'completed')
+        self.assertEqual(self.client.post(f"/api/sessions/{created['id']}/complete").status_code,200)
+
+    def test_complete_answer_streams_closing_without_another_llm_question(self):
+        class UnexpectedLLM:
+            def generate_contextual_response(self, prompt):
+                raise AssertionError('Completed objectives must not generate another question')
+        class FakeTTS:
+            def __init__(self): self.texts=[]
+            def synthesize_streaming(self,text,speed=1.0):
+                self.texts.append(text)
+                yield np.zeros(2400,dtype=np.float32).tobytes()
+        server._llm_model=UnexpectedLLM()
+        server._tts_model=FakeTTS()
+        created=self.client.post('/api/sessions',json={'skill_id':'english-speaking','activity_id':'english-01'}).json()
+        response=self.client.post(f"/api/sessions/{created['id']}/voice-stream",json={'text':'Hello, my name is Maya. Goodbye!'})
+        events=[json.loads(line) for line in response.text.splitlines() if line]
+        result=next(event['result'] for event in events if event['type']=='result')
+        self.assertEqual(result['session_progress']['outcome'],'success')
+        self.assertEqual(server.training.session(created['id'])['status'],'completed')
+        self.assertEqual(len(result['responses']),1)
+        self.assertTrue(server._tts_model.texts)
+        self.assertTrue(all('?' not in text for text in server._tts_model.texts))
+
     def test_partial_transcription_is_provisional_and_does_not_create_turns(self):
         class FakeSTT:
             def transcribe_detailed(self,data,language,context):

@@ -72,6 +72,11 @@ def workplace_targets(skill_id, objectives):
 
 def observe(target, turns):
     patterns=target.get('patterns',[])
+    if target['name']=='introduce yourself':
+        # Speech often produces "the name is". Conversely, "I'm fine" or
+        # "I am doing well" describes feelings, not the learner's identity.
+        patterns=[r"\b(?:(?:my |the )?name is|call me)\s+[a-z]+",
+                  r"\b(?:i am|i'm)\s+(?!(?:fine|doing|well|happy|good|sorry|glad|from|a|an|the|not|here|ready|okay|ok|tired|hungry|excited)\b)[a-z]+\b"]
     matched=[pattern for pattern in patterns if any(re.search(pattern,text,re.I) or
              re.search(pattern.replace(r'[^?]*\?',''),text,re.I) for text in turns)]
     required=target.get('required_hits',1)

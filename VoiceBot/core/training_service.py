@@ -21,6 +21,8 @@ class TrainingService:
     _owners = {'_initialize': 'catalog', '_seed_platform_catalog': 'catalog', '_seed_english_curriculum': 'catalog', 'skills': 'catalog', '_activity': 'catalog', 'activities': 'catalog', 'resources': 'catalog', 'scenario_preview': 'scenario', 'prompt': 'scenario', 'fallback_reply': 'scenario', 'create_session': 'session', 'session': 'session', 'add_turn': 'session', 'response_speakers': 'session', 'evaluate_progress': 'session', 'caption_preferences': 'session', 'set_opening_caption': 'session', 'add_posture': 'session', 'assessment_prompt': 'assessment', 'assess': 'assessment', '_assessment_dict': 'assessment', 'dashboard': 'progress', 'history': 'progress', 'plan': 'adaptive', 'add_document': 'knowledge', 'documents': 'knowledge', 'delete_document': 'knowledge', 'search': 'knowledge'}
     plan = staticmethod(AdaptiveTrainingService.plan)
     _owners['cancel_session'] = 'session'
+    _owners['completion_review_prompt'] = 'session'
+    _owners['save_completion_review'] = 'session'
 
     def __init__(self, database_path):
         self.path = Path(database_path)

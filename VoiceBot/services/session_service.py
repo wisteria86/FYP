@@ -90,6 +90,7 @@ class SessionService(ApplicationService):
                 result["learning_design"] = variables.get("learningDesign")
             snapshot=json.loads(result.pop('scenario_snapshot_json',None) or '{}')
             result['success_criteria']=snapshot.get('success_criteria',result['objectives'])
+            result['completion_review']=snapshot.get('completion_review')
             if snapshot:
                 for key in ('title','description','situation','objectives','learning_design','difficulty','roleplay_mode','scenario_type','training_language','sequence_number','posture_mode','posture_enabled','knowledge_mode','document_ids','knowledge_evidence','adaptation_reason','previous_feedback'):
                     if key in snapshot:result[key]=snapshot[key]
@@ -156,35 +157,30 @@ class SessionService(ApplicationService):
         minimum_turns = int(design.get("minimum_turns") or {"beginner": 3, "intermediate": 4, "advanced": 5}.get(level, 4))
         word_target = int(design.get("word_target") or {"beginner": 12, "intermediate": 28, "advanced": 45}.get(level, 28))
         valid_turns = distinct_turns(user_turns)
-        all_text = " ".join(user_turns).lower()
         word_count = len(_words(' '.join(valid_turns)))
-        def target_match(pattern: str) -> bool:
-            # Whisper punctuation is intentionally not trusted. A spoken
-            # question still demonstrates the target when no '?' is emitted.
-            return bool(
-                re.search(pattern, all_text, re.IGNORECASE)
-                or re.search(pattern.replace(r"[^?]*\?", ""), all_text, re.IGNORECASE)
-            )
         targets = design.get('targets') or workplace_targets(session['skill_id'], session['objectives'])
         if not design and session.get('success_criteria',session['objectives'])!=session['objectives']:
             targets=workplace_targets('__custom__',session['success_criteria'])
         criteria = [observe(target, valid_turns) for target in targets]
         if session['skill_id']=='company-knowledge':
             criteria=self.context.knowledge.policy_observations(session,valid_turns)
-        enough_turns = len(valid_turns) >= minimum_turns
-        enough_words = word_count >= word_target
-        criteria_met = all(item["met"] for item in criteria) if criteria else True
-        success = enough_turns and enough_words and criteria_met
+        review=session.get('completion_review') or {}
+        semantic = (session['skill_id']!='company-knowledge' and
+                    review.get('user_turn_count')==len(user_turns) and
+                    {item['name'] for item in criteria}=={item['name'] for item in review.get('criteria',[])})
+        if semantic:
+            by_name={item['name']:item for item in review['criteria']}
+            criteria=[by_name[item['name']] for item in criteria]
+        # Counts are practice guidance, not a reason to reject a complete answer.
+        # Replaying the same answer cannot manufacture additional evidence.
+        repeated_only = not semantic and len(user_turns) > 1 and len(valid_turns) == 1
+        criteria_met = bool(criteria) and all(item["met"] for item in criteria)
+        success = bool(valid_turns) and criteria_met and not repeated_only
         missing = [item["name"] for item in criteria if not item["met"]]
-        if not enough_turns:
-            missing.append(f"{minimum_turns - len(valid_turns)} more meaningful response(s)")
-        if not enough_words:
-            missing.append(f"about {word_target - word_count} more spoken word(s)")
+        if repeated_only and criteria_met:
+            missing.append('Apply these skills in a new reply rather than repeating the same answer')
         progress = min(99 if not success else 100, round(
-            (min(len(valid_turns) / max(minimum_turns, 1), 1) * .35
-             + min(word_count / max(word_target, 1), 1) * .25
-             + ((sum(item["met"] for item in criteria) / len(criteria)) if criteria else 1) * .40) * 100
-        ))
+            sum(item['met'] for item in criteria) / max(1, len(criteria)) * 100))
         return {
             "outcome": "success" if success else "failure",
             "continue_session": not success,
@@ -197,7 +193,50 @@ class SessionService(ApplicationService):
             "missing": missing,
             "learning_focus": design.get("focus"),
             "examples": design.get("examples", []),
+            "evaluation_mode": 'meaning-based review' if semantic else 'rule-based fallback',
         }
+
+    def completion_review_prompt(self, session_id: str) -> str:
+        session=self.session(session_id)
+        progress=self.evaluate_progress(session_id)
+        # Role labels distinguish learner evidence from questions/model answers.
+        turns=[{'role':t['role'],'speaker':t.get('speaker_name'),'text':t['text']} for t in session['turns']]
+        return _json({'lesson':session['title'],'situation':session['situation'],
+                      'objectives':session['objectives'],'criteria':[c['name'] for c in progress['criteria']],
+                      'transcript':turns})
+
+    def save_completion_review(self, session_id: str, review: dict, user_turn_count: int) -> bool:
+        """Validate an advisory model decision before making it authoritative.
+
+        Bind it to this learner-turn revision, require the whole rubric, and
+        reject invented/assistant-only evidence. Source-policy rules stay local.
+        """
+        if not isinstance(review,dict) or not isinstance(review.get('criteria'),list):return False
+        session=self.session(session_id)
+        if session['skill_id']=='company-knowledge' or session['status']!='active':return False
+        turns=[t['text'] for t in session['turns'] if t['role']=='user']
+        if len(turns)!=user_turn_count:return False
+        expected={c['name'] for c in self.evaluate_progress(session_id)['criteria']}
+        clean=[];seen=set()
+        normalize=lambda text:' '.join(text.casefold().split())
+        for item in review['criteria']:
+            if not isinstance(item,dict):return False
+            name=item.get('name');met=item.get('met');quotes=item.get('evidence')
+            if not isinstance(name,str) or name not in expected or name in seen or type(met) is not bool or not isinstance(quotes,list):return False
+            seen.add(name)
+            if any(not isinstance(q,str) or len(q.strip())<2 or not any(normalize(q) in normalize(t) for t in turns) for q in quotes):return False
+            if met and not quotes:return False
+            clean.append({'name':name,'met':met,'evidence':quotes[:3],'source':'semantic'})
+        if seen!=expected or not expected:return False
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            row=db.execute("SELECT scenario_snapshot_json FROM sessions WHERE id=? AND status='active'",(session_id,)).fetchone()
+            count=db.execute("SELECT COUNT(*) FROM turns WHERE session_id=? AND role='user'",(session_id,)).fetchone()[0]
+            if not row or count!=user_turn_count:return False
+            snapshot=json.loads(row[0] or '{}')
+            snapshot['completion_review']={'user_turn_count':count,'criteria':clean}
+            db.execute('UPDATE sessions SET scenario_snapshot_json=? WHERE id=?',(_json(snapshot),session_id))
+        return True
 
     def caption_preferences(self, session_id: str) -> dict[str, Any]:
         session = self.session(session_id)

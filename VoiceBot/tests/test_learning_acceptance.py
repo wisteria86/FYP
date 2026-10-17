@@ -28,6 +28,83 @@ class LearningAcceptanceTests(unittest.TestCase):
             self.training.add_turn(session['id'],'user',line)
         self.assertEqual(self.training.evaluate_progress(session['id'])['outcome'],'success')
 
+    def test_complete_concise_answer_does_not_need_word_or_turn_quota(self):
+        session=self.training.create_session('demo','english-speaking','beginner','english-01')
+        self.training.add_turn(session['id'],'user','Hello, my name is Maya. Goodbye!')
+        progress=self.training.evaluate_progress(session['id'])
+        self.assertEqual(progress['outcome'],'success')
+        self.assertLess(progress['word_count'],progress['word_target'])
+        self.assertEqual(progress['missing'],[])
+        self.assertNotIn('?',self.training.fallback_reply(session['id']))
+
+    def test_completion_review_accepts_paraphrases_and_is_persisted(self):
+        session=self.training.create_session('demo','english-speaking','beginner','english-01')
+        quote='Good day! Call me Visteria. It was a pleasure to meet you; take care.'
+        self.training.add_turn(session['id'],'user',quote)
+        criteria=self.training.evaluate_progress(session['id'])['criteria']
+        review={'criteria':[{'name':c['name'],'met':True,'evidence':[quote]} for c in criteria]}
+        self.assertTrue(self.training.save_completion_review(session['id'],review,1))
+        reloaded=TrainingService(self.training.path)
+        progress=reloaded.evaluate_progress(session['id'])
+        self.assertEqual(progress['outcome'],'success')
+        self.assertEqual(progress['evaluation_mode'],'meaning-based review')
+        self.assertFalse(progress['missing'])
+
+    def test_review_can_reject_keyword_only_answer(self):
+        session=self.training.create_session('demo','english-speaking','beginner','english-01')
+        self.training.add_turn(session['id'],'user','The words are hello, my name is Alex, and goodbye. I refuse to introduce myself.')
+        criteria=self.training.evaluate_progress(session['id'])['criteria']
+        review={'criteria':[{'name':c['name'],'met':False,'evidence':[]} for c in criteria]}
+        self.assertTrue(self.training.save_completion_review(session['id'],review,1))
+        self.assertEqual(self.training.evaluate_progress(session['id'])['outcome'],'failure')
+
+    def test_completion_review_rejects_invented_or_assistant_only_evidence(self):
+        session=self.training.create_session('demo','english-speaking','beginner','english-01')
+        self.training.add_turn(session['id'],'user','I need some help.')
+        criteria=self.training.evaluate_progress(session['id'])['criteria']
+        for quote in ['I am a completely invented quotation.',session['turns'][0]['text']]:
+            review={'criteria':[{'name':c['name'],'met':True,'evidence':[quote]} for c in criteria]}
+            self.assertFalse(self.training.save_completion_review(session['id'],review,1))
+        self.assertFalse(self.training.save_completion_review(session['id'],{'criteria':[]},1))
+
+    def test_completion_review_cannot_apply_to_a_newer_learner_turn(self):
+        session=self.training.create_session('demo','english-speaking','beginner','english-01')
+        self.training.add_turn(session['id'],'user','Hi, my name is Maya.')
+        criteria=self.training.evaluate_progress(session['id'])['criteria']
+        review={'criteria':[{'name':c['name'],'met':False,'evidence':[]} for c in criteria]}
+        self.assertTrue(self.training.save_completion_review(session['id'],review,1))
+        self.training.add_turn(session['id'],'user','Goodbye, see you soon.')
+        self.assertFalse(self.training.save_completion_review(session['id'],review,1))
+        self.assertEqual(self.training.evaluate_progress(session['id'])['evaluation_mode'],'rule-based fallback')
+
+    def test_incomplete_answer_requests_objective_not_more_words(self):
+        session=self.training.create_session('demo','english-speaking','beginner','english-01')
+        self.training.add_turn(session['id'],'user','Hello, my name is Maya.')
+        progress=self.training.evaluate_progress(session['id'])
+        self.assertEqual(progress['missing'],['close politely'])
+
+    def test_feeling_is_not_identity_but_natural_name_paraphrase_is(self):
+        session=self.training.create_session('demo','english-speaking','beginner','english-01')
+        self.training.add_turn(session['id'],'user',"Hi, I'm fine. Goodbye.")
+        self.assertIn('introduce yourself',self.training.evaluate_progress(session['id'])['missing'])
+        self.training.add_turn(session['id'],'user','The name is Visteria.')
+        self.assertEqual(self.training.evaluate_progress(session['id'])['outcome'],'success')
+
+    def test_prompt_keeps_early_commitments_and_avoids_forced_drills(self):
+        session=self.training.create_session('demo','english-speaking','beginner','english-01')
+        self.training.add_turn(session['id'],'user','My name is Visteria and I live next door.')
+        for index in range(14):
+            self.training.add_turn(session['id'],'assistant',f'Context {index}.')
+        prompt=self.training.prompt(session['id'])
+        self.assertIn('Visteria',prompt)
+        self.assertIn('Never contradict',prompt)
+        self.assertNotIn('say exactly "A more natural way',prompt)
+
+    def test_opening_identity_matches_context(self):
+        preview=self.training.scenario_preview('demo','english-speaking','beginner','english-02')
+        self.assertIn("I'm Maya",preview['opening'])
+        self.assertIn('Your partner is Maya',preview['situation'])
+
     def test_greeting_fallback_advances_without_treating_feeling_as_name(self):
         session=self.training.create_session('demo','english-speaking','beginner','english-01')
         self.training.add_turn(session['id'],'user','Hello, my name is Alex.')

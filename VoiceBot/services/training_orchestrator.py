@@ -30,6 +30,21 @@ class TrainingOrchestrator:
                 if not set(session['document_ids']).issubset(ready):
                     raise DomainError('document_unavailable','Selected policy documents are no longer available. Prepare a new lesson.',status_code=409)
             self.training.add_turn(session_id, "user", payload.text, payload.duration_seconds)
+            # One shared, persisted judgement precedes dialogue and auto-close.
+            # Bound the extra work; offline/unsupported providers retain local
+            # evidence rules rather than freezing a call waiting for a judge.
+            if self.llm and hasattr(self.llm,'evaluate_objectives') and session['skill_id']!='company-knowledge':
+                review_started=time.perf_counter()
+                try:
+                    count=sum(t['role']=='user' for t in session['turns'])+1
+                    review=await asyncio.wait_for(asyncio.to_thread(
+                        self.llm.evaluate_objectives,self.training.completion_review_prompt(session_id)),timeout=3.5)
+                    accepted=self.training.save_completion_review(session_id,review,count)
+                    self.metrics.record('completion','objective review',(time.perf_counter()-review_started)*1000,accepted)
+                except Exception as exc:
+                    logger.warning('Completion review unavailable; retaining local evidence checks: %s',type(exc).__name__)
+                    self.metrics.record('completion','objective review',(time.perf_counter()-review_started)*1000,False,error_type=type(exc).__name__)
+            turn_progress = self.training.evaluate_progress(session_id)
             stage_started = time.perf_counter()
             ids=session.get('document_ids')
             if session.get('knowledge_mode','off')=='off':sources=[]
@@ -79,10 +94,19 @@ class TrainingOrchestrator:
                 run.cancel=cancelled.set
                 return run
     
-            for speaker in self.training.response_speakers(session_id):
+            speakers = self.training.response_speakers(session_id)
+            if turn_progress['outcome'] == 'success':
+                speakers = speakers[:1]
+            for speaker in speakers:
                 reply = ""
                 caption_text = None
-                if self.llm:
+                if turn_progress['outcome'] == 'success':
+                    # Decide before streaming: a completed scene must not speak a
+                    # fresh question and then abruptly disappear into results.
+                    reply = self.training.fallback_reply(session_id, speaker)
+                    if sentence_callback:
+                        sentence_callback(reply, speaker['name'])
+                elif self.llm:
                     prompt = self.training.prompt(session_id, sources, speaker)
                     runner = generate_timed(prompt)
                     try:

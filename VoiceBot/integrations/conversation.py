@@ -7,4 +7,7 @@ class ConversationAdapter:
         return {'context': ''.join(self.generate_response(context))}
     def evaluate_conversation(self, context): return self.provider.evaluate_english(context)
     def evaluate_english(self, context): return self.evaluate_conversation(context)
+    def evaluate_objectives(self, context):
+        if not hasattr(self.provider,'evaluate_objectives'):return None
+        return self.provider.evaluate_objectives(context)
     def translate_caption(self, text, language): return self.provider.translate_caption(text, language)
