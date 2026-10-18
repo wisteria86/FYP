@@ -68,6 +68,18 @@ def _persist_runtime_settings(updates):
         temporary.write_text(json.dumps(data,indent=2),encoding='utf-8')
         temporary.replace(_settings_path)
 _engine_catalog = {
+    "piper": {
+        "name": "Piper English", "language": "English",
+        "description": "Amy Low voice on CPU. Downloads its model on first selection.",
+        "default": False, "download_on_select": True, "latency_label": "Benchmark on this PC",
+        "features": ["Local CPU synthesis", "Amy US English voice", "Sherpa-ONNX runtime"],
+    },
+    "kitten": {
+        "name": "Kitten Nano INT8", "language": "English",
+        "description": "Compact English voice on CPU. Downloads its model on first selection.",
+        "default": False, "download_on_select": True, "latency_label": "Benchmark on this PC",
+        "features": ["Local CPU synthesis", "INT8 model", "Sherpa-ONNX runtime"],
+    },
     "kokoro": {
         "name": "Kokoro",
         "language": "English (Multi-voice)",
@@ -160,6 +172,9 @@ def _authorized_session(request: Request, session_id: str) -> dict:
 
 
 def _engine_installed(engine: str) -> bool:
+    if engine in {"piper", "kitten"}:
+        from modules.tts_english import installed
+        return installed(engine)
     if engine == "chattts":
         return (ROOT / "asset" / "gpt" / "model.safetensors").exists() or (ROOT / Config.CHAT_TTS_CACHE_DIR).exists()
     if engine == "kokoro":
@@ -170,6 +185,9 @@ def _engine_installed(engine: str) -> bool:
 
 def _build_tts_engine(engine: str, voice: Optional[str] = None):
     global _current_kokoro_voice
+    if engine in {"piper", "kitten"}:
+        from modules.tts_english import EnglishOnnxTTS
+        return EnglishOnnxTTS(engine)
     if engine == "chattts":
         from modules.tts_chattts import ChatTTSModel
         return ChatTTSModel(
@@ -322,16 +340,12 @@ def _load_models() -> None:
     try:
         from modules.stt_router import create_stt
         preferences=_saved_settings()
-        try:
-            _stt_model = create_stt(engine=preferences.get('stt_engine'),device=preferences.get('stt_device'))
-        except Exception:
-            logger.exception('Saved recognizer unavailable; using automatic fallback')
-            _stt_model=create_stt(engine='auto',device='auto')
+        _stt_model = create_stt(engine=preferences.get('stt_engine'),device=preferences.get('stt_device'))
         metrics.set_model_load("stt", (time.perf_counter() - started) * 1000, True)
     except Exception as exc:
         metrics.set_model_load("stt", (time.perf_counter() - started) * 1000, False)
         _model_errors["stt"] = str(exc)
-        logger.exception("Whisper unavailable; typed roleplay remains enabled")
+        logger.exception("Speech recognition unavailable; typed roleplay remains enabled")
     started = time.perf_counter()
     try:
         _activate_tts_engine(_engine_name, persist=False)
@@ -611,23 +625,28 @@ async def voice_turn_stream(session_id: str, payload: RoleplayTurn, request: Req
                     sentence, speaker = await asyncio.wait_for(queue.get(), timeout=.1)
                 except asyncio.TimeoutError:
                     continue
+                sentence_ready_ms = (time.perf_counter() - started) * 1000
+                if not audio_count:
+                    logger.info('Voice turn first_sentence_ms=%.1f', sentence_ready_ms)
                 yield json.dumps({'type':'speech_text','speaker':speaker,'text':sentence})+'\n'
                 async for pcm in audio_chunks(synthesize, sentence):
                     audio_count += 1
                     samples += len(pcm) // 4
                     if first_audio_ms is None:
                         first_audio_ms = (time.perf_counter() - started) * 1000
-                    yield json.dumps({"type": "audio", "speaker": speaker, "audio_b64": base64.b64encode(_pcm_to_wav(pcm, sample_rate)).decode("ascii")}) + "\n"
+                        logger.info('Voice turn first_audio_ms=%.1f first_synthesis_ms=%.1f', first_audio_ms, first_audio_ms - sentence_ready_ms)
+                    yield json.dumps({"type": "audio", "speaker": speaker, "audio_b64": base64.b64encode(_pcm_to_wav(pcm, sample_rate)).decode("ascii"), "tts_timing": getattr(pcm, "tts_timing", None), "kokoro_timing": getattr(pcm, "timing", None), "timing": {"first_sentence_ms": round(sentence_ready_ms, 1), "first_audio_ms": round(first_audio_ms, 1), "first_synthesis_ms": round(first_audio_ms - sentence_ready_ms, 1)} if audio_count == 1 else None}) + "\n"
             result = await task
             if not audio_count:
                 for response in result["responses"]:
+                    sentence_ready_ms = (time.perf_counter() - started) * 1000
                     yield json.dumps({'type':'speech_text','speaker':response['speaker'],'text':response['text']})+'\n'
                     async for pcm in audio_chunks(synthesize, response["text"]):
                         audio_count += 1
                         samples += len(pcm) // 4
                         if first_audio_ms is None:
                             first_audio_ms = (time.perf_counter() - started) * 1000
-                        yield json.dumps({"type": "audio", "speaker": response["speaker"], "audio_b64": base64.b64encode(_pcm_to_wav(pcm, sample_rate)).decode("ascii")}) + "\n"
+                        yield json.dumps({"type": "audio", "speaker": response["speaker"], "audio_b64": base64.b64encode(_pcm_to_wav(pcm, sample_rate)).decode("ascii"), "tts_timing": getattr(pcm, "tts_timing", None), "kokoro_timing": getattr(pcm, "timing", None), "timing": {"first_sentence_ms": round(sentence_ready_ms, 1), "first_audio_ms": round(first_audio_ms, 1), "first_synthesis_ms": round(first_audio_ms - sentence_ready_ms, 1)} if audio_count == 1 else None}) + "\n"
             metrics.record("tts", "streamed speech", (time.perf_counter() - started) * 1000,
                            audio_count > 0, correlation_id=result.get("correlation_id"),
                            engine=_engine_name, first_audio_ms=first_audio_ms,
@@ -672,7 +691,7 @@ def stream_tts(request: TTSRequest):
                 samples += len(pcm) // 4
                 chunks += 1
                 wav = _pcm_to_wav(pcm, sample_rate)
-                yield json.dumps({"type": "audio", "audio_b64": base64.b64encode(wav).decode("ascii"), "index": chunks, "engine": engine}) + "\n"
+                yield json.dumps({"type": "audio", "audio_b64": base64.b64encode(wav).decode("ascii"), "index": chunks, "engine": engine, "tts_timing": getattr(pcm, "tts_timing", None)}) + "\n"
             total_ms = (time.perf_counter() - started) * 1000
             audio_seconds = samples / sample_rate
             ok = chunks > 0
@@ -741,7 +760,10 @@ def posture_alias(session_id: str, sample: PostureSample, request: Request):
 
 @app.post("/api/transcribe")
 async def transcribe(file: UploadFile = File(...), language: str | None = Form(None),
-                     context: str | None = Form(None), duration_ms: float = Form(0), partial: bool = Form(False)):
+                     context: str | None = Form(None), duration_ms: float = Form(0), partial: bool = Form(False),
+                     decoding_method: str | None = Form(None)):
+    if decoding_method is not None and decoding_method not in {'greedy_search','modified_beam_search'}:
+        raise HTTPException(422,'Invalid decoding technique')
     if _stt_model is None:
         raise HTTPException(503, "Speech recognition is unavailable. You can continue by typing.")
     data = await file.read()
@@ -755,6 +777,10 @@ async def transcribe(file: UploadFile = File(...), language: str | None = Form(N
         if hasattr(_stt_model, "transcribe_detailed"):
             def recognize():
                 with _stt_activity.use():
+                    if decoding_method and language_code in {'en','English'}:
+                        if not hasattr(_stt_model,'decoder_for'):
+                            raise RuntimeError('Select Nemotron to choose a decoding technique')
+                        return _stt_model.decoder_for(decoding_method).transcribe_detailed(data,language_code,context)
                     return _stt_model.transcribe_detailed(data,language_code,context)
             result = await asyncio.get_running_loop().run_in_executor(None,recognize)
         else:
@@ -776,6 +802,51 @@ async def transcribe(file: UploadFile = File(...), language: str | None = Form(N
         if isinstance(exc, RuntimeError):
             raise HTTPException(503, str(exc)) from exc
         raise
+
+
+@app.post('/api/stt/session-decoder')
+async def prepare_session_decoder(request: Request, decoding_method: str):
+    _authorized_user_id(request)
+    if decoding_method not in {'greedy_search','modified_beam_search'}:
+        raise HTTPException(422,'Invalid decoding technique')
+    def prepare():
+        with _stt_activity.use():
+            if not hasattr(_stt_model,'decoder_for'):
+                raise RuntimeError('Select Nemotron to choose a decoding technique')
+            return _stt_model.decoder_for(decoding_method).runtime_info()
+    try:return await asyncio.to_thread(prepare)
+    except RuntimeError as exc:raise HTTPException(503,str(exc)) from exc
+
+
+@app.post('/api/stt/compare-decoders')
+async def compare_stt_decoders(request: Request, file: UploadFile = File(...),
+                               methods: str = Form('["greedy_search","modified_beam_search"]'),
+                               beam_width: int = Form(4)):
+    _authorized_user_id(request)
+    from services.decoder_comparison import compare_decoders, METHODS
+    try:selected=json.loads(methods)
+    except ValueError:raise HTTPException(422,'Invalid decoder selection')
+    if (not isinstance(selected,list) or not selected or len(selected)>2
+            or any(not isinstance(item,str) or item not in METHODS for item in selected)
+            or len(set(selected))!=len(selected) or not 1<=beam_width<=8):
+        raise HTTPException(422,'Select one or both decoders, with beam width between 1 and 8')
+    data=await file.read()
+    if not data:raise HTTPException(422,'Record audio before comparing decoders')
+    if len(data)>10*1024*1024:raise HTTPException(413,'Recording must be smaller than 10 MB')
+    def benchmark():
+        # Exclusive lease prevents switching or competing live capture during
+        # comparison; each disposable process contains native decoder failures.
+        with _stt_activity.switch():
+            primary=getattr(_stt_model,'primary',_stt_model)
+            if primary is None or getattr(primary,'engine',None)!='nemotron':
+                raise ValueError('Select Nemotron before running decoder comparisons')
+            return compare_decoders(data,selected,primary.model_dir,primary.device,
+                                    primary.cpu_threads,beam_width)
+    try:
+        results=await asyncio.to_thread(benchmark)
+        return {'results':results,'same_audio':True}
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
+    except RuntimeError as exc:raise HTTPException(409,str(exc)) from exc
 
 
 @app.get("/api/documents")

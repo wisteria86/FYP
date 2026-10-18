@@ -1,10 +1,6 @@
 python-dotenv
 setuptools<81  # webrtcvad imports the legacy pkg_resources module
 
-# RTX 50-series CUDA build (driver supports CUDA 13.x)
---extra-index-url https://download.pytorch.org/whl/cu130
-torch==2.13.0+cu130
-torchaudio==2.11.0+cu130
 
 # --- Web API server (api/server.py → React frontend) ---
 fastapi
@@ -21,13 +17,14 @@ soundfile
 numpy
 
 faster-whisper
+av<17  # faster-whisper 1.2.1 calls av.open(metadata_errors=...), removed in newer PyAV
 sherpa-onnx==1.13.8  # CPU ONNX recognition; optional CUDA wheel matches this version
 # Optional NVIDIA GPU streaming recognition: requirements-nemotron.txt
 openai
 kokoro-onnx
 misaki[ja]
 unidic-lite
-ChatTTS
+#ChatTTS
 transformers==4.41.2  # ChatTTS 0.2.5 is incompatible with Transformers 5.x
 requests  # required at ChatTTS import time but omitted by ChatTTS 0.2.5 metadata
 webrtcvad
@@ -53,7 +50,3 @@ pyopenjtalk
 #   Linux   : sudo apt install espeak-ng
 #   macOS   : brew install espeak-ng
 phonemizer
-
-# Windows faster-whisper runtime (CTranslate2 uses CUDA 12 / cuDNN 9).
-nvidia-cublas-cu12; sys_platform == "win32"
-nvidia-cudnn-cu12; sys_platform == "win32"

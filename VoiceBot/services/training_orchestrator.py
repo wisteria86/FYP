@@ -17,6 +17,46 @@ logger = logging.getLogger(__name__)
 
 
 class TrainingOrchestrator:
+    # Orchestrators are created per request; reviews must survive that lifetime.
+    _objective_reviews = {}
+
+    def _consume_objective_review(self, session_id, session):
+        key = (id(self.training), session_id)
+        pending = self._objective_reviews.get(key)
+        if pending is None or not pending[0].done():
+            return
+        future, count, started = self._objective_reviews.pop(key)
+        try:
+            review, duration_ms = future.result()
+            current = sum(t['role'] == 'user' for t in session['turns'])
+            accepted = current == count and self.training.save_completion_review(session_id, review, count)
+            self.metrics.record('completion', 'objective review',
+                                duration_ms, accepted)
+        except Exception as exc:
+            logger.warning('Background completion review unavailable: %s', type(exc).__name__)
+            self.metrics.record('completion', 'objective review',
+                                (time.perf_counter() - started) * 1000, False,
+                                error_type=type(exc).__name__)
+
+    def _start_objective_review(self, session_id):
+        key = (id(self.training), session_id)
+        if key in self._objective_reviews:
+            return
+        session = self.training.session(session_id)
+        if not self.llm or not hasattr(self.llm, 'evaluate_objectives') or session['skill_id'] == 'company-knowledge':
+            return
+        count = sum(t['role'] == 'user' for t in session['turns'])
+        prompt = self.training.completion_review_prompt(session_id)
+        started = time.perf_counter()
+        def review_objectives():
+            review = self.llm.evaluate_objectives(prompt)
+            return review, (time.perf_counter() - started) * 1000
+        future = asyncio.get_running_loop().run_in_executor(None, review_objectives)
+        # Keep the actual worker in flight rather than timing out a wrapper and
+        # starting another review while the original thread is still running.
+        future.add_done_callback(lambda done: done.exception() if not done.cancelled() else None)
+        self._objective_reviews[key] = (future, count, started)
+
     def __init__(self, training, llm, synthesize, metrics, sample_rate, engine):
         self.training, self.llm, self.synthesize = training, llm, synthesize
         self.metrics, self.sample_rate, self.engine = metrics, sample_rate, engine
@@ -29,22 +69,15 @@ class TrainingOrchestrator:
                 ready={doc['id'] for doc in self.training.documents(session['user_id']) if doc['status']=='ready'}
                 if not set(session['document_ids']).issubset(ready):
                     raise DomainError('document_unavailable','Selected policy documents are no longer available. Prepare a new lesson.',status_code=409)
+            # Apply only a completed review of the previous transcript, before
+            # adding this turn invalidates its revision. Never apply mid-speech.
+            self._consume_objective_review(session_id, session)
+            previous_progress = self.training.evaluate_progress(session_id)
             self.training.add_turn(session_id, "user", payload.text, payload.duration_seconds)
-            # One shared, persisted judgement precedes dialogue and auto-close.
-            # Bound the extra work; offline/unsupported providers retain local
-            # evidence rules rather than freezing a call waiting for a judge.
-            if self.llm and hasattr(self.llm,'evaluate_objectives') and session['skill_id']!='company-knowledge':
-                review_started=time.perf_counter()
-                try:
-                    count=sum(t['role']=='user' for t in session['turns'])+1
-                    review=await asyncio.wait_for(asyncio.to_thread(
-                        self.llm.evaluate_objectives,self.training.completion_review_prompt(session_id)),timeout=3.5)
-                    accepted=self.training.save_completion_review(session_id,review,count)
-                    self.metrics.record('completion','objective review',(time.perf_counter()-review_started)*1000,accepted)
-                except Exception as exc:
-                    logger.warning('Completion review unavailable; retaining local evidence checks: %s',type(exc).__name__)
-                    self.metrics.record('completion','objective review',(time.perf_counter()-review_started)*1000,False,error_type=type(exc).__name__)
-            turn_progress = self.training.evaluate_progress(session_id)
+            turn_progress = (previous_progress if previous_progress['outcome'] == 'success'
+                             else self.training.evaluate_progress(session_id))
+            if turn_progress['outcome'] != 'success':
+                self._start_objective_review(session_id)
             stage_started = time.perf_counter()
             ids=session.get('document_ids')
             if session.get('knowledge_mode','off')=='off':sources=[]
@@ -176,7 +209,8 @@ class TrainingOrchestrator:
                 raise ValueError("This lesson has no AI participant")
             reply = responses[0]["text"]
             correlation_id = responses[0]["correlation_id"]
-            session_progress = self.training.evaluate_progress(session_id)
+            session_progress = (turn_progress if turn_progress['outcome'] == 'success'
+                                else self.training.evaluate_progress(session_id))
             assessment = None
             if session_progress["outcome"] == "success":
                 language_evaluation = None

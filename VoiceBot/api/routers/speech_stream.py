@@ -1,11 +1,15 @@
 """Authenticated, bounded PCM streaming transport for local recognition."""
 import asyncio
 import json
+import logging
 import time
 import numpy as np
 from fastapi import WebSocket, WebSocketDisconnect, HTTPException
 from config import Config
 from contextlib import nullcontext
+
+
+logger = logging.getLogger(__name__)
 
 
 def install_speech_stream(app,get_model,authorize,metrics,activity=None):
@@ -42,10 +46,12 @@ def install_speech_stream(app,get_model,authorize,metrics,activity=None):
             rate=int(metadata.get('sample_rate',0))
             if rate not in {16000,22050,24000,32000,44100,48000,96000}:
                 raise ValueError('Unsupported capture sample rate')
-            recognizer=model.primary
+            method=metadata.get('decoding_method','greedy_search')
+            recognizer=await asyncio.to_thread(model.decoder_for,method)
             stream=await asyncio.to_thread(recognizer.create_stream)
             await socket.send_json({'type':'ready','engine':'nemotron'})
             received=0;last_text=''
+            processing_ms=0.0;max_chunk_ms=0.0;last_ack=0.0
             while True:
                 message=await asyncio.wait_for(socket.receive(),15)
                 if message['type']=='websocket.disconnect':break
@@ -58,7 +64,14 @@ def install_speech_stream(app,get_model,authorize,metrics,activity=None):
                     samples=np.frombuffer(data,dtype='<f4')
                     if not np.isfinite(samples).all() or np.max(np.abs(samples))>1.01:
                         raise ValueError('Invalid PCM samples')
+                    chunk_started=time.perf_counter()
                     text=await asyncio.to_thread(recognizer.accept_audio,stream,samples,rate)
+                    chunk_ms=(time.perf_counter()-chunk_started)*1000
+                    processing_ms+=chunk_ms
+                    max_chunk_ms=max(max_chunk_ms,chunk_ms)
+                    if time.perf_counter()-last_ack>=0.25:
+                        last_ack=time.perf_counter()
+                        await socket.send_json({'type':'progress','processed_samples':received//4})
                     if text and text!=last_text:
                         last_text=text
                         await socket.send_json({'type':'partial','text':text,'final':False})
@@ -68,13 +81,15 @@ def install_speech_stream(app,get_model,authorize,metrics,activity=None):
                     finalized=time.perf_counter()
                     result=await asyncio.to_thread(recognizer.finish_stream,stream)
                     final_ms=(time.perf_counter()-finalized)*1000
+                    logger.info("Nemotron stream finalize_ms=%.1f captured_ms=%.1f", final_ms, received/rate/4*1000)
                     elapsed=(time.perf_counter()-started)*1000
                     metrics.record('transcription','streaming speech',elapsed,True,engine='nemotron',streaming=True,audio_ms=received/rate/4*1000)
-                    await socket.send_json({'type':'final',**result,'needs_retry':False,'latency_ms':round(final_ms,1),'stream_wall_ms':round(elapsed,1)})
+                    await socket.send_json({'type':'final',**result,'needs_retry':False,'latency_ms':round(final_ms,1),'stream_wall_ms':round(elapsed,1),'captured_audio_ms':round(received/rate/4*1000,1),'stream_processing':{'accept_audio_ms':round(processing_ms,1),'max_chunk_ms':round(max_chunk_ms,1),'processing_rtf':round(processing_ms/max(1,received/rate/4*1000),3)}})
                     break
         except WebSocketDisconnect:
             pass
         except Exception:
+            logger.exception("Live recognition failed; recorded audio will be retried")
             try:await socket.send_json({'type':'error','message':'Live recognition unavailable; retrying the recorded audio.'})
             except Exception:pass
         finally:

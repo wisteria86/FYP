@@ -1,22 +1,24 @@
 export class StreamingTranscriber {
-  constructor(sessionId,onPartial=()=>{}){
-    this.sessionId=sessionId;this.onPartial=onPartial;this.closed=false;this.ready=false
-    this.controller=new AbortController();this.result=null
+  constructor(sessionId,onPartial=()=>{},decodingMethod='greedy_search'){
+    this.decodingMethod=decodingMethod;this.sessionId=sessionId;this.onPartial=onPartial;this.closed=false;this.ready=false
+    this.controller=new AbortController();this.result=null;this.sentSamples=0;this.processedSamples=0
   }
   async start(context,source){
     try{
       const url=new URL(`/api/sessions/${this.sessionId}/speech-stream`,window.location.href)
       url.protocol=url.protocol==='https:'?'wss:':'ws:'
+      this.contextSampleRate=context.sampleRate
       this.socket=new WebSocket(url)
       const connected=new Promise((resolve,reject)=>{
         const timeout=setTimeout(()=>reject(new Error('Streaming connection timed out')),3000)
-        this.socket.onopen=()=>this.socket.send(JSON.stringify({sample_rate:context.sampleRate}))
+        this.socket.onopen=()=>this.socket.send(JSON.stringify({sample_rate:context.sampleRate,decoding_method:this.decodingMethod}))
         this.socket.onerror=()=>{clearTimeout(timeout);reject(new Error('Streaming connection failed'))}
         this.socket.onclose=()=>{clearTimeout(timeout);resolve(false);this.ready=false;this.complete?.(null)}
         this.socket.onmessage=({data})=>{
           if(this.closed)return
           const event=JSON.parse(data)
           if(event.type==='ready'){clearTimeout(timeout);this.ready=true;resolve(true)}
+          if(event.type==='progress')this.processedSamples=event.processed_samples
           if(event.type==='partial')this.onPartial(event.text)
           if(event.type==='final'){this.result=event;this.complete?.(event)}
           if(event.type==='error'){clearTimeout(timeout);resolve(false);this.ready=false;this.complete?.(null)}
@@ -33,22 +35,28 @@ export class StreamingTranscriber {
         if(!this.closed&&this.socket.readyState===WebSocket.OPEN&&this.ready){
           if(this.socket.bufferedAmount>256000){this.cancel();return}
           this.socket.send(data.buffer)
+          this.sentSamples+=data.length
         }
       }
       return true
     }catch{this.cancel();return false}
   }
-  async finish(){
+  async finish(onFlushed=()=>{}){
     if(this.closed||!this.ready)return null
     try{
+      const started=performance.now()
       await new Promise(resolve=>{this.flushed=resolve;this.node.port.postMessage('flush');setTimeout(resolve,150)})
+      const flushedAt=performance.now()
+      const outstandingMs=(this.sentSamples-this.processedSamples)/this.contextSampleRate*1000
       this.disconnect()
+      onFlushed()
       if(this.closed||!this.ready||this.socket.readyState!==WebSocket.OPEN)return null
       const result=await new Promise(resolve=>{
         this.complete=resolve
         this.socket.send(JSON.stringify({type:'finish'}))
         this.finalTimeout=setTimeout(()=>resolve(null),10000)
       })
+      this.timing={unacknowledged_audio_ms:Math.round(outstandingMs),stream_processing:result?.stream_processing??null,flush_ms:Math.round(flushedAt-started),final_response_wait_ms:Math.round(performance.now()-flushedAt),backend_finalize_ms:result?.latency_ms??null,backend_breakdown:result?.finalize_timing??null}
       return result
     }catch{return null}finally{this.cancel()}
   }

@@ -2,8 +2,17 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
 import './Monitor.css'
 import Administration from './Administration'
+import VoiceInputTest from './VoiceInputTest'
+import SessionAudioSettings from './SessionAudioSettings'
+import {loadSessionAudio,saveSessionAudio,sessionAudioMode} from './sessionAudio.mjs'
+import {createInputLevel} from './inputLevel.mjs'
+import {CaptureClock} from './captureClock.mjs'
 import { IncrementalTranscriber } from './incrementalTranscriber.mjs'
 import { StreamingTranscriber } from './streamingTranscriber.mjs'
+import { listMicrophones, microphoneConstraints } from './micDevices.mjs'
+import { createCleanCapture } from './noiseReduction.mjs'
+import {turnDetection,captureLimitReason} from './turnEnding.mjs'
+import { startSilero } from './sileroVad.mjs'
 import { monitorMicrophone } from './micMonitor.mjs'
 
 const API = '/api'
@@ -187,7 +196,7 @@ function SettingsHub({ dashboard, health, setView, onChanged }) {
   const [name,setName]=useState(dashboard?.user.name||'')
   const [message,setMessage]=useState(''),[saving,setSaving]=useState(false)
   const [currentPassword,setCurrentPassword]=useState(''),[newPassword,setNewPassword]=useState('')
-  const testMic=async()=>{try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});setMic(stream.getAudioTracks()[0]?.label||'Microphone ready');stream.getTracks().forEach(track=>track.stop())}catch(e){setMic(`Unavailable: ${e.message}`)}}
+  const testMic=async()=>{try{const stream=await navigator.mediaDevices.getUserMedia({audio:microphoneConstraints()});setMic(stream.getAudioTracks()[0]?.label||'Microphone ready');stream.getTracks().forEach(track=>track.stop())}catch(e){setMic(`Unavailable: ${e.message}`)}}
   const testCamera=async()=>{try{const stream=await navigator.mediaDevices.getUserMedia({video:true});setCamera(stream.getVideoTracks()[0]?.label||'Camera ready');stream.getTracks().forEach(track=>track.stop())}catch(e){setCamera(`Unavailable: ${e.message}`)}}
   const save=async()=>{setSaving(true);try{setMessage('Saving…');await api('/auth/profile',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});await onChanged();setMessage('Profile saved.')}catch(error){setMessage(error.message)}finally{setSaving(false)}}
   const changePassword=async()=>{setSaving(true);try{setMessage('Updating password…');await api('/auth/password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({current_password:currentPassword,new_password:newPassword})});setCurrentPassword('');setNewPassword('');setMessage('Password updated.')}catch(error){setMessage(error.message)}finally{setSaving(false)}}
@@ -233,15 +242,27 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [recording, setRecording] = useState(false)
+  const [capturePaused,setCapturePaused]=useState(false)
+  const [voiceDraft,setVoiceDraft]=useState(null)
+  const voiceDraftRef=useRef(null),reviewSending=useRef(false)
   const [micState, setMicState] = useState('idle')
   const [micLevel, setMicLevel] = useState(0)
   const [micDevice, setMicDevice] = useState('No microphone selected')
   const [voiceState, setVoiceState] = useState('idle')
   const [activeSpeaker, setActiveSpeaker] = useState(null)
   const [sessionProgress, setSessionProgress] = useState(null)
-  const maxAnswerMs=(session.learning_design?.max_answer_seconds||12)*1000
+  const [audioPanelOpen,setAudioPanelOpen]=useState(false)
+  const audioPanelRef=useRef(null),audioButtonRef=useRef(null)
   const [micOptions, setMicOptions] = useState([])
-  const [selectedMic, setSelectedMic] = useState(()=>localStorage.getItem('hikari-mic-id')||'')
+  const [sessionAudio,setSessionAudio]=useState(()=>loadSessionAudio(localStorage))
+  const automaticTurnEnd=sessionAudio.inputMode==='auto'
+  const audioMode=sessionAudioMode(sessionAudio)
+  const micLevelGraph=useRef(null)
+  const micDenoiser=useRef(null)
+  const micVad=useRef(null)
+  const [micListError,setMicListError]=useState('')
+  const [micRefreshing,setMicRefreshing]=useState(false)
+  const [selectedMic, setSelectedMic] = useState(()=>loadSessionAudio(localStorage).deviceId)
   const [camera, setCamera] = useState(false)
   const [captions, setCaptions] = useState(userSettings?.captions_enabled??true)
   const [elapsed, setElapsed] = useState(0)
@@ -255,23 +276,49 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
   const incrementalCapture = useRef(null)
   const streamingCapture = useRef(null)
   const micStarting = useRef(false)
+  const lastCapture = useRef(null)
   const latencyTrial = useRef(null)
-  const latencyTest = useRef(new URLSearchParams(window.location.search).get('latency_test')==='1')
   const callActiveRef = useRef(false), mutedRef = useRef(false), modeRef = useRef('voice'), beginListening = useRef(null), discardCapture = useRef(false)
   const micStream = useRef(null), micContext = useRef(null), micFrame = useRef(null), speechSeen = useRef(false), lastSpeech = useRef(0), peakLevel = useRef(0), lastLevelReport = useRef(0), noiseFloor = useRef(.003)
   useEffect(() => { chatEnd.current?.scrollIntoView({behavior:'smooth'}) }, [session.turns, busy])
   useEffect(()=>{const update=()=>setElapsed(Math.max(0,Math.floor((Date.now()-Date.parse(session.created_at))/1000)));update();const timer=setInterval(update,1000);return()=>clearInterval(timer)},[session.created_at])
-  useEffect(() => () => { streamingCapture.current?.cancel();incrementalCapture.current?.cancel();media.current?.getTracks().forEach(t => t.stop()); micStream.current?.getTracks().forEach(t => t.stop()); micFrame.current?.(); micContext.current?.close(); playbackContext.current?.close() }, [])
-  useEffect(() => {
-    const refreshMicrophones = async () => {
-      if (!navigator.mediaDevices?.enumerateDevices) return
-      const devices=(await navigator.mediaDevices.enumerateDevices()).filter(item=>item.kind==='audioinput')
-      setMicOptions(devices)
+  useEffect(() => () => { if(voiceDraftRef.current)URL.revokeObjectURL(voiceDraftRef.current.url);streamingCapture.current?.cancel();incrementalCapture.current?.cancel();media.current?.getTracks().forEach(t => t.stop()); micStream.current?.getTracks().forEach(t => t.stop()); micFrame.current?.(); micVad.current?.stop();micDenoiser.current?.destroy();micLevelGraph.current?.destroy();micContext.current?.close(); playbackContext.current?.close() }, [])
+  useEffect(()=>{
+    if(!audioPanelOpen)return
+    const previous=document.activeElement
+    const panel=audioPanelRef.current
+    panel?.querySelector('button')?.focus()
+    const handleKey=event=>{
+      if(event.key==='Escape'){event.preventDefault();setAudioPanelOpen(false)}
+      if(event.key==='Tab'){
+        const controls=[...panel.querySelectorAll('button:not(:disabled),select:not(:disabled),input:not(:disabled)')]
+        const first=controls[0],last=controls.at(-1)
+        if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus()}
+        else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus()}
+      }
     }
-    refreshMicrophones().catch(()=>{})
-    navigator.mediaDevices?.addEventListener?.('devicechange',refreshMicrophones)
-    return()=>navigator.mediaDevices?.removeEventListener?.('devicechange',refreshMicrophones)
+    document.addEventListener('keydown',handleKey)
+    return()=>{document.removeEventListener('keydown',handleKey);if(previous?.isConnected)previous.focus()}
+  },[audioPanelOpen])
+  useEffect(()=>{
+    const refresh=()=>{if(!callActive){const value=loadSessionAudio(localStorage);setSessionAudio(value);setSelectedMic(value.deviceId)}}
+    refresh();window.addEventListener('hikari-session-audio-changed',refresh)
+    return()=>window.removeEventListener('hikari-session-audio-changed',refresh)
+  },[callActive])
+  const refreshMicrophones=useCallback(async(requestAccess=false)=>{
+    setMicRefreshing(true)
+    try{
+      const devices=await listMicrophones(navigator.mediaDevices,requestAccess)
+      setMicOptions(devices);setMicListError('')
+    }catch(error){setMicListError(error.message)}finally{setMicRefreshing(false)}
   },[])
+  useEffect(()=>{
+    const refresh=()=>{refreshMicrophones(false)}
+    refresh()
+    navigator.mediaDevices?.addEventListener?.('devicechange',refresh)
+    window.addEventListener('focus',refresh)
+    return()=>{navigator.mediaDevices?.removeEventListener?.('devicechange',refresh);window.removeEventListener('focus',refresh)}
+  },[refreshMicrophones])
   useEffect(() => {
     if (!camera||!session.posture_enabled) return undefined
     const worker=new Worker(new URL('./pose.worker.js',import.meta.url),{type:'module'})
@@ -307,20 +354,26 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
     return playbackContext.current
   }
   const playChunk = async b64 => {
+    const receivedAt=performance.now()
     const context=await ensureAudioReady()
+    const readyAt=performance.now()
     const bytes=Uint8Array.from(atob(b64),character=>character.charCodeAt(0))
+    const decodeStarted=performance.now()
     const buffer=await context.decodeAudioData(bytes.buffer.slice(0))
+    const decodedAt=performance.now()
     const source=context.createBufferSource();source.buffer=buffer;source.connect(context.destination)
     playbackSources.current.add(source)
     source.onended=()=>playbackSources.current.delete(source)
-    const lead=playbackTail.current===0?.15:.025
+    const lead=.025
     const at=Math.max(context.currentTime+lead,playbackTail.current);source.start(at);playbackTail.current=at+buffer.duration
     if(latencyTrial.current&&!latencyTrial.current.reported){
       const trial=latencyTrial.current
       trial.reported=true
       const outputLatency=(context.outputLatency||context.baseLatency||0)*1000
       const audibleAt=performance.now()+(at-context.currentTime)*1000+outputLatency
-      reportMic({event:'playback_started',state:'latency_test',duration_ms:audibleAt-trial.speechEnd,engine:trial.engine,endpointing_ms:trial.stopped-trial.speechEnd,transcription_wall_ms:trial.transcriptionMs,response_to_playback_ms:audibleAt-trial.responseStart,audio_output_latency_ms:outputLatency})
+      console.info('[Hikari playback latency]',{response_to_audio_received_ms:Math.round(receivedAt-trial.responseStart),context_ready_ms:Math.round(readyAt-receivedAt),base64_ms:Math.round(decodeStarted-readyAt),decode_ms:Math.round(decodedAt-decodeStarted),schedule_wait_ms:Math.round((at-context.currentTime)*1000),output_latency_ms:Math.round(outputLatency)})
+      console.info('[Hikari latency]',{endpointing_ms:Math.round(trial.stopped-trial.speechEnd),transcription_ms:Math.round(trial.transcriptionMs),response_to_playback_ms:Math.round(audibleAt-trial.responseStart),total_ms:Math.round(audibleAt-trial.speechEnd),transcription_path:trial.transcriptionPath})
+      reportMic({event:'playback_started',state:'session',transcription_path:trial.transcriptionPath,duration_ms:audibleAt-trial.speechEnd,engine:trial.engine,endpointing_ms:trial.stopped-trial.speechEnd,transcription_wall_ms:trial.transcriptionMs,response_to_playback_ms:audibleAt-trial.responseStart,audio_output_latency_ms:outputLatency})
     }
     return playbackTail.current
   }
@@ -349,6 +402,7 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
       for(const line of lines){
         if(!line.trim())continue
         const event=JSON.parse(line)
+        if(event.tts_timing)console.info('[Hikari TTS latency]',event.tts_timing)
         if(event.type==='error')throw new Error(event.message)
         if(event.type==='audio'){
           received+=1
@@ -363,7 +417,7 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
     await waitForPlayback()
     setVoiceState('ready')
     if(resumeListening)setActiveSpeaker(null)
-    if(resumeListening&&callActiveRef.current&&modeRef.current==='voice'&&!mutedRef.current){
+    if(automaticTurnEnd&&resumeListening&&callActiveRef.current&&modeRef.current==='voice'&&!mutedRef.current){
       setTimeout(()=>{if(callActiveRef.current&&!mutedRef.current)beginListening.current?.()},180)
     }
   }
@@ -389,12 +443,15 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
           for(const line of lines){
             if(!line.trim())continue
             const event=JSON.parse(line)
+        if(event.tts_timing)console.info('[Hikari TTS latency]',event.tts_timing)
             if(event.type==='error')throw new Error(event.message)
             if(event.type==='speech_error'){setError(event.message);streamed=true}
             if(event.type==='speech_text')setSession(s=>{
               const existing=s.turns.find(turn=>turn.provisional&&turn.speaker_name===event.speaker)
               return {...s,turns:existing?s.turns.map(turn=>turn===existing?{...turn,text:`${turn.text} ${event.text}`}:turn):[...s.turns,{role:'assistant',speaker_name:event.speaker,text:event.text,provisional:true,created_at:new Date().toISOString()}]}
             })
+            if(event.timing)console.info('[Hikari backend latency]',event.timing)
+            if(event.kokoro_timing)console.info('[Hikari Kokoro latency]',event.kokoro_timing)
             if(event.type==='audio'){(receivedAudio[event.speaker]??=[]).push(event.audio_b64);setActiveSpeaker(event.speaker);setVoiceState('speaking');await playChunk(event.audio_b64);streamed=true}
             if(event.type==='result')result=event.result
           }
@@ -411,7 +468,7 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
       }
       if(streamed){
         await waitForPlayback();setVoiceState('ready');setActiveSpeaker(null)
-        if(result.session_progress?.outcome!=='success'&&callActiveRef.current&&!mutedRef.current)setTimeout(()=>{if(callActiveRef.current&&!mutedRef.current&&modeRef.current==='voice')beginListening.current?.()},180)
+        if(automaticTurnEnd&&result.session_progress?.outcome!=='success'&&callActiveRef.current&&!mutedRef.current)setTimeout(()=>{if(callActiveRef.current&&!mutedRef.current&&modeRef.current==='voice')beginListening.current?.()},180)
       }
       if(result.session_progress?.outcome==='success'){
         stopCall()
@@ -420,72 +477,114 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
     } catch (e) {
       if(e.name==='AbortError')return
       setVoiceState('failed');setError(`${e.message} The conversation is still active.`)
-      if(callActiveRef.current&&modeRef.current==='voice'&&!mutedRef.current)setTimeout(()=>{if(callActiveRef.current&&!mutedRef.current&&modeRef.current==='voice')beginListening.current?.()},500)
+      if(automaticTurnEnd&&callActiveRef.current&&modeRef.current==='voice'&&!mutedRef.current)setTimeout(()=>{if(callActiveRef.current&&!mutedRef.current&&modeRef.current==='voice')beginListening.current?.()},500)
     } finally { sending.current=false;setBusy(false) }
   }
   const toggleMic = async () => {
-    if(micStarting.current||recorder.current?.state==='recording')return true
+    if(micStarting.current||['recording','paused'].includes(recorder.current?.state)||voiceDraftRef.current)return true
     if(!callActiveRef.current||mutedRef.current||modeRef.current!=='voice')return false
     micStarting.current=true
     try {
       await ensureAudioReady()
       if (!navigator.mediaDevices?.getUserMedia) throw new Error('Microphone capture requires localhost or HTTPS.')
-      const audioOptions={deviceId:selectedMic?{exact:selectedMic}:undefined,echoCancellation:true,noiseSuppression:true,autoGainControl:true}
+      const audioOptions=microphoneConstraints(selectedMic,{noiseSuppression:audioMode.browser})
       let stream=micStream.current
       if(!stream?.getAudioTracks().some(track=>track.readyState==='live')){
-        try{stream=await navigator.mediaDevices.getUserMedia({audio:audioOptions})}catch(firstError){if(!selectedMic)throw firstError;localStorage.removeItem('hikari-mic-id');setSelectedMic('');stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}})}
+        try{stream=await navigator.mediaDevices.getUserMedia({audio:audioOptions})}catch(firstError){if(!selectedMic)throw firstError;localStorage.removeItem('hikari-mic-id');setSelectedMic('');setSessionAudio(saveSessionAudio(localStorage,{...sessionAudio,deviceId:''}));stream=await navigator.mediaDevices.getUserMedia({audio:microphoneConstraints('',{noiseSuppression:audioMode.browser})})}
       }
       micStream.current=stream
       const track=stream.getAudioTracks()[0], settings=track.getSettings(), device=track.label||'Default microphone'
+      console.info('[Hikari microphone settings]',{device,...settings})
       const devices=(await navigator.mediaDevices.enumerateDevices()).filter(item=>item.kind==='audioinput')
       setMicOptions(devices);if(!selectedMic&&settings.deviceId){setSelectedMic(settings.deviceId);localStorage.setItem('hikari-mic-id',settings.deviceId)}
       setMicDevice(device); setMicState('listening'); setMicLevel(0); speechSeen.current=false; lastSpeech.current=0; peakLevel.current=0;lastLevelReport.current=0;noiseFloor.current=.0003
       reportMic({event:'connected',device,state:'ready',sample_rate:settings.sampleRate,channel_count:settings.channelCount})
       const AudioContext=window.AudioContext||window.webkitAudioContext
-      const context=new AudioContext(), source=context.createMediaStreamSource(stream)
+      const context=new AudioContext({sampleRate:48000})
       micContext.current=context
       if(context.state==='suspended')await context.resume()
+      const levelGraph=sessionAudio.gainEnabled?createInputLevel(context,stream,sessionAudio.gainDb):null
+      micLevelGraph.current=levelGraph
+      const leveledStream=levelGraph?.stream||stream
+      const capture=audioMode.rnnoise?await createCleanCapture(context,leveledStream):null
+      micDenoiser.current=capture
+      const source=capture?.source||context.createMediaStreamSource(leveledStream)
+      const recordingStream=capture?.stream||leveledStream
+      console.info('[Hikari session audio]',{mode:audioMode.id,gain_db:sessionAudio.gainEnabled?sessionAudio.gainDb:0,live_recognition:sessionAudio.liveRecognition})
+      console.info('[Hikari noise reduction]',{enabled:!!capture,engine:capture?'RNNoise':audioMode.browser?'browser':'none',sample_rate:context.sampleRate})
       if(!callActiveRef.current||mutedRef.current||modeRef.current!=='voice'){
-        stream.getTracks().forEach(track=>track.stop());await context.close();micStream.current=null;micContext.current=null;return false
+        capture?.destroy();levelGraph?.destroy();micLevelGraph.current=null;micDenoiser.current=null;stream.getTracks().forEach(track=>track.stop());await context.close();micStream.current=null;micContext.current=null;return false
       }
       const preferredMime=['audio/webm;codecs=opus','audio/webm'].find(type=>MediaRecorder.isTypeSupported?.(type))
-      const r = preferredMime?new MediaRecorder(stream,{mimeType:preferredMime}):new MediaRecorder(stream); chunks.current=[]; started.current=performance.now(); recorder.current=r
+      const r = preferredMime?new MediaRecorder(recordingStream,{mimeType:preferredMime}):new MediaRecorder(recordingStream); chunks.current=[]; started.current=performance.now(); recorder.current=r
       const decodeCapture=(blob,signal)=>{
-        const form=new FormData();form.append('file',blob,'speech.webm');form.append('language',session.training_language||'English');form.append('context',`${session.title}. ${session.situation}`);form.append('duration_ms',String(performance.now()-started.current));form.append('partial','true')
+        const form=new FormData();form.append('file',blob,'speech.webm');form.append('language',session.training_language||'English');form.append('context',`${session.title}. ${session.situation}`);form.append('duration_ms',String(performance.now()-started.current));form.append('partial','true');form.append('decoding_method',sessionAudio.decodingMethod)
         return api('/transcribe',{method:'POST',body:form,signal:AbortSignal.any&&AbortSignal.timeout?AbortSignal.any([signal,AbortSignal.timeout(12000)]):signal})
       }
       const incremental=new IncrementalTranscriber(decodeCapture,partial=>{setText(partial);setMicState('transcribing live')})
       incrementalCapture.current=incremental
       let live=null
-      if(health?.stt_runtime?.streaming&&(session.training_language||'English')==='English'){
-        live=new StreamingTranscriber(session.id,partial=>{setText(partial);setMicState('transcribing live')})
+      if(sessionAudio.liveRecognition&&health?.stt_runtime?.streaming&&(session.training_language||'English')==='English'){
+        live=new StreamingTranscriber(session.id,partial=>{setText(partial);setMicState('transcribing live')},sessionAudio.decodingMethod)
         streamingCapture.current=live
         if(!await live.start(context,source)){live=null;streamingCapture.current=null}
       }
-      if(!callActiveRef.current||mutedRef.current){live?.cancel();incremental.cancel();source.disconnect();await context.close();return false}
+      if(!callActiveRef.current||mutedRef.current){live?.cancel();incremental.cancel();source.disconnect();capture?.destroy();levelGraph?.destroy();micLevelGraph.current=null;micDenoiser.current=null;await context.close();return false}
       let lastSnapshot=0
       r.ondataavailable = e => {
         if(!e.data.size)return
         chunks.current.push(e.data)
         const now=performance.now(),paused=now-lastSpeech.current>300
-        if(!live?.ready&&r.state==='recording'&&speechSeen.current&&(now-lastSnapshot>1500||(paused&&now-lastSnapshot>350))){
+        if(automaticTurnEnd&&!live?.ready&&r.state==='recording'&&speechSeen.current&&(now-lastSnapshot>1500||(paused&&now-lastSnapshot>350))){
           if(incremental.push(new Blob(chunks.current,{type:r.mimeType||'audio/webm'}),now))lastSnapshot=now
         }
       }
       r.onstop = async () => {
         const stoppedAt=performance.now()
-        latencyTrial.current=latencyTest.current&&speechSeen.current?{speechEnd:lastSpeech.current,stopped:stoppedAt,reported:false}:null
-        const captureMs=performance.now()-started.current
+        console.info('[Hikari capture endpoint]',{reason:r.hikariStopReason||stopReason,capture_ms:Math.round(stoppedAt-started.current),silence_ms:Math.round(stoppedAt-lastSpeech.current)})
+        latencyTrial.current=speechSeen.current?{speechEnd:lastSpeech.current,stopped:stoppedAt,reported:false}:null
+        const captureMs=r.captureClock.elapsed(performance.now())
+        lastCapture.current=new Blob(chunks.current,{type:r.mimeType||'audio/webm'})
         micFrame.current?.(); micFrame.current=null
-        setRecording(false)
-        if(speechSeen.current&&!discardCapture.current)setBusy(true)
+        micVad.current?.stop();micVad.current=null
+        setRecording(false);setCapturePaused(false)
+        if((speechSeen.current||!automaticTurnEnd)&&!discardCapture.current)setBusy(true)
+        const transcriptionStarted=performance.now()
+        let cleanupStarted=false
+        const cleanupCapture=()=>{
+          if(cleanupStarted)return
+          cleanupStarted=true
+          source.disconnect()
+          capture?.destroy();levelGraph?.destroy()
+          if(micLevelGraph.current===levelGraph)micLevelGraph.current=null
+          if(!automaticTurnEnd){stream.getTracks().forEach(track=>track.stop());if(micStream.current===stream)micStream.current=null}
+          if(micDenoiser.current===capture)micDenoiser.current=null
+          if(micContext.current===context)micContext.current=null
+          const cleanupAt=performance.now()
+          context.close().then(()=>console.info('[Hikari capture cleanup]',{close_ms:Math.round(performance.now()-cleanupAt)})).catch(()=>{})
+        }
+        if(!automaticTurnEnd&&!discardCapture.current&&callActiveRef.current&&!mutedRef.current){
+          const liveResult=live?await live.finish(cleanupCapture):null
+          incremental.cancel();cleanupCapture()
+          if(!callActiveRef.current||mutedRef.current||discardCapture.current){setBusy(false);return}
+          if(voiceDraftRef.current)URL.revokeObjectURL(voiceDraftRef.current.url)
+          const draft={blob:lastCapture.current,url:URL.createObjectURL(lastCapture.current),durationMs:captureMs,liveResult}
+          voiceDraftRef.current=draft;setVoiceDraft(draft);setMicLevel(0);setMicState('review');setVoiceState('ready');setBusy(false)
+          latencyTrial.current=null
+          await sendReviewedVoice()
+          return
+        }
         let liveResult=null
         if(live){
-          if(speechSeen.current&&!discardCapture.current)liveResult=await live.finish()
+          // Flush captured PCM before closing its context; overlap cleanup with
+          // backend finalization rather than delaying the response request.
+          if(speechSeen.current&&!discardCapture.current)liveResult=await live.finish(cleanupCapture)
           else live.cancel()
           if(streamingCapture.current===live)streamingCapture.current=null
         }
-        source.disconnect(); await context.close().catch(()=>{}); micContext.current=null
+        cleanupCapture()
+        if(live?.timing)console.info('[Hikari transcription stages]',live.timing)
+        console.info('[Hikari recognition outcome]',{live_final_received:!!liveResult,input_audio:liveResult?.input_audio??null,captured_audio_ms:liveResult?.captured_audio_ms??null,text_chars:liveResult?.text?.trim().length??0,needs_retry:liveResult?.needs_retry??null,capture_ms:Math.round(captureMs),recorded_bytes:chunks.current.reduce((total,chunk)=>total+chunk.size,0)})
         if(!callActiveRef.current||mutedRef.current){stream.getTracks().forEach(t=>t.stop());micStream.current=null}
         setRecording(false);setMicLevel(0)
         if(discardCapture.current){incremental.cancel();discardCapture.current=false;setMicState('idle');setBusy(false);return}
@@ -503,45 +602,63 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
         setMicState('transcribing');setBusy(true)
         reportMic({event:'stopped',device,state:'transcribing',duration_ms:captureMs,peak_percent:peakLevel.current})
         try {
-          const form=new FormData();form.append('file',new Blob(chunks.current,{type:r.mimeType||'audio/webm'}),'speech.webm');form.append('language',session.training_language||'English');form.append('context',`${session.title}. ${session.situation}`);form.append('duration_ms',String(captureMs))
-          const transcriptionStarted=performance.now()
+          const form=new FormData();form.append('file',new Blob(chunks.current,{type:r.mimeType||'audio/webm'}),'speech.webm');form.append('language',session.training_language||'English');form.append('context',`${session.title}. ${session.situation}`);form.append('duration_ms',String(captureMs));form.append('decoding_method',sessionAudio.decodingMethod)
           const reusable=liveResult?.text?liveResult:await incremental.finish(lastSpeech.current)
           if(incremental.controller.signal.aborted){setBusy(false);return}
           const signal=AbortSignal.any&&AbortSignal.timeout?AbortSignal.any([incremental.controller.signal,AbortSignal.timeout(45000)]):incremental.controller.signal
           const out=reusable||await api('/transcribe',{method:'POST',body:form,signal})
           if(incremental.controller.signal.aborted){setBusy(false);return}
           if(latencyTrial.current)latencyTrial.current.transcriptionMs=performance.now()-transcriptionStarted
-          if(!out.text)throw new Error('No speech detected. Check the live level and try speaking closer to the selected microphone.')
+          console.info('[Hikari transcript decision]',{text_chars:out.text?.trim().length??0,needs_retry:!!out.needs_retry,engine:out.engine||'unknown',input_audio:out.input_audio??null})
+          if(!out.text?.trim())throw new Error('Nemotron returned an empty transcript. No message was sent. Check the selected microphone, then choose Retry microphone.')
           if(out.needs_retry){
-            setText(out.text);setMicState('retry');setBusy(false);setError(`I heard “${out.text}”, but it was too short or uncertain. Please say the full sentence again.`);reportMic({event:'error',device,state:'retry',duration_ms:out.latency_ms||0,peak_percent:peakLevel.current,transcript:out.text,error:out.retry_reason});if(callActiveRef.current&&!mutedRef.current)setTimeout(()=>beginListening.current?.(),650);return
+            setText(out.text);setMicState('retry');setBusy(false);setError(`I heard “${out.text}”, but it was too short or uncertain. Please say the full sentence again.`);reportMic({event:'error',device,state:'retry',duration_ms:out.latency_ms||0,peak_percent:peakLevel.current,transcript:out.text,error:out.retry_reason});return
           }
           setText(out.text);setMicState('transcribed');reportMic({event:'transcribed',device,state:'complete',duration_ms:out.latency_ms||0,peak_percent:peakLevel.current,transcript:out.text})
           if(latencyTrial.current){
-            const ttsState=await api('/tts/engines').catch(()=>({active:'unknown'}))
-            latencyTrial.current.engine=ttsState.active
+            console.info('[Hikari transcription latency]',{backend_finalize_or_decode_ms:out.latency_ms,transcription_path:liveResult?.text?'live':reusable?'incremental':'recorded'})
+            latencyTrial.current.engine=health?.engine||'unknown'
+            latencyTrial.current.transcriptionPath=liveResult?.text?'live':reusable?'incremental':'recorded'
             latencyTrial.current.responseStart=performance.now()
           }
           await send(out.text,captureMs/1000)
         } catch(e){
           if(incremental.controller.signal.aborted){setBusy(false);return}
-          setMicState('error');setError(e.message);reportMic({event:'error',device,state:'error',duration_ms:captureMs,peak_percent:peakLevel.current,error:e.message});setBusy(false);resumeCapture()
+          setMicState('error');setError(e.message);reportMic({event:'error',device,state:'error',duration_ms:captureMs,peak_percent:peakLevel.current,error:e.message});setBusy(false);console.error('[Hikari recognition failed]',e)
         }
+      }
+      let stopReason='unknown'
+      const markSpeech=()=>{
+        if(r.state!=='recording')return
+        if(!speechSeen.current){
+          speechSeen.current=true;setError('');setMicState('speech detected')
+          reportMic({event:'speech_detected',device,state:'recording',duration_ms:performance.now()-started.current})
+        }
+      }
+      // VAD only decides turn boundaries. MediaRecorder and live recognition
+      // retain the continuous capture, including audio before speech detection.
+      const vad=automaticTurnEnd?await startSilero(context,recordingStream,{
+        onProbability:probability=>{if(r.state==='recording'&&probability>=turnDetection.positiveThreshold)lastSpeech.current=performance.now()},
+        onSpeech:markSpeech,
+        onEnd:()=>{if(automaticTurnEnd&&r.state==='recording'&&speechSeen.current){stopReason='silero_silence';r.stop()}},
+      }):{error:null,stop:async()=>{}}
+      micVad.current=vad
+      if(!callActiveRef.current||mutedRef.current||modeRef.current!=='voice'){
+        await vad.stop();micVad.current=null;live?.cancel();incremental.cancel()
+        source.disconnect();capture?.destroy();micDenoiser.current=null
+        await context.close();micContext.current=null;return false
       }
       const analyse=rms=>{
         if(r.state!=='recording')return
         const level=Math.min(100,rms*500);peakLevel.current=Math.max(peakLevel.current,level);setMicLevel(level)
-        const now=performance.now()
-        const elapsed=now-started.current
-        // Do not calibrate the learner's first words as background noise.
-        if(elapsed<350&&!speechSeen.current&&rms<.0006)noiseFloor.current=noiseFloor.current*.8+rms*.2
-        const threshold=Math.max(.0006,Math.min(.006,noiseFloor.current*1.8)),thresholdPercent=Math.min(100,threshold*500)
-        if(now-lastLevelReport.current>500){lastLevelReport.current=now;reportMic({event:'level',device,state:speechSeen.current?'speech detected':'listening',duration_ms:elapsed,level_percent:level,peak_percent:peakLevel.current,threshold_percent:thresholdPercent})}
-        if(rms>threshold){lastSpeech.current=now;if(!speechSeen.current){speechSeen.current=true;setError('');setMicState('speech detected');reportMic({event:'speech_detected',device,state:'recording',duration_ms:elapsed,level_percent:level,threshold_percent:thresholdPercent})}}
-        if(speechSeen.current&&now-lastSpeech.current>500&&elapsed>1200&&r.state==='recording')r.stop()
-        else if(speechSeen.current&&elapsed>maxAnswerMs&&r.state==='recording')r.stop()
-        else if(!speechSeen.current&&elapsed>8000&&r.state==='recording')r.stop()
+        const now=performance.now(),elapsed=r.captureClock.elapsed(now)
+        if(now-lastLevelReport.current>500){lastLevelReport.current=now;reportMic({event:'level',device,state:speechSeen.current?'speech detected':'listening',duration_ms:elapsed,level_percent:level,peak_percent:peakLevel.current})}
+        if(vad.error){stopReason='vad_error';discardCapture.current=true;setError(`Speech detection failed: ${vad.error}. Rejoin the call.`);r.stop();return}
+        const limitReason=captureLimitReason(elapsed,speechSeen.current,automaticTurnEnd)
+        if(limitReason){stopReason=limitReason;r.stop()}
       }
-      started.current=performance.now()
+      started.current=performance.now();r.captureClock=new CaptureClock(started.current)
+      setCapturePaused(false)
       r.start(100); setRecording(true);reportMic({event:'listening',device,state:'listening'})
       micFrame.current=monitorMicrophone(context,source,analyse,error=>{
         setError(error.message);reportMic({event:'error',device,state:'error',error:error.message})
@@ -549,46 +666,31 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
       });return true
     } catch(e) {
       micFrame.current?.();micFrame.current=null
+      micVad.current?.stop();micVad.current=null
+      streamingCapture.current?.cancel();incrementalCapture.current?.cancel()
+      micDenoiser.current?.destroy();micDenoiser.current=null
+      micLevelGraph.current?.destroy();micLevelGraph.current=null
       micStream.current?.getTracks().forEach(track=>track.stop());micStream.current=null
       if(micContext.current)await micContext.current.close().catch(()=>{});micContext.current=null
       setMicState('error');setError(`Microphone unavailable: ${e.message}`);reportMic({event:'error',state:'error',error:e.message});return false
     } finally {micStarting.current=false}
   }
   beginListening.current=toggleMic
-  useEffect(()=>{
-    if(!callActive||muted||!['speaking','streaming'].includes(voiceState))return
-    const stream=micStream.current,context=playbackContext.current
-    if(!stream?.active||!context||context.state!=='running')return
-    const source=context.createMediaStreamSource(stream),analyser=context.createAnalyser()
-    analyser.fftSize=1024;source.connect(analyser)
-    const samples=new Float32Array(1024);let frame,aboveSince=0,disposed=false
-    const check=()=>{
-      if(disposed)return
-      analyser.getFloatTimeDomainData(samples)
-      const rms=Math.sqrt(samples.reduce((sum,value)=>sum+value*value,0)/samples.length),now=performance.now()
-      if(rms>Math.max(.015,noiseFloor.current*3)){
-        if(!aboveSince)aboveSince=now
-        if(now-aboveSince>180){
-          voiceRequest.current?.abort()
-          playbackSources.current.forEach(node=>{try{node.stop()}catch{}});playbackSources.current.clear();playbackTail.current=0
-          setVoiceState('ready');setActiveSpeaker(null)
-          reportMic({event:'speech_detected',state:'interrupted',level_percent:Math.min(100,rms*500)})
-          setTimeout(()=>{if(callActiveRef.current&&!mutedRef.current&&modeRef.current==='voice')beginListening.current?.()},100)
-          return
-        }
-      }else aboveSince=0
-      frame=requestAnimationFrame(check)
-    }
-    frame=requestAnimationFrame(check)
-    return()=>{disposed=true;cancelAnimationFrame(frame);source.disconnect();analyser.disconnect()}
-  },[callActive,muted,voiceState])
+  // Resume microphone capture after waitForPlayback completes. A volume-only
+  // interruption detector cannot distinguish the learner from speaker echo,
+  // and can abort the bot's own audio immediately on laptops.
   const stopCall = () => {
+    if(voiceDraftRef.current)URL.revokeObjectURL(voiceDraftRef.current.url)
+    voiceDraftRef.current=null;setVoiceDraft(null);setCapturePaused(false)
     streamingCapture.current?.cancel();streamingCapture.current=null
     incrementalCapture.current?.cancel();incrementalCapture.current=null
     voiceRequest.current?.abort();voiceRequest.current=null
     callActiveRef.current=false;setCallActive(false);mutedRef.current=false;setMuted(false);setVoiceState('idle');setMicState('idle')
-    if(recorder.current?.state==='recording'){discardCapture.current=true;recorder.current.stop()}
+    if(['recording','paused'].includes(recorder.current?.state)){discardCapture.current=true;recorder.current.stop()}
     else{micStream.current?.getTracks().forEach(track=>track.stop());micStream.current=null}
+    micVad.current?.stop();micVad.current=null
+    micDenoiser.current?.destroy();micDenoiser.current=null
+    micLevelGraph.current?.destroy();micLevelGraph.current=null
     playbackContext.current?.close();playbackContext.current=null;playbackTail.current=0
   }
   const startCall = async () => {
@@ -599,7 +701,17 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
     callActiveRef.current = true; modeRef.current = 'voice'; mutedRef.current = false; setCallActive(true); setMuted(false); setError('')
     try {
       await ensureAudioReady()
-      if(!micStream.current?.active)micStream.current=await navigator.mediaDevices.getUserMedia({audio:{deviceId:selectedMic?{exact:selectedMic}:undefined,echoCancellation:true,noiseSuppression:true,autoGainControl:true}})
+      if(!micStream.current?.active){
+        try{micStream.current=await navigator.mediaDevices.getUserMedia({audio:microphoneConstraints(selectedMic,{noiseSuppression:audioMode.browser})})}
+        catch(error){
+          if(!selectedMic||!['NotFoundError','OverconstrainedError'].includes(error.name))throw error
+          localStorage.removeItem('hikari-mic-id');setSelectedMic('');setSessionAudio(saveSessionAudio(localStorage,{...sessionAudio,deviceId:''}))
+          micStream.current=await navigator.mediaDevices.getUserMedia({audio:microphoneConstraints('',{noiseSuppression:audioMode.browser})})
+        }
+      }
+      const track=micStream.current.getAudioTracks()[0]
+      console.info('[Hikari microphone settings]',{device:track.label,...track.getSettings()})
+      await refreshMicrophones(false)
     } catch(e) {
       setError(e.message);callActiveRef.current=false;setCallActive(false);return
     }
@@ -611,10 +723,10 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
           if(e.name==='AbortError')return
           setVoiceState('failed')
           setError(`Voice playback failed: ${e.message}. You can still proceed by speaking.`)
-          setTimeout(() => {if(callActiveRef.current&&!mutedRef.current&&modeRef.current==='voice')beginListening.current?.()}, 600)
+          if(automaticTurnEnd)setTimeout(() => {if(callActiveRef.current&&!mutedRef.current&&modeRef.current==='voice')beginListening.current?.()}, 600)
         })
     } else {
-      if (!await toggleMic()) { callActiveRef.current = false; setCallActive(false) }
+      if (automaticTurnEnd&&!await toggleMic()) { callActiveRef.current = false; setCallActive(false) }
     }
   }
   const changeMode = next => {
@@ -624,9 +736,9 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
   }
   const toggleMute = () => {
     const next=!muted;mutedRef.current=next;setMuted(next)
-    if(next&&recorder.current?.state==='recording'){discardCapture.current=true;recorder.current.stop()}
+    if(next&&['recording','paused'].includes(recorder.current?.state)){discardCapture.current=true;recorder.current.stop()}
     if(next){streamingCapture.current?.cancel();incrementalCapture.current?.cancel();micStream.current?.getTracks().forEach(track=>track.stop());micStream.current=null}
-    if(!next&&callActiveRef.current&&!busy&&voiceState==='ready')setTimeout(()=>beginListening.current?.(),100)
+    if(automaticTurnEnd&&!next&&callActiveRef.current&&!busy&&voiceState==='ready')setTimeout(()=>beginListening.current?.(),100)
   }
   const toggleCamera = async () => {
     if (camera) { media.current?.getTracks().forEach(t=>t.stop()); media.current=null; setCamera(false); return }
@@ -635,8 +747,43 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
       setTimeout(()=>{ if(video.current) video.current.srcObject=stream },0)
     } catch(e){setError(`Camera unavailable: ${e.message}`)}
   }
+  const downloadCapture=()=>{
+    if(!lastCapture.current)return
+    const url=URL.createObjectURL(lastCapture.current)
+    const link=document.createElement('a')
+    link.href=url;link.download='hikari-microphone.webm';link.click()
+    setTimeout(()=>URL.revokeObjectURL(url),1000)
+  }
+  const sendReviewedVoice=async()=>{
+    const draft=voiceDraftRef.current
+    if(!draft||reviewSending.current||!callActiveRef.current||mutedRef.current)return
+    reviewSending.current=true;setBusy(true);setError('');setMicState('transcribing')
+    const controller=new AbortController();voiceRequest.current=controller
+    const timer=setTimeout(()=>controller.abort(),45000)
+    try{
+      const form=new FormData();form.append('file',draft.blob,'speech.webm');form.append('decoding_method',sessionAudio.decodingMethod)
+      form.append('language',session.training_language||'English');form.append('duration_ms',String(draft.durationMs))
+      form.append('context',`${session.title}. ${session.situation}`)
+      const out=draft.liveResult?.text?.trim()?draft.liveResult:await api('/transcribe',{method:'POST',body:form,signal:controller.signal})
+      if(!callActiveRef.current||voiceDraftRef.current!==draft||controller.signal.aborted)return
+      if(!out.text?.trim()){URL.revokeObjectURL(draft.url);voiceDraftRef.current=null;setVoiceDraft(null);throw new Error('No words recognized. Press Record voice to try another turn.')}
+      URL.revokeObjectURL(draft.url);voiceDraftRef.current=null;setVoiceDraft(null)
+      setMicState('transcribed');await send(out.text,draft.durationMs/1000)
+    }catch(error){if(error.name!=='AbortError'){setMicState('error');setError(error.message)}else if(callActiveRef.current){setMicState('error');setError('Recognition was interrupted or timed out. Your recording is still available.')}}
+    finally{clearTimeout(timer);reviewSending.current=false;setBusy(false)}
+  }
+  const toggleVoiceRecording=()=>{
+    const current=recorder.current
+    if(current?.state==='recording'){
+      current.hikariStopReason='manual_send';current.stop()
+    }else if(voiceDraftRef.current){
+      sendReviewedVoice()
+    }else{
+      beginListening.current?.()
+    }
+  }
   const latestReply=[...session.turns].reverse().find(turn=>turn.role==='assistant')
-  const callStatus=!callActive?'Ready to start':voiceState==='speaking'||voiceState==='streaming'?`${activeSpeaker||session.counterpart} is speaking`:muted?'Microphone muted':micState==='transcribing'?'Understanding you…':voiceState==='generating'||busy?'Preparing response…':recording?(micState==='speech detected'?'Listening to you…':'Listening…'):'Connected'
+  const callStatus=!callActive?'Ready to start':voiceDraft?'Preparing your voice message…':capturePaused?'Recording paused':!recording&&['error','retry'].includes(micState)?'Recognition needs attention':voiceState==='speaking'||voiceState==='streaming'?`${activeSpeaker||session.counterpart} is speaking`:muted?'Microphone muted':micState==='transcribing'?'Understanding you…':voiceState==='generating'||busy?'Preparing response…':recording?(micState==='speech detected'?'Listening to you…':'Listening…'):'Connected'
   const participants=session.participants||[{participant_type:'learner',display_name:'You'},{participant_type:'ai',display_name:session.counterpart}]
   const aiParticipants=participants.filter(person=>person.participant_type==='ai')
   const multipleAI=aiParticipants.length>1
@@ -652,7 +799,7 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
     <header className="session-header"><div><h1>{session.title}</h1><p>{session.description||session.situation}</p></div><div className="session-header-actions"><div className="session-clock"><span/> <strong>{formatTime(elapsed)}</strong><small>{callActive?'In Session':'Ready'}</small></div><i/><button className="h-small" onClick={finishSession} disabled={busy||sessionProgress?.outcome!=='success'}>Finish lesson</button><button className="session-end-top" onClick={leaveSession}>☎ &nbsp; End Session</button></div></header>
     <div className="session-body">
       <section className="session-call-area">
-        {error&&<div className="session-error">{error}</div>}
+        {error&&<div className="session-error" role="alert">{error}{lastCapture.current&&['error','retry'].includes(micState)&&<button onClick={downloadCapture}>Save microphone recording</button>}{callActive&&!recording&&!busy&&['error','retry'].includes(micState)&&<button onClick={()=>{setError('');beginListening.current?.()}} disabled={muted}>Retry microphone</button>}</div>}
         {sessionProgress&&<div className={`session-progress ${sessionProgress.outcome}`}><strong>{sessionProgress.outcome==='success'?'Objectives achieved':'Keep learning'}</strong><span>{sessionProgress.criteria?.filter(item=>item.met).length || 0}/{sessionProgress.criteria?.length || 0} objectives{sessionProgress.missing?.length?` · Next: ${sessionProgress.missing[0]}`:''}{sessionProgress.evaluation_mode?` · ${sessionProgress.evaluation_mode}`:''}</span></div>}
         {mode==='voice'?<div className={`participant-stage ${multipleAI?'participant-grid':'single-participant'}`}>
           {multipleAI?<>{aiParticipants.map((person,index)=>participantTile(person,index))}{participantTile(participants.find(person=>person.participant_type==='learner')||{display_name:'You'},aiParticipants.length,true)}</>:<>
@@ -660,10 +807,32 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
             <div className="self-pip">{camera?<video ref={video} autoPlay muted playsInline/>:<div className="pip-avatar">●</div>}<strong>You</strong><span>{muted?'⌁':'◉'}</span></div>
             <div className="ai-role-label">▮▮▮ &nbsp; AI Roleplay</div>
           </>}
-          {!callActive&&<div className="join-overlay"><h2>Ready to begin?</h2><p>{health?.components?.stt===false?'Speech recognition is offline. Start Hikari normally before joining.':'Your microphone starts after you join the training call.'}</p>{micOptions.length>0&&<select value={selectedMic} onChange={event=>{setSelectedMic(event.target.value);localStorage.setItem('hikari-mic-id',event.target.value)}}>{micOptions.map((item,index)=><option value={item.deviceId} key={item.deviceId}>{item.label||`Microphone ${index+1}`}</option>)}</select>}<button onClick={startCall} disabled={health?.components?.stt===false}>{health?.components?.stt===false?'Speech Recognition Offline':'Join Voice Session'}</button></div>}
+          <button ref={audioButtonRef} className="session-audio-tab" aria-label="Open audio settings" aria-haspopup="dialog" aria-expanded={audioPanelOpen} aria-controls="session-audio-panel" onClick={()=>setAudioPanelOpen(true)}><Icon name="settings"/><span>Audio</span></button>
+          {audioPanelOpen&&<div className="session-audio-backdrop" onClick={()=>setAudioPanelOpen(false)}>
+            <section ref={audioPanelRef} id="session-audio-panel" className="session-audio-panel" role="dialog" aria-modal="true" aria-labelledby="session-audio-title" onClick={event=>event.stopPropagation()}>
+              <header><div><p>CALL PREFERENCES</p><h2 id="session-audio-title">Audio settings</h2></div><button className="audio-panel-close" aria-label="Close audio settings" onClick={()=>setAudioPanelOpen(false)}>×</button></header>
+              <div className="audio-panel-content">
+                <label className="audio-device-label" htmlFor="session-microphone">Microphone</label>
+                <p className="audio-panel-description">{automaticTurnEnd?'Automatic input listens between replies and sends after a pause. You can also press Stop & send.':'Use the bottom Record voice button to start. Press it again to stop and send.'} Recordings are limited to 80 seconds.</p>
+                <p className="audio-panel-description">Choose the input you want to use for this conversation.</p>
+                <select id="session-microphone" value={selectedMic} disabled={callActive||micRefreshing} onChange={event=>{setSelectedMic(event.target.value);setSessionAudio(saveSessionAudio(localStorage,{...sessionAudio,deviceId:event.target.value}))}}>
+                  <option value="">System default microphone</option>
+                  {selectedMic&&!micOptions.some(item=>item.deviceId===selectedMic)&&<option value={selectedMic}>Previously selected microphone</option>}
+                  {micOptions.map((item,index)=><option value={item.deviceId} key={item.deviceId}>{item.label||`Microphone ${index+1}`}</option>)}
+                </select>
+                <button className="audio-refresh" disabled={micRefreshing} onClick={()=>refreshMicrophones(!callActive)}>{micRefreshing?'Finding microphones…':'Enable / refresh microphones'}</button>
+                <p className="audio-panel-note">Decoder: {sessionAudio.decodingMethod==='greedy_search'?'Greedy':'Modified beam'} · Input: {automaticTurnEnd?'Automatic':'Manual'} · Session processing: {audioMode.name} · Gain {sessionAudio.gainEnabled?`${sessionAudio.gainDb} dB`:'off'} · Live recognition {sessionAudio.liveRecognition?'on':'off'}. Change processing preferences on the Settings page before joining your next session.</p>
+                {callActive&&<p className="audio-panel-note">Input settings are locked during a call. Switch to chat before changing them.</p>}
+                {!callActive&&micOptions.length===0&&<p className="audio-panel-note">Enable microphone access to see your devices.</p>}
+                {micListError&&<p className="audio-panel-error" role="alert">{micListError}</p>}
+              </div>
+              <footer><button onClick={()=>setAudioPanelOpen(false)}>Done</button></footer>
+            </section>
+          </div>}
+          {!callActive&&<div className="join-overlay"><h2>Ready to begin?</h2><p>{health?.components?.stt===false?'Speech recognition is offline. Start Hikari normally before joining.':automaticTurnEnd?'Your microphone starts automatically. Pause after speaking to send your turn.':'Use Record voice below, then press Stop & send when you are finished.'}</p><button onClick={startCall} disabled={health?.components?.stt===false}>{health?.components?.stt===false?'Speech Recognition Offline':'Join Voice Session'}</button></div>}
           {captions&&latestReply&&<div className="live-caption"><strong>{latestReply.speaker_name||aiParticipants[0]?.display_name||session.counterpart}</strong><p>{latestReply.caption_text||latestReply.text}</p>{latestReply.caption_text&&<small>{userSettings?.native_language} captions · spoken English</small>}</div>}
         </div>:<div className="session-chat"><div className="messages">{session.turns.map((turn,index)=><div className={`turn ${turn.role}`} key={index}><small>{turn.role==='user'?'You':turn.speaker_name||session.counterpart}</small><p>{turn.text}</p><SourceEvidence sources={turn.sources}/>{captions&&turn.caption_text&&<small className="translated-caption">{turn.caption_text}</small>}</div>)}{busy&&<div className="turn assistant typing"><i/><i/><i/></div>}<div ref={chatEnd}/></div><div className="composer"><textarea value={text} onChange={event=>setText(event.target.value)} placeholder="Type your response…" onKeyDown={event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}}}/><button className="send" onClick={()=>send()} disabled={busy||!text.trim()}><Icon name="send"/></button></div></div>}
-        {session.posture_enabled&&<section className="posture-live"><strong>Posture indicators</strong><span>{camera?postureReason:"Camera is off; posture is not assessed."}</span>{posture&&Object.entries(posture).filter(([,v])=>typeof v==="number").map(([k,v])=><small key={k}>{k.replaceAll("_"," ")}: {Math.round(v)} · </small>)}</section>}<div className="meeting-controls"><button onClick={onOpenSettings}><span>⚙</span>Settings</button><button className={muted?'selected':''} onClick={toggleMute}><span>♩</span>{muted?'Unmute':'Mute'}</button><button className={camera?'selected':''} onClick={toggleCamera}><span>▣</span>Camera</button><button className="hangup" onClick={leaveSession}><span>☎</span>End Session</button><button className={captions?'selected':''} onClick={()=>setCaptions(value=>!value)}><span>▤</span>Captions</button><button onClick={()=>changeMode(mode==='voice'?'chat':'voice')}><span>•••</span>{mode==='voice'?'More':'Voice Call'}</button></div>
+        {session.posture_enabled&&<section className="posture-live"><strong>Posture indicators</strong><span>{camera?postureReason:"Camera is off; posture is not assessed."}</span>{posture&&Object.entries(posture).filter(([,v])=>typeof v==="number").map(([k,v])=><small key={k}>{k.replaceAll("_"," ")}: {Math.round(v)} · </small>)}</section>}<div className="meeting-controls">{mode==='voice'&&<button className={`voice-record-button ${recording?'selected is-recording':''}`} disabled={!callActive||muted||busy||micStarting.current||['speaking','streaming','generating'].includes(voiceState)} aria-pressed={recording} onClick={toggleVoiceRecording}><span>{recording?'■':'●'}</span>{recording?'Stop & send':voiceDraft?'Retry send':'Record voice'}</button>}<button onClick={onOpenSettings}><span>⚙</span>Settings</button><button className={muted?'selected':''} onClick={toggleMute}><span>♩</span>{muted?'Unmute':'Mute'}</button><button className={camera?'selected':''} onClick={toggleCamera}><span>▣</span>Camera</button><button className="hangup" onClick={leaveSession}><span>☎</span>End Session</button><button className={captions?'selected':''} onClick={()=>setCaptions(value=>!value)}><span>▤</span>Captions</button><button onClick={()=>changeMode(mode==='voice'?'chat':'voice')}><span>•••</span>{mode==='voice'?'More':'Voice Call'}</button></div>
       </section>
       <aside className="session-transcript"><h2>Conversation</h2><div>{session.turns.map((turn,index)=><article className={turn.role} key={index}><div className="transcript-avatar">●</div><section><header><strong>{turn.role==='user'?'You':turn.speaker_name||session.counterpart}</strong><span>· {formatTime(Math.max(0,Math.floor((turn.elapsed_seconds??((Date.parse(turn.created_at)-Date.parse(session.created_at))/1000))||0)))}</span></header><p>{turn.text}</p><SourceEvidence sources={turn.sources}/>{captions&&turn.caption_text&&<small className="translated-caption">{turn.caption_text}</small>}</section></article>)}{busy&&<article><div className="transcript-avatar">●</div><section className="transcript-typing"><i/><i/><i/></section></article>}</div></aside>
     </div>
@@ -865,6 +1034,7 @@ function Settings({ onChanged, embedded=false }){
         for (const line of lines) {
           if (!line.trim()) continue
           const event = JSON.parse(line)
+          if(event.tts_timing)console.info('[Hikari TTS latency]',event.tts_timing)
           if (event.type === 'error') throw new Error(event.message)
           if (event.type === 'audio') {
             if (!firstChunkTime) firstChunkTime = Math.round(performance.now() - startTime)
@@ -949,6 +1119,9 @@ function Settings({ onChanged, embedded=false }){
         <small>Running: {recognition?.runtime?.model||'Not loaded'} · {recognition?.runtime?.device||'—'} · {recognition?.runtime?.compute_type||'—'}. CPU speed depends on the machine; equal GPU speed is not guaranteed.</small>
       </section>
 
+      <SessionAudioSettings request={api}/>
+      <VoiceInputTest request={api} runtime={recognition?.runtime}/>
+
       <section className="settings-section language-preferences">
         <div className="section-title"><div><p className="eyebrow">LANGUAGE LEARNING</p><h2>Dialogue & caption languages</h2><p>Beginner English stays spoken in English while captions are translated into your native language.</p></div></div>
         <div className="voice-picker-row">
@@ -1018,13 +1191,13 @@ function Settings({ onChanged, embedded=false }){
                   <span className="lang-tag">{engine.language}</span>
                   <button
                     className={`engine-action-btn ${isActive ? 'btn-active' : 'btn-switch'}`}
-                    disabled={busy || isActive || !engine.installed}
+                    disabled={busy || isActive || (!engine.installed && !engine.download_on_select)}
                     onClick={(e) => {
                       e.stopPropagation()
                       applyEngine(engine.id, selectedVoice)
                     }}
                   >
-                    {isActive ? 'Active' : !engine.installed ? 'Not installed' : busy ? 'Loading…' : 'Switch Engine'}
+                    {isActive ? 'Active' : busy ? 'Loading…' : !engine.installed ? (engine.download_on_select ? 'Download & Switch' : 'Not installed') : 'Switch Engine'}
                   </button>
                 </div>
               </article>

@@ -72,7 +72,7 @@ class TTSRequest(BaseModel):
 
 
 class TTSEngineSelection(BaseModel):
-    engine: str = Field(pattern="^(chattts|kokoro|vits_ja|vits_ar)$")
+    engine: str = Field(pattern="^(chattts|kokoro|piper|kitten|vits_ja|vits_ar)$")
     voice: Optional[str] = Field(default=None, max_length=50)
 
 

@@ -1,3 +1,4 @@
+import {frameLevels} from './inputLevel.mjs'
 // Capture decisions must not depend on requestAnimationFrame: browsers pause it
 // in hidden/occluded windows. Keep the graph rendered without microphone echo.
 export function monitorMicrophone(context, source, onSamples, onError = () => {}) {
@@ -21,7 +22,8 @@ export function monitorMicrophone(context, source, onSamples, onError = () => {}
     }
     try {
       analyser.getFloatTimeDomainData(samples)
-      onSamples(Math.sqrt(samples.reduce((sum, value) => sum + value * value, 0) / samples.length))
+      const levels=frameLevels(samples)
+      onSamples(levels.rms,levels)
     } catch (error) { onError(error) }
   }, 50)
   return () => {

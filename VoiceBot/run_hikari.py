@@ -38,7 +38,7 @@ def port_is_free(port: int) -> bool:
 
 def preflight(require_frontend_tools: bool = False) -> tuple[Path, str | None]:
     python = VENV_PYTHON if VENV_PYTHON.exists() else Path(sys.executable)
-    probe = "import importlib.util,sys; names=('fastapi','uvicorn','psutil','ChatTTS','faster_whisper'); sys.exit(0 if all(importlib.util.find_spec(n) for n in names) else 1)"
+    probe = "import importlib.util,sys; names=('fastapi','uvicorn','psutil','faster_whisper','sherpa_onnx','av','multipart','dotenv'); sys.exit(0 if all(importlib.util.find_spec(n) for n in names) else 1)"
     check = subprocess.run([str(python), "-c", probe], cwd=ROOT)
     if check.returncode:
         raise RuntimeError(f'Python packages are incomplete. Run: "{python}" -m pip install -r requirements.txt')

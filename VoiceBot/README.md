@@ -45,11 +45,12 @@ The first backend start loads the available speech recognizer and selected TTS e
 
 ## Run locally on Linux
 
-From the `VoiceBot` directory, create a **Linux** virtual environment (do not reuse
-a Windows `.venv`) and install the dependencies:
+From the `VoiceBot` directory, use Python 3.12 to create a **Linux** virtual
+environment (do not reuse a Windows `.venv`) and install the dependencies. The
+pinned Transformers/tokenizers stack currently fails to build on Python 3.13:
 
 ```bash
-python3 -m venv .venv
+python3.12 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 cp .env.template .env  # First setup only; configure your API key and Linux cache paths.
 cd frontend
@@ -110,7 +111,7 @@ ChatTTS buffers each speaker's complete reply as one continuous utterance, avoid
 
 Speech recognition uses multilingual Whisper `medium` on CUDA with `WHISPER_COMPUTE_TYPE=int8_float16` to leave GPU memory for ChatTTS. Recognition explicitly uses transcription rather than translation, with deterministic decoding. `/api/health` reports `stt_runtime` model, device, and precision; GPU initialization runs at startup. Runtime errors are reported as service failures, not misleading "no speech" results.
 
-On Windows, faster-whisper requires separate CUDA 12 cuBLAS/cuDNN libraries even when PyTorch uses CUDA 13. These are included in `requirements.txt`, and the STT module registers their DLL directories. To smoke-test the running app, use `.venv\Scripts\python.exe scripts\check_voice_latency.py` (synthesizes two sentences and transcribes the first; does not access the microphone).
+On Windows, faster-whisper needs separate CUDA 12 cuBLAS/cuDNN libraries only when using CUDA; CPU inference does not require CUDA. Those libraries are not installed by `requirements.txt`, and must be installed separately for CUDA inference. The STT module registers their DLL directories when available. To smoke-test the running app, use `.venv\Scripts\python.exe scripts\check_voice_latency.py` (synthesizes two sentences and transcribes the first; does not access the microphone).
 
 The selected engine and Kokoro voice can also be changed from the Settings screen.
 
@@ -145,3 +146,53 @@ See [12 October completion verification](docs/PROTOTYPE_COMPLETION_2026-10-12.md
 ## Application status
 
 The primary learner journey is integrated: create an account, review a persistent dashboard, select and prepare a scenario, complete a voice or chat roleplay, receive an assessment, and continue from updated proficiency, progress, recommendations, and training plans. Demo access is disabled by default; set `ALLOW_DEMO_ACCESS=true` only for isolated development fixtures.
+
+## Setting up another PC
+
+Use Python 3.12 and create a fresh virtual environment on the destination machine;
+never copy `.venv` between PCs. Include all new source files when transferring the
+project. Models, `.env`, runtime preferences and the compiled frontend are ignored
+by Git, so a fresh clone requires setup and a frontend build.
+
+Windows PowerShell, from `VoiceBot`:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+Copy-Item .env.template .env # First setup only; never overwrite existing secrets.
+.\.venv\Scripts\python.exe scripts/setup_nemotron.py
+cd frontend
+npm ci
+npm run build
+cd ..
+.\start_hikari.cmd
+```
+
+Linux, after the environment/dependency steps above:
+
+```bash
+.venv/bin/python scripts/setup_nemotron.py
+cd frontend
+npm ci
+npm run build
+cd ..
+./start_hikari.sh
+```
+
+Configure your LLM credentials in `.env` before starting. The template selects
+English Nemotron on CPU with no automatic Whisper fallback, and Piper on CPU.
+Piper downloads its voice package on first use; Nemotron requires the setup command
+above. Internet is needed for these downloads and the configured LLM API. Existing
+`data/runtime_settings.json` may override the template's engine selections; inspect
+Settings if migrating an existing installation.
+
+Use `http://localhost:8000` on the destination PC. Select its microphone in Settings;
+browser microphone identifiers and saved processing choices do not transfer between
+PCs. Fresh browsers use browser-only suppression, manual turns and greedy decoding.
+RNNoise requires 48 kHz AudioWorklet capture; choose browser-only suppression if the
+browser cannot provide it. Automatic turns require the bundled Silero assets.
+
+The pinned Sherpa wheel supports greedy Nemotron decoding. The isolated experimental
+build is not part of installation, and selecting beam is validated before saving.
+After backend changes, stop and restart Hikari, then refresh the browser; a stale
+backend can return “Method Not Allowed” for a newly added endpoint.

@@ -1,0 +1,116 @@
+{
+  "runtime_version": "1.13.8",
+  "runtime_git": "8c8e275d",
+  "onnxruntime_version": "1.28.2",
+  "method": "modified_beam_search",
+  "beam": 4,
+  "threads": 4,
+  "source_commit": "1a9d234ab95567eba8c2e89873a87d70b79633e2",
+  "model_load_ms": 8009.4,
+  "recognition": [
+    {
+      "file": "0.wav",
+      "recognition_ms": 8234.6,
+      "rtf": 1.243,
+      "reference_wer_percent": 0.0,
+      "text": "After early nightfall the yellow lamps would light up here and there the squalid quarter of the brothels",
+      "confidence": null,
+      "detected_language": "en",
+      "language_probability": null,
+      "engine": "nemotron",
+      "final": true,
+      "input_audio": {
+        "duration_ms": 6625.0,
+        "rms": 0.047091,
+        "peak": 0.534943
+      },
+      "finalize_timing": {
+        "lock_wait_ms": 0.0,
+        "padding_and_finish_ms": 16.92,
+        "decode_ms": 1029.19,
+        "result_ms": 0.07,
+        "decode_steps": 2,
+        "padding_seconds": 1.0,
+        "sample_rate": 16000
+      }
+    },
+    {
+      "file": "1.wav",
+      "recognition_ms": 18689.1,
+      "rtf": 1.118,
+      "reference_wer_percent": 4.17,
+      "text": "God as a direct consequence of the sin which man thus punished had given her a lovely child whose place was on that same dishonoured bosom to connect her parent forever with the race and descent of mortals, and to be finally a blessed soul in heaven",
+      "confidence": null,
+      "detected_language": "en",
+      "language_probability": null,
+      "engine": "nemotron",
+      "final": true,
+      "input_audio": {
+        "duration_ms": 16715.0,
+        "rms": 0.030577,
+        "peak": 0.423492
+      },
+      "finalize_timing": {
+        "lock_wait_ms": 0.0,
+        "padding_and_finish_ms": 8.44,
+        "decode_ms": 944.56,
+        "result_ms": 0.07,
+        "decode_steps": 2,
+        "padding_seconds": 1.0,
+        "sample_rate": 16000
+      }
+    },
+    {
+      "file": "8k.wav",
+      "recognition_ms": 6370.3,
+      "rtf": 1.32,
+      "reference_wer_percent": 0.0,
+      "text": "Yet these thoughts affected Hester Prynne less with hope than apprehension",
+      "confidence": null,
+      "detected_language": "en",
+      "language_probability": null,
+      "engine": "nemotron",
+      "final": true,
+      "input_audio": {
+        "duration_ms": 4825.0,
+        "rms": 0.028765,
+        "peak": 0.279907
+      },
+      "finalize_timing": {
+        "lock_wait_ms": 0.0,
+        "padding_and_finish_ms": 11.83,
+        "decode_ms": 1230.12,
+        "result_ms": 0.06,
+        "decode_steps": 2,
+        "padding_seconds": 1.0,
+        "sample_rate": 16000
+      }
+    },
+    {
+      "file": "hikari.webm",
+      "recognition_ms": 3124.2,
+      "rtf": 1.633,
+      "reference_wer_percent": null,
+      "text": "Hello",
+      "confidence": null,
+      "detected_language": "en",
+      "language_probability": null,
+      "engine": "nemotron",
+      "final": true,
+      "input_audio": {
+        "duration_ms": 1913.5,
+        "rms": 0.22159,
+        "peak": 0.927765
+      },
+      "finalize_timing": {
+        "lock_wait_ms": 0.0,
+        "padding_and_finish_ms": 24.47,
+        "decode_ms": 1258.89,
+        "result_ms": 0.05,
+        "decode_steps": 2,
+        "padding_seconds": 1.0,
+        "sample_rate": 16000
+      }
+    }
+  ]
+}

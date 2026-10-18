@@ -20,6 +20,7 @@ class LauncherTests(unittest.TestCase):
             selected,_=run_hikari.preflight()
         self.assertEqual(selected,interpreter)
         self.assertEqual(probe.call_args.args[0][0],str(interpreter))
+        self.assertNotIn('ChatTTS',probe.call_args.args[0][2])
 
     def test_missing_packages_report_selected_platform_command(self):
         interpreter=run_hikari.venv_python('posix')

@@ -1,0 +1,3 @@
+# Piper and Kitten use the existing Sherpa-ONNX runtime; no piper-tts needed.
+# If requirements-nemotron.txt already installed Sherpa, keep that distribution.
+sherpa-onnx==1.13.8

@@ -4,6 +4,41 @@ from modules.stt_router import create_stt,SpeechRecognitionRouter
 
 
 class STTRouterTests(unittest.TestCase):
+    def test_decoder_selection_reuses_primary_and_rejects_invalid_methods(self):
+        primary=Mock(decoding_method='greedy_search')
+        router=SpeechRecognitionRouter(primary)
+        self.assertIs(router.decoder_for('greedy_search'),primary)
+        with self.assertRaises(ValueError):router.decoder_for('unknown')
+
+    def test_unsupported_native_decoder_is_probed_outside_server_and_cached(self):
+        primary=Mock(decoding_method='greedy_search',model_dir='/models',device='cpu',cpu_threads=4)
+        router=SpeechRecognitionRouter(primary)
+        with patch('subprocess.run',return_value=Mock(returncode=1)) as probe, patch('modules.stt_nemotron.NemotronSTT') as factory:
+            for _ in range(2):
+                with self.assertRaisesRegex(RuntimeError,'installed Sherpa'):
+                    router.decoder_for('modified_beam_search')
+            probe.assert_called_once()
+            factory.assert_not_called()
+
+    def test_supported_decoder_is_cached_and_closed_with_router(self):
+        primary=Mock(decoding_method='greedy_search',model_dir='/models',device='cpu',cpu_threads=4)
+        router=SpeechRecognitionRouter(primary)
+        with patch('subprocess.run',return_value=Mock(returncode=0)), patch('modules.stt_nemotron.NemotronSTT') as factory:
+            decoder=router.decoder_for('modified_beam_search')
+            self.assertIs(router.decoder_for('modified_beam_search'),decoder)
+            factory.assert_called_once()
+            router.close()
+            decoder.close.assert_called_once()
+
+    def test_auto_uses_cpu_whisper_when_torch_is_unavailable(self):
+        whisper=Mock(runtime_info=lambda:{'device':'cpu','model':'medium'})
+        factory=Mock(return_value=whisper)
+        with patch.dict('sys.modules',{'torch':None}):
+            router=create_stt(engine='auto',device='auto',whisper_factory=factory)
+        self.assertIsNone(router.primary)
+        self.assertEqual(router.fallback_reason,'No compatible NVIDIA CUDA GPU')
+        factory.assert_called_once()
+
     def test_explicit_cpu_nemotron_is_allowed_without_cuda(self):
         nvidia=Mock();factory=Mock()
         router=create_stt(cuda_available=False,nemotron_factory=lambda:nvidia,whisper_factory=factory,engine='nemotron',device='cpu')
@@ -53,3 +88,30 @@ class STTRouterTests(unittest.TestCase):
         whisper=Mock();whisper.transcribe_detailed.return_value={'text':'Hello.'}
         router=SpeechRecognitionRouter(nvidia,lambda:whisper)
         self.assertEqual(router.transcribe_detailed(b'audio','en')['text'],'Hello.')
+
+    def test_explicit_nemotron_startup_error_never_loads_whisper(self):
+        factory=Mock()
+        with self.assertRaisesRegex(RuntimeError, 'broken model'):
+            create_stt(engine='nemotron',device='cpu',cuda_available=False,
+                       nemotron_factory=Mock(side_effect=RuntimeError('broken model')),
+                       whisper_factory=factory)
+        factory.assert_not_called()
+
+    def test_explicit_nemotron_decode_error_never_loads_whisper(self):
+        primary=Mock(runtime_info=lambda:{"engine":"nemotron"})
+        primary.transcribe_detailed.side_effect=RuntimeError('decode failed')
+        factory=Mock()
+        router=create_stt(engine='nemotron',device='cpu',cuda_available=False,
+                          nemotron_factory=lambda:primary,whisper_factory=factory)
+        with self.assertRaisesRegex(RuntimeError, 'Whisper fallback disabled'):
+            router.transcribe_detailed(b'audio','English')
+        factory.assert_not_called()
+        self.assertIsNone(router.runtime_info()['fallback'])
+
+    def test_explicit_nemotron_rejects_other_languages_without_whisper(self):
+        factory=Mock()
+        router=create_stt(engine='nemotron',device='cpu',cuda_available=False,
+                          nemotron_factory=Mock(),whisper_factory=factory)
+        with self.assertRaisesRegex(RuntimeError, 'English only'):
+            router.transcribe_detailed(b'audio','ur')
+        factory.assert_not_called()

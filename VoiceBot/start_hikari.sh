@@ -7,7 +7,7 @@ cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 if [[ ! -x .venv/bin/python ]]; then
     printf '%s\n' \
         'Hikari Linux virtual environment is missing.' \
-        'Create it with: python3 -m venv .venv' \
+        'Create it with: python3.12 -m venv .venv' \
         'Then install: .venv/bin/python -m pip install -r requirements.txt' >&2
     exit 1
 fi

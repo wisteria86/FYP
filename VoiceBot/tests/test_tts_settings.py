@@ -55,6 +55,17 @@ class TTSSettingsTests(unittest.TestCase):
         self.assertTrue(kokoro_entry.get("default"))
         self.assertTrue(kokoro_entry.get("active"))
 
+    def test_english_comparison_engines_are_selectable(self):
+        from api.schemas import TTSEngineSelection
+        catalog = self.client.get("/api/tts/engines").json()["engines"]
+        for engine in ("piper", "kitten"):
+            self.assertEqual(TTSEngineSelection(engine=engine).engine, engine)
+            entry = next(item for item in catalog if item["id"] == engine)
+            self.assertTrue(entry["download_on_select"])
+            with patch("modules.tts_english.EnglishOnnxTTS") as adapter:
+                self.assertIs(server._build_tts_engine(engine), adapter.return_value)
+                adapter.assert_called_once_with(engine)
+
     def test_select_voice_within_kokoro(self):
         res = self.client.post("/api/tts/engine", json={"engine": "kokoro", "voice": "af_bella"})
         self.assertEqual(res.status_code, 200)
