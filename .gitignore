@@ -234,3 +234,6 @@ VoiceBot/data/runtime_settings.json
 # Local test evidence and generated documents
 VoiceBot/tmp/
 VoiceBot/output/
+
+# Local Claude Code settings
+.claude/

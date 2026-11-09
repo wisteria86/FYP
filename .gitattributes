@@ -1,0 +1,16 @@
+# Keep one line-ending style for everyone, whatever their Git settings.
+# The repository already stores text with LF; this keeps checkouts the same.
+* text=auto eol=lf
+
+# Windows launchers need Windows line endings.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files are never converted.
+*.png binary
+*.jpg binary
+*.woff2 binary
+*.wasm binary
+*.task binary
+*.db binary
