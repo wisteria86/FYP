@@ -1,0 +1,227 @@
+{
+  "archetype": "social",
+  "level": "beginner",
+  "setting": "A fictional practice chat with a language partner about normal weekdays.",
+  "presentation": {
+    "situation": "Your language partner {{name}} wants to compare normal weekdays with you. {{name}} {{routine}}. Tell {{name}} about your day and ask about theirs.",
+    "opening": "I always find mornings difficult! What does a normal weekday look like for you?",
+    "opening_speaker": "p1",
+    "learner_role": "Language partner"
+  },
+  "brief": {
+    "you_are": "You are practising English with a partner.",
+    "situation": "Your language partner {{name}} wants to compare normal weekdays with you. {{name}} {{routine}}. Tell {{name}} about your day and ask about theirs.",
+    "task": "Say what you usually do on a weekday, use time words like at seven or after work, and ask about your partner's day.",
+    "done_looks_like": "Your partner knows three things you do in a day and when, and you asked about their day."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Language partner",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are practising English with a partner.",
+      "goals": [
+        "Say what you usually do on a weekday, use time words like at seven or after work, and ask about your partner's day."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Language partner",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Practises English with you each week",
+      "voice_index": 0,
+      "topics": [
+        "morning",
+        "work",
+        "evening",
+        "routine"
+      ],
+      "card": {
+        "want": "To compare daily routines, and to find a good time for the next practice.",
+        "hidden_need": "Would like to find a regular practice time.",
+        "attitude": "Cheerful and patient.",
+        "speech": "Very simple everyday English. Short sentences. One easy question at a time.",
+        "tactics": [
+          "If the answer is very short, ask one easy question",
+          "Use the person's own words back to them"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "You meet each week to practise English."
+    },
+    {
+      "id": "f2",
+      "text": "{{name}} {{routine}}.",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Sequence three daily actions",
+      "evidence": "The learner describes things they usually do, in the present simple.",
+      "alternatives": [
+        "I usually wake up early and go to work."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Use time expressions",
+      "evidence": "The learner uses a time expression.",
+      "alternatives": [
+        "I start work at nine."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Ask about the other person's routine",
+      "evidence": "The learner asks about the partner's routine.",
+      "alternatives": [
+        "What time do you get up?"
+      ]
+    }
+  ],
+  "examples": [
+    "I usually wake up at …",
+    "Then I …",
+    "What time do you …?"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Hear what the learner usually does.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\bi (?:usually|normally|always|often|sometimes)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "What do you usually do in the morning?",
+        "What do you do first?"
+      ],
+      "orient": "Tell me about a normal day. Start with: I usually.",
+      "fallback": [
+        "What do you do first?",
+        "What do you usually do in the morning?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Hear when these things happen.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:at \\d|in the morning|in the evening|after|before|then)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "What time do you do that?",
+        "And after that?"
+      ],
+      "orient": "Now say when. You can say: at seven, or: in the evening.",
+      "fallback": [
+        "And after that?",
+        "What time do you do that?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "The learner asks about the partner.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:what time|when|how often|do you)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "My day is very different. Do you want to know about it?",
+        "Do you have a question about my day?"
+      ],
+      "orient": "Now ask about my day. You can say: What time do you get up?",
+      "fallback": [
+        "Do you have a question about my day?",
+        "My day is very different. Do you want to know about it?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Thanks. That was good practice. See you next week!",
+  "expert_notes": {
+    "o1": {
+      "good": "Using the present simple for things you do every day.",
+      "common_mistakes": [
+        "Saying: I am wake up"
+      ],
+      "micro_lesson": "For daily habits use: I wake up, I go, I eat.",
+      "model": "I usually wake up early, then I go to work.",
+      "smaller_step": "Say: I usually, and one action.",
+      "subskills": [
+        "grammar"
+      ]
+    },
+    "o2": {
+      "good": "Time words help the listener follow your day.",
+      "common_mistakes": [
+        "Leaving out at or in"
+      ],
+      "micro_lesson": "Say: at seven, in the morning, after work.",
+      "model": "I start work at nine, and in the evening I cook.",
+      "smaller_step": "Say one time: at seven.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o3": {
+      "good": "Asking the same question back is an easy way to keep talking.",
+      "common_mistakes": [
+        "Only talking about yourself"
+      ],
+      "micro_lesson": "Use: What time do you, or: When do you.",
+      "model": "What time do you get up? When do you finish work?",
+      "smaller_step": "Say: What time do you get up?",
+      "subskills": [
+        "comprehension"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Lina",
+      "routine": "starts work at eight and goes for a walk after dinner"
+    },
+    {
+      "name": "Omar",
+      "routine": "studies in the morning and works in a shop in the evening"
+    }
+  ]
+}

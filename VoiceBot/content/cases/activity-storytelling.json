@@ -1,0 +1,232 @@
+{
+  "archetype": "panel",
+  "level": "intermediate",
+  "setting": "A fictional meeting with a prospective customer who wants to hear how your team works.",
+  "presentation": {
+    "situation": "{{name}} is considering working with your company, and asks for a true story that shows {{value}}. Tell a short professional story from your own work or studies. Do not invent achievements.",
+    "opening": "Before we decide, I'd love to hear a real story that shows how you handle {{value}}.",
+    "opening_speaker": "p1",
+    "learner_role": "Company representative"
+  },
+  "brief": {
+    "you_are": "You are telling a prospective customer a true professional story.",
+    "situation": "{{name}} is considering working with your company, and asks for a true story that shows {{value}}. Tell a short professional story from your own work or studies. Do not invent achievements.",
+    "task": "Tell a clear story with a beginning, middle and end, include real details, and say why it matters to them.",
+    "done_looks_like": "{{name}} remembers your story and understands what it says about {{value}}."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Company representative",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are telling a prospective customer a true professional story.",
+      "goals": [
+        "Tell a clear story with a beginning, middle and end, include real details, and say why it matters to them."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Prospective customer",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Is deciding whether to work with your company",
+      "voice_index": 0,
+      "topics": [
+        "story",
+        "customer",
+        "company",
+        "problem"
+      ],
+      "card": {
+        "want": "To see what your company is really like when things get difficult.",
+        "hidden_need": "",
+        "attitude": "Interested and slightly sceptical of sales talk.",
+        "speech": "Fluent, natural professional English. Direct, and free of corporate slogans.",
+        "tactics": [
+          "Ask what happened next",
+          "Ask 'what does that mean for me?'",
+          "Never supply details of the story"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "{{name}} wants a true story that shows {{value}}."
+    },
+    {
+      "id": "f2",
+      "text": "The story comes from the speaker. {{name}} knows only what the speaker says."
+    },
+    {
+      "id": "f3",
+      "text": "{{name}} is comparing two suppliers.",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Tell a story with a clear beginning and end",
+      "evidence": "The learner tells events in order, with a beginning and a turning point.",
+      "alternatives": [
+        "Last year we had a client whose launch was at risk. Then..."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Include real, specific detail",
+      "evidence": "The learner includes a concrete detail or evidence.",
+      "alternatives": [
+        "We had three days, and the file was missing."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Say why it matters to the listener",
+      "evidence": "The learner connects the story to the listener.",
+      "alternatives": [
+        "What that means for you is that you will always get a straight answer."
+      ]
+    }
+  ],
+  "examples": [
+    "Last year, a client's launch was at risk. Then we...",
+    "We had three days, and we called the client each morning.",
+    "What that means for you is that you will always know where things stand."
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Hear a story with a shape.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:last (?:year|month|week)|when (?:we|i)|one day|then|after that|finally|in the end)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So what happened?",
+        "Where does the story start?"
+      ],
+      "orient": "Tell me a true story from your work or studies. Start with when it happened, and what went wrong.",
+      "fallback": [
+        "Where does the story start?",
+        "So what happened?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Hear real detail.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:for example|\\d+|days?|weeks?|because|exactly|data|result)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Can you be more specific?",
+        "What exactly did you do?"
+      ],
+      "orient": "Add a real detail from your story: a number, a name or something somebody said.",
+      "fallback": [
+        "What exactly did you do?",
+        "Can you be more specific?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Hear why it matters.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:means for you|for you|that'?s why|the lesson|what (?:this|that) (?:shows|means)|so you)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So what does that mean for me?",
+        "Why are you telling me this?"
+      ],
+      "orient": "Finish by saying why this story matters to me. Start with: What that means for you is.",
+      "fallback": [
+        "Why are you telling me this?",
+        "So what does that mean for me?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Thank you. That helps me a lot more than a brochure would.",
+  "expert_notes": {
+    "o1": {
+      "good": "A clear beginning, a problem and what came next.",
+      "common_mistakes": [
+        "Listing facts about your company"
+      ],
+      "micro_lesson": "Start with a time and a problem.",
+      "model": "Last year, a client's launch was at risk. Then we...",
+      "smaller_step": "Say: Last year.",
+      "subskills": [
+        "narrative"
+      ]
+    },
+    "o2": {
+      "good": "One real detail makes a story believable.",
+      "common_mistakes": [
+        "Inventing achievements"
+      ],
+      "micro_lesson": "Use one real, specific detail.",
+      "model": "We had three days, and we called the client each morning.",
+      "smaller_step": "Say one real detail.",
+      "subskills": [
+        "evidence"
+      ]
+    },
+    "o3": {
+      "good": "Ending with the point for this listener.",
+      "common_mistakes": [
+        "Stopping when the events stop"
+      ],
+      "micro_lesson": "Say: What that means for you is.",
+      "model": "What that means for you is that you will always know where things stand.",
+      "smaller_step": "Say: What that means for you.",
+      "subskills": [
+        "impact"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Hannah",
+      "value": "trust when something goes wrong"
+    },
+    {
+      "name": "Salman",
+      "value": "reliability under pressure"
+    }
+  ]
+}

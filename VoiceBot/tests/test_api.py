@@ -1,3 +1,4 @@
+import isolated_environment  # noqa: F401  (must come before the server)
 import os
 import io
 import tempfile
@@ -354,7 +355,7 @@ class ApiTests(unittest.TestCase):
         resources = self.client.get("/api/resources")
         dashboard = self.client.get("/api/dashboard")
         self.assertEqual(activities.status_code, 200)
-        self.assertEqual(len(activities.json()), 42)
+        self.assertEqual(len(activities.json()), 46)
         self.assertEqual(len(resources.json()), 7)
         self.assertIn("practice_minutes", dashboard.json())
         self.assertIn("progress_history", dashboard.json())

@@ -1,0 +1,230 @@
+{
+  "archetype": "colleague",
+  "level": "intermediate",
+  "setting": "A fictional office chat in which a colleague reviews an email as it is drafted.",
+  "presentation": {
+    "situation": "You need to email {{to}} about {{topic}}. The facts: {{facts_text}} {{name}} sits next to you and offers to look at it. Say or type your email piece by piece: subject, polite explanation, the action you want, and a closing.",
+    "opening": "Okay, you need to email {{to}} about {{topic}}. What's your subject line going to be?",
+    "opening_speaker": "p1",
+    "learner_role": "Colleague"
+  },
+  "brief": {
+    "you_are": "You are drafting a professional email while a colleague helps.",
+    "situation": "You need to email {{to}} about {{topic}}. The facts: {{facts_text}} {{name}} sits next to you and offers to look at it. Say or type your email piece by piece: subject, polite explanation, the action you want, and a closing.",
+    "task": "Write a clear subject line, explain politely in a sentence or two, request a specific action, and close professionally.",
+    "done_looks_like": "Your draft has a clear subject, a polite explanation, a clear request and a closing."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Colleague",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are drafting a professional email while a colleague helps.",
+      "goals": [
+        "Write a clear subject line, explain politely in a sentence or two, request a specific action, and close professionally."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Colleague",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Sits next to you and has offered to read your draft",
+      "voice_index": 0,
+      "topics": [
+        "email",
+        "subject",
+        "reader",
+        "tone"
+      ],
+      "card": {
+        "want": "To help you send something clear the first time.",
+        "hidden_need": "",
+        "attitude": "Friendly and practical. Reacts as the reader would.",
+        "speech": "Natural workplace English. Short comments.",
+        "tactics": [
+          "React as the reader would: 'would they know what you want?'",
+          "Do not write the email for them"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "The email is to {{to}} about {{topic}}."
+    },
+    {
+      "id": "f2",
+      "text": "The facts: {{facts_text}}"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Write a clear subject line",
+      "evidence": "The learner gives a specific subject line.",
+      "alternatives": [
+        "Subject: Delivery delayed until Friday"
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Explain politely",
+      "evidence": "The learner writes a polite, clear explanation.",
+      "alternatives": [
+        "Dear Ms Khan, I am sorry to tell you that your delivery is delayed."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Request an action and close",
+      "evidence": "The learner requests a specific action and closes professionally.",
+      "alternatives": [
+        "Please confirm by Thursday. Kind regards, Sara"
+      ]
+    }
+  ],
+  "examples": [
+    "Subject: Delivery delayed until Friday",
+    "Dear Ms Khan, I am sorry to tell you that your delivery is delayed.",
+    "Please confirm by Thursday. Kind regards, Sara"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "See the subject line.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\bsubject\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "What's your subject line?",
+        "Would they know what this is about from the subject alone?"
+      ],
+      "orient": "We're drafting your email. Tell me the subject line. Make it say exactly what the email is about.",
+      "fallback": [
+        "Would they know what this is about from the subject alone?",
+        "What's your subject line?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "See the polite explanation.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:dear|hello|hi |sorry|please|thank|regards|i am writing|i'?m writing)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Okay, how does it start?",
+        "What do you say first?"
+      ],
+      "orient": "Now give me the greeting and explanation. Start with: Dear, or: Hello.",
+      "fallback": [
+        "What do you say first?",
+        "Okay, how does it start?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "See the request and closing.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:please|could you|confirm|reply|send|kind regards|best regards|by (?:monday|tuesday|wednesday|thursday|friday|tomorrow))\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So what do you want them to do?",
+        "How do you end it?"
+      ],
+      "orient": "Now tell them what you need them to do, by when, and finish with a closing. For example: Please confirm by Thursday. Kind regards.",
+      "fallback": [
+        "How do you end it?",
+        "So what do you want them to do?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Looks good. I'd send that.",
+  "expert_notes": {
+    "o1": {
+      "good": "A subject line that says what the email is about.",
+      "common_mistakes": [
+        "'Hello' or 'Important' as a subject"
+      ],
+      "micro_lesson": "Say the main fact in a few words.",
+      "model": "Subject: Delivery delayed until Friday",
+      "smaller_step": "Say: Subject, and the main fact.",
+      "subskills": [
+        "subject clarity"
+      ]
+    },
+    "o2": {
+      "good": "A greeting and a short, polite explanation.",
+      "common_mistakes": [
+        "Too casual, or a long apology"
+      ],
+      "micro_lesson": "Start: Dear, then say what happened, politely.",
+      "model": "Dear Ms Khan, I am sorry to tell you that your delivery is delayed.",
+      "smaller_step": "Say: Dear, and the name.",
+      "subskills": [
+        "tone"
+      ]
+    },
+    "o3": {
+      "good": "One clear request, with a date, and a polite closing.",
+      "common_mistakes": [
+        "Ending with no request"
+      ],
+      "micro_lesson": "Say: Please, and a date. Then: Kind regards.",
+      "model": "Please confirm by Thursday. Kind regards, Sara",
+      "smaller_step": "Say: Please confirm by.",
+      "subskills": [
+        "requested action"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Nadia",
+      "to": "a customer, Ms Khan",
+      "topic": "a late delivery",
+      "facts_text": "the delivery moves from Tuesday to Friday, and she needs to confirm that someone will be home."
+    },
+    {
+      "name": "Chris",
+      "to": "your manager, Mr Ali",
+      "topic": "a changed appointment",
+      "facts_text": "the supplier visit moves from Monday to Wednesday at 2 pm, and you need him to confirm that he can attend."
+    }
+  ]
+}

@@ -1,0 +1,237 @@
+{
+  "archetype": "social",
+  "level": "beginner",
+  "setting": "A fictional first day at an evening English class.",
+  "presentation": {
+    "situation": "You meet {{name}}, a new classmate, before an evening English class. {{name}} is from {{city}}. Tell {{name}} about yourself and ask something back.",
+    "opening": "Hello, I'm {{name}}, your new classmate. I'm from {{city}}. Could you tell me a little about yourself?",
+    "opening_speaker": "p1",
+    "learner_role": "Classmate"
+  },
+  "brief": {
+    "you_are": "You are a student in an evening English class.",
+    "situation": "You meet {{name}}, a new classmate, before an evening English class. {{name}} is from {{city}}. Tell {{name}} about yourself and ask something back.",
+    "task": "Say where you are from, say what you do, and ask {{name}} one question.",
+    "done_looks_like": "{{name}} knows where you are from and what you do, and you asked one question."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Classmate",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are a student in an evening English class.",
+      "goals": [
+        "Say where you are from, say what you do, and ask {{name}} one question."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Classmate",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "A new student in your class",
+      "voice_index": 0,
+      "topics": [
+        "class",
+        "city",
+        "work",
+        "study"
+      ],
+      "card": {
+        "want": "To make one friend in the class before it starts.",
+        "hidden_need": "Is nervous about speaking English in front of the class.",
+        "attitude": "Friendly and a little shy.",
+        "speech": "Very simple everyday English. Short sentences. One easy question at a time.",
+        "tactics": [
+          "If the answer is very short, ask one easy question",
+          "Use the person's own words back to them"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "The class starts in ten minutes."
+    },
+    {
+      "id": "f2",
+      "text": "{{name}} is from {{city}} and works as {{job}}.",
+      "owner": "p1"
+    },
+    {
+      "id": "f3",
+      "text": "{{name}} started learning English {{since}}.",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Share where you are from",
+      "evidence": "The learner says where they are from or where they live.",
+      "alternatives": [
+        "I'm from Lahore."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Describe what you do",
+      "evidence": "The learner says what they do or study.",
+      "alternatives": [
+        "I work in a bank."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Ask one question back",
+      "evidence": "The learner asks a real question about the classmate.",
+      "alternatives": [
+        "What about you?"
+      ]
+    }
+  ],
+  "examples": [
+    "I'm from …",
+    "I work/study …",
+    "What about you?"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Find out where the learner is from.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:i'm|i am) from\\b",
+        "\\bi live in\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Where are you from?",
+        "Do you live near here?"
+      ],
+      "orient": "We are new classmates. I told you where I'm from. Now please tell me: where are you from?",
+      "fallback": [
+        "Do you live near here?",
+        "Where are you from?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Find out what the learner does.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:i work|i study|i'm a|i am a)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "What do you do?",
+        "Do you work or study?"
+      ],
+      "orient": "Now tell me about your work or your studies. You can say: I work in, or: I study.",
+      "fallback": [
+        "Do you work or study?",
+        "What do you do?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "The learner shows interest by asking back.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:what|where|how|do|are)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "And I talk a lot! Do you have a question for me?",
+        "Is there anything you want to ask me?"
+      ],
+      "orient": "Now ask me one question. You can say: What about you?",
+      "fallback": [
+        "Is there anything you want to ask me?",
+        "And I talk a lot! Do you have a question for me?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Thank you. It was nice to meet you. See you in class!",
+  "expert_notes": {
+    "o1": {
+      "good": "A full short sentence about your home.",
+      "common_mistakes": [
+        "Giving one word and stopping"
+      ],
+      "micro_lesson": "Use: I am from, or: I live in.",
+      "model": "I'm from Lahore, but I live in Karachi now.",
+      "smaller_step": "Say: I am from, and then your city.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "Saying your job or your studies in a full sentence.",
+      "common_mistakes": [
+        "Saying only the job word"
+      ],
+      "micro_lesson": "Use: I work in, or: I study.",
+      "model": "I work in a bank, and I study English at night.",
+      "smaller_step": "Say: I work, or: I study.",
+      "subskills": [
+        "grammar"
+      ]
+    },
+    "o3": {
+      "good": "Asking back keeps a conversation going, and shows you are interested.",
+      "common_mistakes": [
+        "Only answering, and never asking"
+      ],
+      "micro_lesson": "A good chat goes both ways. After you answer, ask back.",
+      "model": "What about you? What do you do?",
+      "smaller_step": "Say: What about you?",
+      "subskills": [
+        "comprehension"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Maya",
+      "city": "Kuala Lumpur",
+      "job": "a nurse",
+      "since": "last year"
+    },
+    {
+      "name": "Bilal",
+      "city": "Multan",
+      "job": "a driver",
+      "since": "in January"
+    }
+  ]
+}

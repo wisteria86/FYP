@@ -1,3 +1,4 @@
+import isolated_environment  # noqa: F401  (must come before the server)
 import os
 import json
 import tempfile
@@ -14,6 +15,10 @@ import api.server as server
 
 class TTSSettingsTests(unittest.TestCase):
     def setUp(self):
+        # These tests cover engine behaviour; sign-in rules live in test_boundaries.
+        demo = patch.object(Config, 'ALLOW_DEMO_ACCESS', True)
+        demo.start()
+        self.addCleanup(demo.stop)
         self._runtime_dir = tempfile.TemporaryDirectory(dir=Path(__file__).parent)
         self._original_settings_path = server._settings_path
         self._original_engine = server._engine_name

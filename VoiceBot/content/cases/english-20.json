@@ -1,0 +1,286 @@
+{
+  "archetype": "meeting",
+  "level": "intermediate",
+  "setting": "A fictional planning meeting, chaired by the learner, for an onboarding workshop.",
+  "presentation": {
+    "situation": "You chair a meeting with {{a}} and {{b}} to plan a {{length}}-minute onboarding workshop for {{people}} new colleagues next Friday. Agree an agenda, task owners and preparation steps.",
+    "opening": "I'm {{a}}, the project coordinator, and {{b}} is our training facilitator. We're planning a {{length}}-minute onboarding workshop for {{people}} colleagues next Friday. What should they be able to do afterwards?",
+    "opening_speaker": "p1",
+    "learner_role": "Meeting chair"
+  },
+  "brief": {
+    "you_are": "You are chairing a planning meeting.",
+    "situation": "You chair a meeting with {{a}} and {{b}} to plan a {{length}}-minute onboarding workshop for {{people}} new colleagues next Friday. Agree an agenda, task owners and preparation steps.",
+    "task": "Contribute at least one useful idea, respond to both colleagues, and finish with a decision about the plan.",
+    "done_looks_like": "There is a shared decision on the agenda and on who does what."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Meeting chair",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are chairing a planning meeting.",
+      "goals": [
+        "Contribute at least one useful idea, respond to both colleagues, and finish with a decision about the plan."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{a}}",
+      "role": "Project coordinator",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Plans the logistics",
+      "voice_index": 0,
+      "topics": [
+        "goal",
+        "schedule",
+        "time",
+        "agenda",
+        "room",
+        "budget",
+        "deadline"
+      ],
+      "card": {
+        "want": "An agenda that fits the room booking and the budget.",
+        "hidden_need": "",
+        "attitude": "Organized and time-aware.",
+        "speech": "Clear everyday English. Natural, not formal.",
+        "tactics": [
+          "Bring up time and room limits",
+          "Ask for a decision"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    },
+    {
+      "id": "p2",
+      "name": "{{b}}",
+      "role": "Training facilitator",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Runs the session",
+      "voice_index": 1,
+      "topics": [
+        "tasks",
+        "demo",
+        "demonstration",
+        "practice",
+        "materials"
+      ],
+      "card": {
+        "want": "Enough paired practice so that new colleagues can really do the task.",
+        "hidden_need": "",
+        "attitude": "Enthusiastic about practice.",
+        "speech": "Clear everyday English. Natural, not formal.",
+        "tactics": [
+          "Propose a demonstration and paired practice",
+          "Offer to prepare the materials"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "The workshop is for {{people}} new colleagues next Friday and lasts {{length}} minutes."
+    },
+    {
+      "id": "f2",
+      "text": "The goal is for each new colleague to complete one basic product task independently and know where to ask for help."
+    },
+    {
+      "id": "f3",
+      "text": "The room is available from 09:00 to 11:00 and has one projector."
+    },
+    {
+      "id": "f4",
+      "text": "The workshop must include a product demonstration, paired practice and questions. The spending limit is USD {{budget}}."
+    },
+    {
+      "id": "f5",
+      "text": "{{a}} can arrange the room and send the agenda.",
+      "owner": "p1"
+    },
+    {
+      "id": "f6",
+      "text": "{{b}} suggests a 20-minute demonstration and 40 minutes of paired practice, and can prepare the materials.",
+      "owner": "p2"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Contribute a useful idea",
+      "evidence": "The learner contributes a useful idea for the plan.",
+      "alternatives": [
+        "I suggest we spend most of the time on paired practice."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Respond to both speakers",
+      "evidence": "The learner responds to or invites both speakers.",
+      "alternatives": [
+        "{{a}}, does that fit the room? {{b}}, what do you think?"
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Reach a shared decision",
+      "evidence": "The learner states a shared decision.",
+      "alternatives": [
+        "So we agree: demo first, then paired practice. {{a}} sends the agenda."
+      ]
+    }
+  ],
+  "examples": [
+    "I suggest we prioritise … because …",
+    "What do you think?",
+    "So we agree to …"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Hear an idea from the chair.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:i suggest|we should|our priority|i recommend)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 1,
+      "opportunity": [
+        "So what do you suggest we prioritise?",
+        "What is your idea for the first part?"
+      ],
+      "orient": "You're chairing this planning meeting. Suggest one idea for the workshop. You can say: I suggest we.",
+      "fallback": [
+        "What is your idea for the first part?",
+        "So what do you suggest we prioritise?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Have both colleagues engaged.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:what do you think|do you agree|your view)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 1,
+      "opportunity": [
+        "I think the demonstration should be short.",
+        "Does that fit the room booking, though?"
+      ],
+      "orient": "We each have a view. Ask each of us by name what we think.",
+      "fallback": [
+        "Does that fit the room booking, though?",
+        "I think the demonstration should be short.",
+        "Please go on."
+      ],
+      "second_speaker": "p2",
+      "second_line": "I would keep the demonstration short, so people get most of the time for paired practice."
+    },
+    {
+      "id": "b3",
+      "goal": "Reach a decision.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:we agree|we decided|our decision|so we will)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 1,
+      "opportunity": [
+        "So what have we decided?",
+        "Who does what, then?"
+      ],
+      "orient": "Time to decide. Say what we agree, and who does what. Start with: So we agree.",
+      "fallback": [
+        "Who does what, then?",
+        "So what have we decided?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Good. That's a clear plan. Thanks for chairing.",
+  "expert_notes": {
+    "o1": {
+      "good": "Bringing your own idea, with a reason.",
+      "common_mistakes": [
+        "Only asking others what to do"
+      ],
+      "micro_lesson": "Say: I suggest we, then: because.",
+      "model": "I suggest we start with a short demonstration, because people learn by doing.",
+      "smaller_step": "Say: I suggest we.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "Bringing both people in, by name.",
+      "common_mistakes": [
+        "Talking to only one person"
+      ],
+      "micro_lesson": "Ask each person by name: What do you think?",
+      "model": "{{a}}, does that fit the room? {{b}}, what do you think?",
+      "smaller_step": "Ask {{b}}: What do you think?",
+      "subskills": [
+        "comprehension"
+      ]
+    },
+    "o3": {
+      "good": "Saying the decision out loud so nobody leaves unsure.",
+      "common_mistakes": [
+        "Ending without a decision"
+      ],
+      "micro_lesson": "Say: So we agree, and name the owners.",
+      "model": "So we agree: demonstration first, then paired practice. {{a}} sends the agenda.",
+      "smaller_step": "Say: So we agree.",
+      "subskills": [
+        "grammar"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "a": "Alex",
+      "b": "Maya",
+      "length": "90",
+      "people": "12",
+      "budget": "300"
+    },
+    {
+      "a": "Sara",
+      "b": "Yusuf",
+      "length": "60",
+      "people": "8",
+      "budget": "200"
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import re
 from config import Config
 from domain.errors import DomainError
 from services.service_context import ApplicationService
+from intelligence.case_library import available_cases
 from services.training_support import _now
 
 
@@ -11,8 +12,12 @@ class AdministrationService(ApplicationService):
     def catalog(self,user):
         self.authorize(user)
         with self.connect() as db:
-            return {name:[dict(row) for row in db.execute('SELECT * FROM '+table)] for name,table in
+            result = {name:[dict(row) for row in db.execute('SELECT * FROM '+table)] for name,table in
                     [('skills','skill_catalog'),('subskills','subskill_catalog'),('activities','training_activities'),('scenarios','scenario_templates')]}
+        upgraded = set(available_cases())
+        for row in result['activities']:
+            row['upgraded'] = row['id'] in upgraded
+        return result
     def save_subskill(self, user, identifier, data):
         self.authorize(user)
         with self.connect() as db:

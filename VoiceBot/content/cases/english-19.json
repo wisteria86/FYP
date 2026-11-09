@@ -1,0 +1,84 @@
+{
+  "archetype": "customer",
+  "level": "intermediate",
+  "setting": "A fictional customer support phone call for an online home-goods shop.",
+  "presentation": {
+    "situation": "You work in customer support for an online home-goods shop. {{name}} is calling, upset that an order is late for the second time. Calm them down, find out what is really needed, and offer a concrete next step.",
+    "opening": "Hi, this is {{name}}. My order is late again, and nobody has explained what is happening.",
+    "opening_speaker": "p1",
+    "learner_role": "Customer support agent"
+  },
+  "brief": {
+    "you_are": "You are a customer support agent at an online home-goods shop.",
+    "situation": "{{name}} ordered {{item}}. It is late for the second time and {{name}} is upset. Your screen shows order {{order}}: {{status}}. You may offer {{options}}.",
+    "task": "Acknowledge how the customer feels, ask questions to find out what they really need, then offer one concrete next step.",
+    "done_looks_like": "The customer feels heard, you know why the date matters, and you agreed a specific action and when it will happen."
+  },
+  "participants": [
+    {"id": "p0", "name": "You", "role": "Customer support agent", "kind": "learner", "team": "learner", "relationship": "Handling this customer's complaint", "goals": ["Calm the customer and agree a concrete next step"], "voice_index": 0},
+    {
+      "id": "p1", "name": "{{name}}", "role": "Customer", "kind": "ai", "team": "opponent", "relationship": "A customer whose order is late for the second time", "voice_index": 0,
+      "topics": ["order", "delivery", "refund", "date", "late"],
+      "card": {
+        "want": "Get {{item}} before {{deadline}}, or get a clear refund.",
+        "hidden_need": "{{need}} {{name}} only mentions this when asked why the date matters.",
+        "attitude": "Frustrated and tired of being passed around, but fair. Calms down when genuinely listened to.",
+        "speech": "Natural spoken English with short, slightly sharp sentences. Never uses corporate language.",
+        "tactics": ["Stay annoyed if the agent gives a scripted apology and nothing else", "Soften when the agent asks a real question", "Ask 'and when exactly will that happen?' about any vague promise"],
+        "pressure": {"gentle": "Upset but polite; accepts a reasonable plan quickly.", "balanced": "Pushes back once on anything vague.", "challenging": "Interrupts vague answers and threatens to cancel the order, without insults."}
+      }
+    }
+  ],
+  "ledger": [
+    {"id": "f1", "text": "The order is {{order}} for {{item}}."},
+    {"id": "f2", "text": "The original delivery date was {{original}} and it has already been moved once."},
+    {"id": "f3", "owner": "p1", "text": "{{name}} needs it before {{deadline}}."},
+    {"id": "f4", "owner": "p1", "text": "{{need}}", "available_from": "discover"},
+    {"id": "f5", "owner": "p1", "text": "{{name}} phoned once before and was told someone would call back. Nobody did."}
+  ],
+  "objectives": [
+    {"id": "o1", "description": "Acknowledge the customer's feelings", "evidence": "The learner recognises the frustration in a way that fits this situation, not only a stock 'sorry for the inconvenience'.", "alternatives": ["I can see why that's frustrating, especially after the first delay"]},
+    {"id": "o2", "description": "Clarify what the customer really needs", "evidence": "The learner asks a genuine question that uncovers the date or why it matters, or accurately summarises it.", "alternatives": ["When do you need it by?", "What is the order for?"]},
+    {"id": "o3", "description": "Offer a concrete next action", "evidence": "The learner commits to a specific action with a time or owner, using the options available. A vague promise does not count.", "alternatives": ["I'll send it express today and call you tomorrow by noon with tracking"]}
+  ],
+  "examples": ["I'm sorry this has happened twice; I can see why you're frustrated.", "Could you tell me why this date matters?", "What I can do is ... and I will ... by ..."],
+  "prerequisites": ["Read the order details in the briefing."],
+  "beats": [
+    {
+      "id": "vent", "goal": "The customer needs to feel heard before anything else.", "driver": "p1", "objectives": ["o1"],
+      "signals": ["\\b(?:sorry|understand|frustrat|apolog|i can see|i hear|that must|upset|annoying)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["Look, this is the second time. Does anyone there actually care about this?", "I called before and nobody called me back. Why should I believe it will be different?"],
+      "orient": "You're the support agent and I'm the customer with the late order. I want you to deal with it. Start by telling me you understand why I'm annoyed.",
+      "fallback": ["This is the second time. I just want someone to deal with it.", "I've already been told someone would call back, and nobody did."]
+    },
+    {
+      "id": "discover", "goal": "The real need behind the date comes out only if the agent asks.", "driver": "p1", "objectives": ["o2"],
+      "signals": ["\\b(?:why|when do you need|what(?:'s| is) it for|by when|what date|how soon|important|matter|deadline)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["You haven't even asked when I need it.", "Do you know why this date matters to me? Nobody has asked."],
+      "orient": "You need to find out what I actually need. Ask me when I need the order and why that date matters.",
+      "fallback": ["The date matters to me, and nobody has asked why.", "I need it before {{deadline}}."]
+    },
+    {
+      "id": "resolve", "goal": "The customer wants a specific action and a time, not a promise.", "driver": "p1", "objectives": ["o3"],
+      "signals": ["\\b(?:i will|i'll|i can|what i can do|express|refund|replace|by (?:today|tomorrow|monday|tuesday|wednesday|thursday|friday|noon)|call you)\\b"],
+      "stall_turns": 3,
+      "opportunity": ["So what are you actually going to do, and when?", "And when exactly will that happen?"],
+      "orient": "Now tell me what you can do. On your screen you can offer {{options}}. Pick one and tell me when it will happen.",
+      "fallback": ["So what happens now, and when exactly?", "Please just tell me the next step and the time."]
+    }
+  ],
+  "closing_line": "All right. That's what I needed to hear. Thank you.",
+  "forbidden_claims": ["\\bfree of charge forever\\b"],
+  "expert_notes": {
+    "o1": {"good": "Naming the specific frustration, such as a second delay and a missed callback, before moving to the fix.", "common_mistakes": ["'Sorry for the inconvenience' with nothing specific", "Explaining company process before acknowledging the problem"], "micro_lesson": "Name what went wrong for this person. Specific words show you really listened.", "model": "This is the second delay and no one called you back. I can see why you're frustrated.", "smaller_step": "Say one sentence that names what has gone wrong for this customer.", "subskills": ["empathy"]},
+    "o2": {"good": "An open question that reveals why the date matters, because the right fix depends on it.", "common_mistakes": ["Jumping to a solution before asking", "Only asking for the order number"], "micro_lesson": "Ask why it matters before you solve it. The reason often changes the right solution.", "model": "Could you tell me when you need it, and what it's for?", "smaller_step": "Ask the customer one question about the date they need.", "subskills": ["clarifying questions"]},
+    "o3": {"good": "One specific action, with a time and an owner, from what the shop can actually offer.", "common_mistakes": ["'We'll look into it'", "Promising something not on the options list"], "micro_lesson": "A next step has three parts: what will happen, who does it, and by when.", "model": "I'll send it by express today and I'll call you by noon tomorrow with the tracking number.", "smaller_step": "Pick one option from your screen and say when it will happen.", "subskills": ["problem solving"]}
+  },
+  "variants": [
+    {"name": "Dana", "item": "a dining table", "order": "A-4417", "original": "last Friday", "deadline": "this Saturday", "need": "Family are coming on Saturday for a parent's sixtieth birthday dinner, and there is nowhere else to seat everyone.", "status": "held at the regional warehouse, express delivery possible within 2 working days", "options": "express delivery at no charge, or a full refund"},
+    {"name": "Omar", "item": "an office chair", "order": "B-2093", "original": "Monday", "deadline": "next Wednesday", "need": "A doctor recommended this chair for back pain and Omar starts working from home next Wednesday.", "status": "not yet dispatched, in stock, can leave tomorrow", "options": "dispatch tomorrow with tracking, or a full refund"},
+    {"name": "Lina", "item": "a set of bedroom curtains", "order": "C-7751", "original": "ten days ago", "deadline": "Sunday", "need": "A new baby's room has to be ready because the baby is coming home from hospital on Sunday.", "status": "lost in transit; a replacement is in stock and can arrive in 2 working days", "options": "a free replacement by express, or a full refund"}
+  ]
+}

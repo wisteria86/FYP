@@ -443,3 +443,29 @@ body{background:radial-gradient(circle at 70% 0,#fff 0,transparent 42%),var(--cr
 .meeting-controls .voice-record-button.is-recording{background:#f6dce2;color:#910c32}.meeting-controls .voice-record-button.is-recording>span{color:#b80b3d}
 
 .recognition-review{margin:12px;padding:14px;border:1px solid var(--border,#dfd6cd);border-radius:12px;background:var(--surface,#fffdf9)}.recognition-review details{margin:8px 0;font-size:.85rem}.recognition-review .composer{padding:8px 0 0}.recognition-review textarea{min-height:76px}
+
+.h-skill-detail{border-bottom:1px solid var(--h-line,#eadfd6);padding:4px 0}
+.h-skill-detail summary{cursor:pointer;list-style-position:outside}
+.h-skill-detail ul{list-style:none;margin:4px 0 10px;padding:0 0 0 18px;font-size:13px}
+.h-skill-detail li{display:flex;justify-content:space-between;padding:3px 0}
+.h-skill-detail p{font-size:13px;margin:4px 0 10px 18px;opacity:.75}
+.h-history-card{grid-column:1/-1}
+.h-history{max-height:360px;overflow:auto}
+.h-history-row{display:grid;grid-template-columns:minmax(0,1fr) auto 52px;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--h-line,#eadfd6)}
+.h-history-row small{display:block;opacity:.7;margin-top:2px}
+.h-history-row>b{text-align:right}
+.h-status{font-size:12px;padding:2px 9px;border-radius:999px;background:#f3ece6;white-space:nowrap}
+.h-status.completed{background:#eaf7ed;color:#1e7040}
+.h-status.active{background:#fff5e5;color:#7c5120}
+@media (max-width:560px){.h-history-row{grid-template-columns:minmax(0,1fr) 52px}.h-history-row .h-status{display:none}}
+
+.training-upgraded{display:inline-block;margin-left:8px;font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:#eaf7ed;color:#1e7040;vertical-align:middle}
+
+.prep-challenge{display:flex;flex-direction:column;gap:4px;font-size:13px;margin:0 0 10px}
+.prep-challenge select{padding:8px 10px;border:1px solid var(--h-line,#eadfd6);border-radius:8px;background:#fffdfa;font:inherit}
+.resource-modal>article p{white-space:pre-line}
+
+.reflection-box label{display:flex;flex-direction:column;gap:6px;font-size:14px;margin-bottom:8px}
+.reflection-box textarea{min-height:70px;padding:8px 10px;border:1px solid var(--h-line,#eadfd6);border-radius:8px;background:#fffdfa;font:inherit;resize:vertical}
+.assessment-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center;margin:14px 0 24px}
+.assessment-actions .primary.done{margin:0}

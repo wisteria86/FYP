@@ -1,0 +1,242 @@
+{
+  "archetype": "service",
+  "level": "intermediate",
+  "setting": "A fictional support call about a broken home internet connection.",
+  "presentation": {
+    "situation": "Your home internet has not worked since {{since}}. You call {{name}} at support. You have already {{tried}}. Explain the problem and check you understand the solution.",
+    "opening": "Thanks for contacting support, this is {{name}}. What problem are you experiencing?",
+    "opening_speaker": "p1",
+    "learner_role": "Customer"
+  },
+  "brief": {
+    "you_are": "You are a customer calling internet support.",
+    "situation": "Your home internet has not worked since {{since}}. You call {{name}} at support. You have already {{tried}}. Explain the problem and check you understand the solution.",
+    "task": "Say exactly what is wrong, say what you have already tried, and confirm the solution.",
+    "done_looks_like": "{{name}} understands the problem, and you can repeat what to do next."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Customer",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are a customer calling internet support.",
+      "goals": [
+        "Say exactly what is wrong, say what you have already tried, and confirm the solution."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Support agent",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Answers calls for the internet provider",
+      "voice_index": 0,
+      "topics": [
+        "internet",
+        "router",
+        "light",
+        "error",
+        "connection"
+      ],
+      "card": {
+        "want": "To find the real problem quickly, without repeating steps you already tried.",
+        "hidden_need": "",
+        "attitude": "Calm and methodical.",
+        "speech": "Clear, polite support language. Explains one step at a time.",
+        "tactics": [
+          "Ask what the lights on the router show",
+          "Ask what they already tried",
+          "Ask them to repeat the fix"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "The internet stopped working {{since}}."
+    },
+    {
+      "id": "f2",
+      "text": "The customer has already {{tried}}."
+    },
+    {
+      "id": "f3",
+      "text": "The router needs {{fix}}.",
+      "owner": "p1"
+    },
+    {
+      "id": "f4",
+      "text": "A technician visit would take two working days, if the fix does not work.",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "State the problem precisely",
+      "evidence": "The learner states the problem specifically.",
+      "alternatives": [
+        "The problem is that my internet stopped working last night."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Explain what you already tried",
+      "evidence": "The learner says what they already tried.",
+      "alternatives": [
+        "I've already restarted the router."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Confirm the proposed solution",
+      "evidence": "The learner confirms the solution in their own words.",
+      "alternatives": [
+        "So I should reset it and wait, is that correct?"
+      ]
+    }
+  ],
+  "examples": [
+    "The problem is …",
+    "I've already tried …",
+    "So I should …, correct?"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Find out precisely what is wrong.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:the problem is|it isn't|it doesn't|error|issue)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Can you tell me what exactly stopped working?",
+        "What happens when you try to connect?"
+      ],
+      "orient": "You called me because your internet is broken. Tell me what is wrong. Start with: The problem is.",
+      "fallback": [
+        "What happens when you try to connect?",
+        "Can you tell me what exactly stopped working?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Find out what has been tried.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:i tried|i've tried|i have tried|already)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Have you tried anything yet?",
+        "What have you done so far?"
+      ],
+      "orient": "Tell me what you already tried. Use: I have tried, or: I already.",
+      "fallback": [
+        "What have you done so far?",
+        "Have you tried anything yet?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Check that the solution is understood.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:so i should|is that correct|do you mean|that should)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "The next step is {{fix}}. Does that make sense?",
+        "Can you tell me what you are going to do?"
+      ],
+      "orient": "I told you the next step. Now say it back to me. Start with: So I should.",
+      "fallback": [
+        "Can you tell me what you are going to do?",
+        "The next step is {{fix}}. Does that make sense?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "That's right. Thanks for calling, and I hope that solves it.",
+  "expert_notes": {
+    "o1": {
+      "good": "A precise description saves time for both of you.",
+      "common_mistakes": [
+        "Saying only: It doesn't work"
+      ],
+      "micro_lesson": "Say what, since when, and what you see.",
+      "model": "The problem is that my internet stopped working last night.",
+      "smaller_step": "Say: The problem is.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "Using the present perfect for what you have done so far.",
+      "common_mistakes": [
+        "Saying: I already try"
+      ],
+      "micro_lesson": "Say: I've tried, or: I have already.",
+      "model": "I've already restarted it twice.",
+      "smaller_step": "Say: I've tried.",
+      "subskills": [
+        "grammar"
+      ]
+    },
+    "o3": {
+      "good": "Saying back the solution avoids a second call.",
+      "common_mistakes": [
+        "Saying okay without understanding"
+      ],
+      "micro_lesson": "Say: So I should, then ask: Is that correct?",
+      "model": "So I should reset it and wait two minutes, is that correct?",
+      "smaller_step": "Say: So I should.",
+      "subskills": [
+        "comprehension"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Farah",
+      "since": "last night",
+      "tried": "restarted the router twice",
+      "fix": "a full reset using the small button on the back"
+    },
+    {
+      "name": "Ben",
+      "since": "this morning",
+      "tried": "checked that the cable is plugged in",
+      "fix": "a new settings update, sent from the support system"
+    }
+  ]
+}

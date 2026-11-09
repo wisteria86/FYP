@@ -1,0 +1,83 @@
+{
+  "archetype": "customer",
+  "level": "intermediate",
+  "setting": "A fictional live support chat for a small software company that sells online booking tools.",
+  "presentation": {
+    "situation": "You support customers of a booking tool. {{name}} runs {{business}} and cannot {{problem}}. Your records show: {{record}}. Find out what is going on, explain it clearly without jargon, and agree what happens next.",
+    "opening": "Hi, I run {{business}}, and I can't {{problem}}. Customers are asking me about it. Can you help?",
+    "opening_speaker": "p1",
+    "learner_role": "Customer support specialist"
+  },
+  "brief": {
+    "you_are": "You are a customer support specialist for an online booking tool.",
+    "situation": "{{name}} runs {{business}} and cannot {{problem}}. Your records show: {{record}}. {{name}} is not technical.",
+    "task": "Ask about what is happening, explain the cause in plain words, and check that {{name}} understands the next step.",
+    "done_looks_like": "{{name}} understands the cause and what to do, in plain language, and you have checked that it makes sense."
+  },
+  "participants": [
+    {"id": "p0", "name": "You", "role": "Customer support specialist", "kind": "learner", "team": "learner", "relationship": "Helping this customer", "goals": ["Solve the problem in plain language"], "voice_index": 0},
+    {
+      "id": "p1", "name": "{{name}}", "role": "Customer", "kind": "ai", "team": "opponent", "relationship": "A small business owner using your booking tool", "voice_index": 0,
+      "topics": ["booking", "customers", "account", "setting", "screen"],
+      "card": {
+        "want": "To get bookings working again before the next customers arrive.",
+        "hidden_need": "Worries about looking unprofessional to regular customers.",
+        "attitude": "Polite, stressed, and easily lost by technical words.",
+        "speech": "Everyday English. Says plainly when something sounds too technical.",
+        "tactics": ["Ask 'what does that mean?' if you hear a technical word", "Only describe what appears on your own screen when asked"],
+        "pressure": {"gentle": "Patient and thankful.", "balanced": "Asks to have jargon explained.", "challenging": "Gets more anxious and asks how long this will take."}
+      }
+    }
+  ],
+  "ledger": [
+    {"id": "f1", "text": "{{name}} runs {{business}} and uses the booking tool."},
+    {"id": "f2", "owner": "p1", "text": "On {{name}}'s screen: {{screen}}."},
+    {"id": "f3", "owner": "p1", "text": "{{name}} did not change anything on purpose."},
+    {"id": "f4", "text": "The support records show: {{record}}."},
+    {"id": "f5", "text": "The fix is: {{fix}}."}
+  ],
+  "objectives": [
+    {"id": "o1", "description": "Find out what the customer is seeing", "evidence": "The learner asks a specific question about what happens or what appears, before explaining.", "alternatives": ["What do you see on your screen when you try?"]},
+    {"id": "o2", "description": "Explain the cause and fix in plain language", "evidence": "The learner explains what happened and what to do without unexplained technical terms.", "alternatives": ["Your calendar got disconnected, so let's link it again"]},
+    {"id": "o3", "description": "Check understanding and agree the next step", "evidence": "The learner checks that it makes sense or worked, and agrees what happens next.", "alternatives": ["Does that make sense? Try it now and tell me what you see"]}
+  ],
+  "examples": ["What do you see on your screen?", "In simple terms, what happened is ...", "Does that make sense? Could you try it now?"],
+  "prerequisites": ["Read the support record in the briefing."],
+  "beats": [
+    {
+      "id": "diagnose", "goal": "The customer needs to be asked what they actually see.", "driver": "p1", "objectives": ["o1"],
+      "signals": ["\\b(?:what do you see|what happens|on your screen|what (?:does|did) it say|when did|error|can you tell me|what message)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["I don't know what else to tell you. Do you need to know what's on my screen?", "My customers are waiting. What do you need from me?"],
+      "orient": "You're supporting me with the booking tool. First, ask me what I can see on my screen.",
+      "fallback": ["What do you need to know from me?", "Do you want me to tell you what's on my screen?"]
+    },
+    {
+      "id": "explain", "goal": "The customer needs the cause and the fix without jargon.", "driver": "p1", "objectives": ["o2"],
+      "signals": ["\\b(?:happened|because|what you need to|in simple|the reason|you can fix|click|open|go to|link|turn on|turn off)\\b"],
+      "stall_turns": 3,
+      "opportunity": ["Okay, but what's actually wrong?", "Sorry, what does that mean in normal words?"],
+      "orient": "Look at the record in your brief and tell me what went wrong and what I should do. Please use simple words.",
+      "fallback": ["So what's wrong, in normal words?", "What should I do?"]
+    },
+    {
+      "id": "confirm", "goal": "Make sure the customer can do it, and knows what happens next.", "driver": "p1", "objectives": ["o3"],
+      "signals": ["\\b(?:does that make sense|is that clear|try (?:it|that)|let me know|are you able|did that work|any questions|what do you see now)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["I think I follow. What happens if it doesn't work?", "So is that everything I need to do?"],
+      "orient": "Nearly done. Check that I understood you, and tell me what happens next if it doesn't work.",
+      "fallback": ["What if it doesn't work?", "Is that everything I need to do?"]
+    }
+  ],
+  "closing_line": "That's a relief. Thank you, that was easy to follow.",
+  "expert_notes": {
+    "o1": {"good": "Asking what the customer sees before giving an answer, so you solve the real problem.", "common_mistakes": ["Giving a fix straight away", "Asking for technical details they can't know"], "micro_lesson": "Ask what they see. Customers can describe a screen, even when they can't name the problem.", "model": "What do you see on your screen when you try to take a booking?", "smaller_step": "Ask the customer one question about their screen.", "subskills": ["clarity"]},
+    "o2": {"good": "Saying what happened in everyday words, then one clear action.", "common_mistakes": ["Using product or technical terms", "Explaining everything instead of the next step"], "micro_lesson": "Replace technical words with what the person will see or do.", "model": "Your calendar got disconnected, so bookings stopped. Let's link it again together.", "smaller_step": "Say the one thing they should do first.", "subskills": ["clarity"]},
+    "o3": {"good": "Checking it worked, and saying what happens next if it didn't.", "common_mistakes": ["'Hope that helps' and stopping", "Assuming silence means they understood"], "micro_lesson": "Finish by checking. Ask them to try it, and say what you'll do if it fails.", "model": "Could you try it now? If it still doesn't work, I'll call you back within the hour.", "smaller_step": "Ask whether it makes sense.", "subskills": ["professionalism"]}
+  },
+  "variants": [
+    {"name": "Bilal", "business": "a barber shop", "problem": "take any online bookings today", "screen": "a message saying the calendar is not connected", "record": "the calendar link expired last night", "fix": "open Settings and connect the calendar again"},
+    {"name": "Rosa", "business": "a small yoga studio", "problem": "see this week's classes on my booking page", "screen": "an empty booking page with a note saying no classes are published", "record": "this week's classes were saved as drafts", "fix": "open the class list and press Publish"},
+    {"name": "Kamran", "business": "a car wash", "problem": "get paid through my booking page", "screen": "a warning that card payments are switched off", "record": "the payment account needs its details confirmed", "fix": "open Payments and confirm the account details"}
+  ]
+}

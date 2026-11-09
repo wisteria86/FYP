@@ -1,0 +1,286 @@
+{
+  "archetype": "negotiation",
+  "level": "advanced",
+  "setting": "A fictional client meeting about changing the scope and timing of a project.",
+  "presentation": {
+    "situation": "You manage {{project}}. {{a}}, the client director, wants it {{earlier}} earlier with no extra budget. {{b}} is the client's technical lead. You could {{options}}. Find out why, offer a fair trade, and confirm what is agreed.",
+    "opening": "We need {{project}} {{earlier}} earlier, and we cannot increase the budget.",
+    "opening_speaker": "p1",
+    "learner_role": "Project manager"
+  },
+  "brief": {
+    "you_are": "You are the project manager, and you can agree changes to scope and timing.",
+    "situation": "You manage {{project}}. {{a}}, the client director, wants it {{earlier}} earlier with no extra budget. {{b}} is the client's technical lead. You could {{options}}. Find out why, offer a fair trade, and confirm what is agreed.",
+    "task": "Find out what really matters to the client, offer a fair trade-off rather than simply saying yes, and confirm the agreement.",
+    "done_looks_like": "You know their real priority, you agreed a trade, and you have confirmed exactly what changes."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Project manager",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are the project manager, and you can agree changes to scope and timing.",
+      "goals": [
+        "Find out what really matters to the client, offer a fair trade-off rather than simply saying yes, and confirm the agreement."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{a}}",
+      "role": "Client director",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Your client",
+      "voice_index": 0,
+      "topics": [
+        "date",
+        "budget",
+        "deadline",
+        "priority",
+        "launch"
+      ],
+      "card": {
+        "want": "To hit the date, without paying more.",
+        "hidden_need": "{{need}}",
+        "attitude": "Firm and commercially minded, and reasonable when given a real trade.",
+        "speech": "Fluent, natural professional English. Direct, and free of corporate slogans.",
+        "tactics": [
+          "State the demand firmly at first",
+          "Accept a trade only if the key priority is protected",
+          "Don't accept vague promises"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    },
+    {
+      "id": "p2",
+      "name": "{{b}}",
+      "role": "Client technical lead",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Works for the client",
+      "voice_index": 1,
+      "topics": [
+        "scope",
+        "feature",
+        "quality",
+        "technical",
+        "testing"
+      ],
+      "card": {
+        "want": "A delivery that actually works, even if some features come later.",
+        "hidden_need": "",
+        "attitude": "Pragmatic, and more flexible on scope than the director.",
+        "speech": "Fluent, natural professional English. Direct, and free of corporate slogans.",
+        "tactics": [
+          "Say which features could wait, if asked",
+          "Warn about quality risks"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "The project is {{project}}."
+    },
+    {
+      "id": "f2",
+      "text": "The client wants it {{earlier}} earlier, and will not increase the budget."
+    },
+    {
+      "id": "f3",
+      "text": "The learner may {{options}}."
+    },
+    {
+      "id": "f4",
+      "text": "{{need}}",
+      "owner": "p1",
+      "available_from": "b1"
+    },
+    {
+      "id": "f5",
+      "text": "{{later}} could come after launch.",
+      "owner": "p2"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Discover underlying priorities",
+      "evidence": "The learner asks a question that uncovers the underlying priority.",
+      "alternatives": [
+        "What matters most about that date?"
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Offer a fair trade-off",
+      "evidence": "The learner offers a conditional trade-off.",
+      "alternatives": [
+        "If we move some features to a second phase, we could hit that date."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Confirm the agreement",
+      "evidence": "The learner confirms the agreement explicitly.",
+      "alternatives": [
+        "To confirm: we launch the core by the new date, and the rest comes after."
+      ]
+    }
+  ],
+  "examples": [
+    "What matters most is …?",
+    "If we …, could you …?",
+    "So we have agreed …"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Reveal the real priority.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:what matters most|which is more important|your priority|why is)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 1,
+      "opportunity": [
+        "Are you going to ask why we need it earlier?",
+        "Why do you think the date matters?"
+      ],
+      "orient": "I've made a demand. Before you answer, find out why. Ask what matters most about the date.",
+      "fallback": [
+        "Why do you think the date matters?",
+        "Are you going to ask why we need it earlier?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Hear a trade rather than a concession.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:if we|in exchange|could reduce|could extend|trade-off)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 1,
+      "opportunity": [
+        "So can you do it or not?",
+        "What are you actually offering?"
+      ],
+      "orient": "Now offer me a trade. Start with: If we. You could change scope or timing, as in your brief.",
+      "fallback": [
+        "What are you actually offering?",
+        "So can you do it or not?",
+        "Please go on."
+      ],
+      "second_speaker": "p2",
+      "second_line": "Some of the features could wait, if that gets us a working launch."
+    },
+    {
+      "id": "b3",
+      "goal": "Confirm what is agreed.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:we agree|agreed that|to confirm|our agreement)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 1,
+      "opportunity": [
+        "So what exactly have we agreed?",
+        "Can you put that in one sentence?"
+      ],
+      "orient": "Now confirm exactly what we agreed. Start with: To confirm.",
+      "fallback": [
+        "Can you put that in one sentence?",
+        "So what exactly have we agreed?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Good. That works for us. Please send that in writing.",
+  "expert_notes": {
+    "o1": {
+      "good": "Asking why, before you say yes or no.",
+      "common_mistakes": [
+        "Saying yes or no straight away"
+      ],
+      "micro_lesson": "Ask: What matters most about that date?",
+      "model": "What matters most about that date? What happens if we miss it?",
+      "smaller_step": "Say: Why does the date matter?",
+      "subskills": [
+        "comprehension"
+      ]
+    },
+    "o2": {
+      "good": "Linking what you give to what you get.",
+      "common_mistakes": [
+        "Agreeing to everything, or refusing everything"
+      ],
+      "micro_lesson": "Say: If we, then we could.",
+      "model": "If we move two features to a second phase, we could hit that date.",
+      "smaller_step": "Say: If we.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o3": {
+      "good": "Saying the agreement aloud, so that it can't be misunderstood.",
+      "common_mistakes": [
+        "Ending on: That should be fine"
+      ],
+      "micro_lesson": "Say what changes, and who does what.",
+      "model": "To confirm: we launch the core on the new date, and the rest follows a month later.",
+      "smaller_step": "Say: To confirm.",
+      "subskills": [
+        "grammar"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "a": "Helen",
+      "b": "Raza",
+      "project": "the new booking system",
+      "earlier": "two weeks",
+      "options": "move features to a second phase, or reduce testing scope with the client's agreement",
+      "need": "A trade show on the new date is where the system will be shown to customers.",
+      "later": "The reporting screens"
+    },
+    {
+      "a": "Victor",
+      "b": "Amna",
+      "project": "the staff training portal",
+      "earlier": "three weeks",
+      "options": "launch to one department first, or postpone the mobile version",
+      "need": "A new group of staff starts on the new date, and they need the portal for their first day.",
+      "later": "The mobile version"
+    }
+  ]
+}

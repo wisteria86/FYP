@@ -10,6 +10,7 @@ from intelligence.conversation_direction import numeric_text, grounded_reply
 from intelligence.replies import valid_caption
 from services.training_orchestrator import TrainingOrchestrator
 from services.structured_orchestrator import wait_for_delivery, schedule_review, PENDING_REVIEWS
+from legacy_fixture import previous_engine
 
 
 class ConversationRegressionTests(unittest.IsolatedAsyncioTestCase):
@@ -38,8 +39,10 @@ class ConversationRegressionTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('supplier',introduction['text'].lower());self.assertNotIn('client',introduction['text'].lower())
         scope=await service.run_turn(sid,RoleplayTurn(text='I will offer you ten seeds',synthesize_audio=False))
         self.assertIn('10 seats',scope['text']);self.assertIn('20 seats',scope['text'])
+        # N7: an unreasoned low offer earns a question, not instant agreement.
         price=await service.run_turn(sid,RoleplayTurn(text='Okay I will take it for ten thousand',synthesize_audio=False))
-        self.assertIn('USD 10,000 works',price['text'])
+        self.assertNotIn('works',price['text'])
+        self.assertIn('USD 10,000',price['text'])
         self.assertNotIn('minimum',price['text'])
         self.assertEqual(numeric_text('ten thousand dollars'),'10000 dollars')
 
@@ -55,6 +58,7 @@ class ConversationRegressionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.training.session(sid)['participants'][1]['scenario_role'],'Supplier representative')
 
     async def test_other_person_request_and_uncertainty_select_the_other_stakeholder(self):
+        previous_engine(self)
         sid=self.session()['id'];service=self.orchestrator(self.provider('We can begin with a demonstration.'))
         for text in ['The other person is going to tell me','They will tell the plan',"I'm not really that sure"]:
             last=next(t for t in reversed(self.training.session(sid)['turns']) if t['role']=='assistant')['participant_id']
@@ -63,8 +67,21 @@ class ConversationRegressionTests(unittest.IsolatedAsyncioTestCase):
             self.assertNotEqual(result['responses'][0]['participant_id'],last)
         self.assertIn('12 new colleagues',json.dumps(self.runtime.read(sid)[0]['facts']))
 
-    async def test_provider_outage_is_a_retryable_notice_and_not_character_dialogue(self):
+    async def test_case_pack_scene_keeps_moving_on_prepared_lines_during_an_outage(self):
         sid=self.session(activity='english-01')['id']
+        class RateLimited(Exception):status_code=429
+        class Provider:
+            def generate_contextual_response(self,prompt):
+                raise RateLimited()
+                yield ''
+        first=await self.orchestrator(Provider()).run_turn(sid,RoleplayTurn(text='Hello, call me Zara.',synthesize_audio=False))
+        self.assertEqual(first['responses'][0]['response_mode'],'scripted')
+        self.assertFalse(first['runtime']['failed_turn_id'])
+        self.assertEqual(first['runtime']['provider_status']['component'],'scripted')
+
+    async def test_provider_outage_is_a_retryable_notice_and_not_character_dialogue(self):
+        previous_engine(self)
+        sid=self.session(activity='english-02')['id']
         class RateLimited(Exception):status_code=429
         class Provider:
             failed=False
@@ -90,6 +107,7 @@ class ConversationRegressionTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(await wait_for_delivery(self.runtime,sid,uid,generation))
 
     async def test_group_responses_do_not_call_a_second_model_to_select_speakers(self):
+        previous_engine(self)
         sid=self.session()['id'];provider=self.provider('I can explain my part of the workshop.')
         provider.plan_turn=Mock(side_effect=AssertionError('Director must be local'))
         result=await self.orchestrator(provider).run_turn(sid,RoleplayTurn(text='What should we consider?',synthesize_audio=False))
@@ -119,6 +137,7 @@ class ConversationRegressionTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(valid_caption("We're negotiating a price.",'ہم قیمت پر مذاکرات کر رہے ہیں۔'))
 
     async def test_unfinished_condition_is_not_agreement_and_the_invited_person_explains(self):
+        previous_engine(self)
         sid=self.session()['id'];service=self.orchestrator(self.provider())
         incomplete=await service.run_turn(sid,RoleplayTurn(text='Okay, if I do this',synthesize_audio=False))
         self.assertIn("don't want to assume",incomplete['text'])
@@ -131,7 +150,8 @@ class ConversationRegressionTests(unittest.IsolatedAsyncioTestCase):
         speaker=self.runtime.speakers(sid)[0];uid=self.runtime.create_utterance(sid,generation,speaker)
         self.runtime.sentence(sid,uid,'Would you like our package at USD 10000 or different terms?',False)
         self.runtime.finish(sid,generation,{})
-        reply=await self.orchestrator(self.provider()).run_turn(sid,RoleplayTurn(text='Yes, I can',synthesize_audio=False))
+        provider=self.provider();provider.generate_contextual_response=Mock(side_effect=RuntimeError('prepared line only'))
+        reply=await self.orchestrator(provider).run_turn(sid,RoleplayTurn(text='Yes, I can',synthesize_audio=False))
         self.assertIn('Do you mean',reply['text'])
         self.assertEqual(self.runtime.view(sid)['offers'],[])
         self.assertNotIn('lock in',self.runtime.validate_sentence(sid,speaker,"Let's lock in the package."))

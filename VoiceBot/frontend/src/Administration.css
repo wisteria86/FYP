@@ -1,0 +1,19 @@
+.admin-panel{margin:16px 24px;min-width:0}
+.admin-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.admin-tabs button{border:1px solid var(--h-line,#eadfd6);background:#fffdfa;border-radius:999px;padding:6px 14px;font:inherit;font-size:13px;cursor:pointer}
+.admin-tabs button.active{background:var(--burgundy,#7b1e3a);color:#fff}
+.admin-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:18px}
+.admin-list{min-width:0}
+.admin-list input{width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--h-line,#eadfd6);border-radius:8px;background:#fffdfa;font:inherit;margin-bottom:8px}
+.admin-list ul{list-style:none;margin:8px 0 0;padding:0;max-height:420px;overflow:auto}
+.admin-list li button{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--h-line,#eadfd6);padding:8px;cursor:pointer;font:inherit}
+.admin-list li button.selected{background:#f7e9e4}
+.admin-list small{display:block;opacity:.7;margin-top:2px;overflow-wrap:anywhere}
+.admin-panel .admin-editor{display:flex;flex-direction:column;gap:10px;min-width:0}
+.admin-panel .admin-editor label,.admin-config label{display:flex;flex-direction:column;gap:4px;font-size:13px}
+.admin-panel .admin-editor label.admin-check{flex-direction:row;align-items:center;gap:8px}
+.admin-panel .admin-editor input:not([type=checkbox]),.admin-panel .admin-editor select,.admin-panel .admin-editor textarea,.admin-config input{padding:8px 10px;border:1px solid var(--h-line,#eadfd6);border-radius:8px;background:#fffdfa;font:inherit;width:100%;box-sizing:border-box}
+.admin-panel .admin-editor textarea{min-height:76px;resize:vertical}
+.admin-note{background:#fff5e5;border-radius:8px;padding:8px 12px;font-size:13px;margin:0}
+.admin-config{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-top:16px;border-top:1px solid var(--h-line,#eadfd6);padding-top:12px}
+@media (max-width:720px){.admin-layout{grid-template-columns:minmax(0,1fr)}}

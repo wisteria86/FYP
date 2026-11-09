@@ -1,0 +1,276 @@
+{
+  "archetype": "panel",
+  "level": "advanced",
+  "setting": "A fictional funding meeting where the learner and a teammate propose an idea to a decision-maker.",
+  "presentation": {
+    "situation": "You and your teammate {{mate}} want {{name}}, the director, to fund {{proposal}}, at {{cost}}. Your evidence: {{evidence}}. Limitation: {{limit}}. Recommend early, use evidence, and answer an objection.",
+    "opening": "You have five minutes to convince me that {{proposal}} is worth funding. Go ahead.",
+    "opening_speaker": "p1",
+    "learner_role": "Presenter"
+  },
+  "brief": {
+    "you_are": "You are presenting a funding proposal with a teammate.",
+    "situation": "You and your teammate {{mate}} want {{name}}, the director, to fund {{proposal}}, at {{cost}}. Your evidence: {{evidence}}. Limitation: {{limit}}. Recommend early, use evidence, and answer an objection.",
+    "task": "State your recommendation early, use your evidence, and answer an objection. Your teammate can help if you bring them in.",
+    "done_looks_like": "{{name}} has a clear recommendation, your evidence, and a real answer to the main objection."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Presenter",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are presenting a funding proposal with a teammate.",
+      "goals": [
+        "State your recommendation early, use your evidence, and answer an objection. Your teammate can help if you bring them in."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Decision-maker",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Director who controls the budget",
+      "voice_index": 0,
+      "topics": [
+        "budget",
+        "cost",
+        "decision",
+        "money",
+        "fund"
+      ],
+      "card": {
+        "want": "A proposal that is worth the money, and honesty about the risks.",
+        "hidden_need": "Has been let down by an over-promised project before.",
+        "attitude": "Sharp, fair and short of time.",
+        "speech": "Fluent, natural professional English. Direct, and free of corporate slogans.",
+        "tactics": [
+          "Ask for the bottom line",
+          "Raise the cost objection",
+          "Ask what happens if it fails"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    },
+    {
+      "id": "p2",
+      "name": "{{mate}}",
+      "role": "AI teammate",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "On your side; helped to prepare the proposal",
+      "voice_index": 1,
+      "topics": [
+        "evidence",
+        "data",
+        "detail"
+      ],
+      "card": {
+        "want": "To support your case, without taking over.",
+        "hidden_need": "",
+        "attitude": "Helpful and factual.",
+        "speech": "Fluent, natural professional English. Direct, and free of corporate slogans.",
+        "tactics": [
+          "Add a supporting fact only if asked or if things stall",
+          "Never speak for the whole team"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "The proposal is {{proposal}}. It costs {{cost}}."
+    },
+    {
+      "id": "f2",
+      "text": "The evidence is: {{evidence}}."
+    },
+    {
+      "id": "f3",
+      "text": "A limitation is: {{limit}}."
+    },
+    {
+      "id": "f4",
+      "text": "{{name}} is worried about value for money.",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "State the recommendation early",
+      "evidence": "The learner states the recommendation near the start.",
+      "alternatives": [
+        "I recommend we fund a three-month trial."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Use evidence",
+      "evidence": "The learner supports the case with the supplied evidence.",
+      "alternatives": [
+        "The evidence shows that errors fell during the pilot."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Answer an objection collaboratively",
+      "evidence": "The learner responds to an objection directly.",
+      "alternatives": [
+        "I understand that concern; however, a limited trial reduces the risk."
+      ]
+    }
+  ],
+  "examples": [
+    "I recommend …",
+    "The evidence shows …",
+    "I understand that concern; however …"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Hear the recommendation early.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:i recommend|my proposal|we should)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 1,
+      "opportunity": [
+        "Bottom line: what are you asking for?",
+        "What do you want me to approve?"
+      ],
+      "orient": "You have to convince me to fund this. Tell me first what you recommend.",
+      "fallback": [
+        "What do you want me to approve?",
+        "Bottom line: what are you asking for?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Test the evidence.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:evidence|data|because|result|research)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 1,
+      "opportunity": [
+        "What evidence do you have?",
+        "Why should I believe that will work?"
+      ],
+      "orient": "Give me your evidence from the brief. You can also ask {{mate}} to add a detail.",
+      "fallback": [
+        "Why should I believe that will work?",
+        "What evidence do you have?",
+        "Please go on."
+      ],
+      "second_speaker": "p2",
+      "second_line": "I can add one detail from the pilot, if that helps."
+    },
+    {
+      "id": "b3",
+      "goal": "Handle the objection.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:i understand|that concern|however|we can address)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 1,
+      "opportunity": [
+        "{{cost}} is a lot of money. Why should I spend it on this?",
+        "What if it fails?"
+      ],
+      "orient": "I have raised an objection about the cost. Answer it directly. Start with: I understand that concern.",
+      "fallback": [
+        "What if it fails?",
+        "{{cost}} is a lot of money. Why should I spend it on this?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "All right. You've made a fair case. I'll take that forward.",
+  "expert_notes": {
+    "o1": {
+      "good": "Recommendation first, reasons after.",
+      "common_mistakes": [
+        "Building up slowly to the point"
+      ],
+      "micro_lesson": "Say: I recommend, in your first sentence.",
+      "model": "I recommend we fund a three-month trial.",
+      "smaller_step": "Say: I recommend.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "Using real evidence, and naming its limits.",
+      "common_mistakes": [
+        "Claiming more than the evidence shows"
+      ],
+      "micro_lesson": "Say: The evidence shows, and name a limit.",
+      "model": "The evidence shows errors fell, though it is only one team so far.",
+      "smaller_step": "Say: The evidence shows.",
+      "subskills": [
+        "grammar"
+      ]
+    },
+    "o3": {
+      "good": "Accepting the objection, and then answering it.",
+      "common_mistakes": [
+        "Getting defensive, or repeating yourself"
+      ],
+      "micro_lesson": "Say: I understand that concern; however.",
+      "model": "I understand that concern; however, a short trial limits the risk.",
+      "smaller_step": "Say: I understand that concern.",
+      "subskills": [
+        "comprehension"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Farah",
+      "mate": "Daniel",
+      "proposal": "a new customer support tool",
+      "cost": "USD 15000",
+      "evidence": "in a small pilot, average reply time fell from 9 hours to 5 hours",
+      "limit": "the pilot covered only one team"
+    },
+    {
+      "name": "James",
+      "mate": "Hira",
+      "proposal": "a staff mentoring programme",
+      "cost": "USD 8000",
+      "evidence": "new staff in last year's trial reached full productivity two weeks earlier",
+      "limit": "the trial had only ten people"
+    }
+  ]
+}

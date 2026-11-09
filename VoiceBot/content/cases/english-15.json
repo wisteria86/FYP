@@ -1,0 +1,231 @@
+{
+  "archetype": "colleague",
+  "level": "intermediate",
+  "setting": "A fictional lunchtime discussion between colleagues about a current workplace question.",
+  "presentation": {
+    "situation": "{{name}} wants your opinion on {{question}} {{name}} thinks {{view}}. Say what you think, give two reasons or examples, and respond fairly to the other view.",
+    "opening": "Here's a question for you: {{question}} I think {{view}}. What's your opinion?",
+    "opening_speaker": "p1",
+    "learner_role": "Colleague"
+  },
+  "brief": {
+    "you_are": "You are discussing an opinion with a colleague.",
+    "situation": "{{name}} wants your opinion on {{question}} {{name}} thinks {{view}}. Say what you think, give two reasons or examples, and respond fairly to the other view.",
+    "task": "State your opinion clearly, support it with two reasons or examples, and acknowledge the other view.",
+    "done_looks_like": "{{name}} knows your opinion and your reasons, and feels you listened to their view."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Colleague",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are discussing an opinion with a colleague.",
+      "goals": [
+        "State your opinion clearly, support it with two reasons or examples, and acknowledge the other view."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Discussion partner",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "A colleague who enjoys a friendly debate",
+      "voice_index": 0,
+      "topics": [
+        "opinion",
+        "reason",
+        "example",
+        "think"
+      ],
+      "card": {
+        "want": "A real discussion, and to test your reasoning.",
+        "hidden_need": "",
+        "attitude": "Thoughtful, happy to disagree politely.",
+        "speech": "Clear everyday English. Natural, not formal.",
+        "tactics": [
+          "Give one reason for your own view",
+          "Ask for an example"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "The question is: {{question}}"
+    },
+    {
+      "id": "f2",
+      "text": "{{name}} thinks {{view}}, mainly because {{reason}}.",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "State a clear opinion",
+      "evidence": "The learner states a clear opinion.",
+      "alternatives": [
+        "I think it is better, in my opinion."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Give two reasons or examples",
+      "evidence": "The learner supports their opinion with reasons or examples.",
+      "alternatives": [
+        "One reason is cost. For example, travel is expensive."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Acknowledge another view",
+      "evidence": "The learner acknowledges the other view.",
+      "alternatives": [
+        "I see your point, but I still think that..."
+      ]
+    }
+  ],
+  "examples": [
+    "In my opinion …",
+    "The first reason is …",
+    "I see your point, but …"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Hear the opinion.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:i think|i believe|in my opinion|my view)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So what do you think?",
+        "Which side are you on?"
+      ],
+      "orient": "I asked your opinion. Start with: I think, or: In my opinion.",
+      "fallback": [
+        "Which side are you on?",
+        "So what do you think?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Hear reasons or examples.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:because|reason|for example|such as)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Why do you think so?",
+        "Can you give me an example?"
+      ],
+      "orient": "Now give me two reasons or examples. Start with: One reason is.",
+      "fallback": [
+        "Can you give me an example?",
+        "Why do you think so?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Have your view acknowledged.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:i see your point|i understand|however|on the other hand)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "But what about what I said?",
+        "Don't you think I have a point?"
+      ],
+      "orient": "I have a different view. Show that you heard it. Start with: I see your point, but.",
+      "fallback": [
+        "Don't you think I have a point?",
+        "But what about what I said?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Fair enough. That's a good way to look at it.",
+  "expert_notes": {
+    "o1": {
+      "good": "A clear position in the first sentence.",
+      "common_mistakes": [
+        "Saying only: It depends"
+      ],
+      "micro_lesson": "Say: I think, or: In my opinion.",
+      "model": "In my opinion, it depends on the job, but mostly I prefer it.",
+      "smaller_step": "Say: I think.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "Reasons and examples make an opinion worth listening to.",
+      "common_mistakes": [
+        "Repeating the opinion louder"
+      ],
+      "micro_lesson": "Say: One reason is, and: For example.",
+      "model": "One reason is cost. For example, my travel takes two hours.",
+      "smaller_step": "Say: One reason is.",
+      "subskills": [
+        "grammar"
+      ]
+    },
+    "o3": {
+      "good": "Showing you heard the other side, before you answer it.",
+      "common_mistakes": [
+        "Ignoring the other view"
+      ],
+      "micro_lesson": "Say: I see your point, but.",
+      "model": "I see your point about cost, but I still think it is worth it.",
+      "smaller_step": "Say: I see your point.",
+      "subskills": [
+        "comprehension"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Ali",
+      "question": "is working from home better than working in an office?",
+      "view": "the office is better",
+      "reason": "new staff learn faster in person"
+    },
+    {
+      "name": "Rachel",
+      "question": "should meetings have a strict time limit?",
+      "view": "every meeting should stop at thirty minutes",
+      "reason": "people get more focused with a limit"
+    }
+  ]
+}

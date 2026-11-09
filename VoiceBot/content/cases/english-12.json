@@ -1,0 +1,242 @@
+{
+  "archetype": "social",
+  "level": "intermediate",
+  "setting": "A fictional conversation between friends arranging to meet.",
+  "presentation": {
+    "situation": "You want to do something with {{name}} this weekend. Invite {{name}}, talk about your plans, and agree the details. {{name}} has plans too, so listen carefully.",
+    "opening": "Hi! How are things? I was thinking about the weekend. Are you doing anything?",
+    "opening_speaker": "p1",
+    "learner_role": "Friend"
+  },
+  "brief": {
+    "you_are": "You are inviting a friend to do something this weekend.",
+    "situation": "You want to do something with {{name}} this weekend. Invite {{name}}, talk about your plans, and agree the details. {{name}} has plans too, so listen carefully.",
+    "task": "Make an invitation, talk about what you plan to do, and agree the day and time.",
+    "done_looks_like": "You both know exactly what you are doing, on what day, and at what time."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Friend",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are inviting a friend to do something this weekend.",
+      "goals": [
+        "Make an invitation, talk about what you plan to do, and agree the day and time."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Friend",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "A friend with a busy weekend",
+      "voice_index": 0,
+      "topics": [
+        "weekend",
+        "saturday",
+        "sunday",
+        "plan",
+        "time"
+      ],
+      "card": {
+        "want": "To see you, around the plans already in the diary.",
+        "hidden_need": "",
+        "attitude": "Friendly, and a little disorganized.",
+        "speech": "Clear everyday English. Natural, not formal.",
+        "tactics": [
+          "Mention the time that does not work",
+          "Ask what exactly you will do, and when"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "You are arranging something to do together this weekend."
+    },
+    {
+      "id": "f2",
+      "text": "{{name}} is {{free}}.",
+      "owner": "p1"
+    },
+    {
+      "id": "f3",
+      "text": "{{name}} is busy {{busy}}.",
+      "owner": "p1"
+    },
+    {
+      "id": "f4",
+      "text": "{{name}} enjoys {{enjoys}}.",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Make an invitation",
+      "evidence": "The learner invites the friend to do something.",
+      "alternatives": [
+        "Would you like to go out on Saturday?"
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Discuss future plans",
+      "evidence": "The learner uses future language.",
+      "alternatives": [
+        "I'm going to book a table. We'll meet near the park."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Agree on practical details",
+      "evidence": "The learner agrees a day and a time, taking the friend's availability into account.",
+      "alternatives": [
+        "How about Saturday at four? That works for me."
+      ]
+    }
+  ],
+  "examples": [
+    "Would you like to …?",
+    "I'm going to …",
+    "How about Saturday?"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Hear the invitation.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:would you like|do you want|how about)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Did you want to do something together?",
+        "Do you have an idea for the weekend?"
+      ],
+      "orient": "You want to invite me to do something. You can say: Would you like to.",
+      "fallback": [
+        "Do you have an idea for the weekend?",
+        "Did you want to do something together?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Discuss what you will do.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:will|going to|planning to)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "What are you planning to do?",
+        "So what will we do exactly?"
+      ],
+      "orient": "Tell me your plan. Use: I am going to, or: we will.",
+      "fallback": [
+        "So what will we do exactly?",
+        "What are you planning to do?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Agree the details.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:at \\d|monday|tuesday|wednesday|thursday|friday|saturday|sunday|that works)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "What day and time should we say?",
+        "So when exactly shall we meet?"
+      ],
+      "orient": "Now agree the day and time. I told you when I am busy. You can say: How about Saturday at four?",
+      "fallback": [
+        "So when exactly shall we meet?",
+        "What day and time should we say?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Perfect. See you then!",
+  "expert_notes": {
+    "o1": {
+      "good": "A clear, friendly invitation with an activity.",
+      "common_mistakes": [
+        "Saying only: Are you free?"
+      ],
+      "micro_lesson": "Use: Would you like to, or: How about.",
+      "model": "Would you like to go for a walk this weekend?",
+      "smaller_step": "Say: Would you like to.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "Using going to for plans, and will for things decided now.",
+      "common_mistakes": [
+        "Using the present for future plans"
+      ],
+      "micro_lesson": "Say: I am going to, or: We will.",
+      "model": "I'm going to book a table, and we'll eat after the walk.",
+      "smaller_step": "Say: We will.",
+      "subskills": [
+        "grammar"
+      ]
+    },
+    "o3": {
+      "good": "Saying the final day and time so that nobody is confused.",
+      "common_mistakes": [
+        "Ending with: See you sometime"
+      ],
+      "micro_lesson": "Say the day and the time out loud.",
+      "model": "How about Saturday at four? See you by the gate.",
+      "smaller_step": "Say a day and a time.",
+      "subskills": [
+        "comprehension"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Zain",
+      "free": "free on Saturday afternoon",
+      "busy": "all day on Sunday",
+      "enjoys": "walking in the park"
+    },
+    {
+      "name": "Priya",
+      "free": "free on Sunday morning",
+      "busy": "on Saturday",
+      "enjoys": "visiting the library and good coffee"
+    }
+  ]
+}

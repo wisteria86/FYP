@@ -20,12 +20,12 @@ class AdaptiveTrainingService(ApplicationService):
         chosen = sorted(skills, key=lambda x: (x["score"], x["sessions"]))[:3]
         return [{"day": f"Session {i + 1}", "skill_id": s["id"], "activity": s["name"], "focus": s["subskills"][i % len(s["subskills"])] if s['subskills'] else s['name']} for i, s in enumerate(chosen)]
 
-    def update_proficiency(self, db, session, scores, assessment_id):
+    def update_proficiency(self, db, session, scores, assessment_id, overall=None, weight=.35):
         user_id, skill_id = session['user_id'], session['skill_id']
-        overall = round(sum(scores.values()) / len(scores), 1)
+        overall = round(sum(scores.values()) / len(scores), 1) if overall is None else overall
         current = db.execute('SELECT score,sessions FROM proficiency WHERE user_id=? AND skill_id=?', (user_id, skill_id)).fetchone()
         previous, count = (current['score'], current['sessions']) if current else (50, 0)
-        updated = round(previous * .65 + overall * .35, 1) if count else overall
+        updated = round(previous * (1 - weight) + overall * weight, 1) if count else overall
         db.execute('INSERT INTO proficiency VALUES (?,?,?,?,?) ON CONFLICT(user_id,skill_id) DO UPDATE SET score=excluded.score,sessions=excluded.sessions,updated_at=excluded.updated_at', (user_id, skill_id, updated, count + 1, _now()))
         db.execute('INSERT INTO proficiency_history(user_id,skill_id,session_id,previous_score,observed_score,new_score,created_at) VALUES (?,?,?,?,?,?,?)', (user_id,skill_id,session['id'],previous,overall,updated,_now()))
         subskills = db.execute('SELECT id,name FROM subskill_catalog WHERE skill_id=? AND active=1 ORDER BY rowid', (skill_id,)).fetchall()
@@ -38,7 +38,7 @@ class AdaptiveTrainingService(ApplicationService):
             current = db.execute('SELECT score,sessions FROM subskill_proficiency WHERE user_id=? AND skill_id=? AND subskill=?', (user_id,skill_id,sub['name'])).fetchone()
             prior, count = (current['score'],current['sessions']) if current else (50,0)
             observed = scores[metric]
-            updated = round(prior*.65+observed*.35,1) if count else observed
+            updated = round(prior*(1-weight)+observed*weight,1) if count else observed
             db.execute('INSERT INTO subskill_proficiency VALUES (?,?,?,?,?,?) ON CONFLICT(user_id,skill_id,subskill) DO UPDATE SET score=excluded.score,sessions=excluded.sessions,updated_at=excluded.updated_at', (user_id,skill_id,sub['name'],updated,count+1,_now()))
             db.execute('INSERT INTO proficiency_history(user_id,skill_id,subskill_id,session_id,previous_score,observed_score,new_score,created_at) VALUES (?,?,?,?,?,?,?,?)', (user_id,skill_id,sub['id'],session['id'],prior,observed,updated,_now()))
         self.update_training_plan(db, user_id, assessment_id, session)
@@ -51,7 +51,7 @@ class AdaptiveTrainingService(ApplicationService):
         db.execute("UPDATE training_plan_activities SET status='completed',session_id=? WHERE plan_id=? AND activity_id=? AND status='upcoming'", (session['id'],plan_id,session.get('activity_id')))
         db.execute("UPDATE recommendations SET status='superseded' WHERE user_id=? AND status='active'", (user_id,))
         db.execute("UPDATE training_plan_activities SET status='superseded' WHERE plan_id=? AND status='upcoming'", (plan_id,))
-        weakest = db.execute('SELECT s.id,s.name,COALESCE(p.score,50) score FROM skill_catalog s LEFT JOIN proficiency p ON p.skill_id=s.id AND p.user_id=? WHERE s.active=1 ORDER BY (s.id=?) DESC,score,s.id LIMIT 3', (user_id,session['skill_id'])).fetchall()
+        weakest = db.execute('SELECT s.id,s.name,COALESCE(p.score,50) score FROM skill_catalog s LEFT JOIN proficiency p ON p.skill_id=s.id AND p.user_id=? WHERE s.active=1 ORDER BY (s.id=?) DESC,EXISTS(SELECT 1 FROM user_goals g WHERE g.user_id=? AND g.skill_id=s.id AND g.status=\'active\') DESC,score,s.id LIMIT 3', (user_id,session['skill_id'],user_id)).fetchall()
         for priority, skill in enumerate(weakest):
             activity = db.execute('''SELECT a.id FROM training_activities a WHERE a.primary_skill_id=? AND a.active=1
                 AND (a.training_language IS NULL OR NOT EXISTS (SELECT 1 FROM sessions s JOIN assessments x ON x.session_id=s.id

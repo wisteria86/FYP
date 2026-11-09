@@ -1,0 +1,103 @@
+{
+  "archetype": "negotiation",
+  "level": "intermediate",
+  "setting": "A fictional purchase negotiation over a staff training package. All figures are simulation facts, not market data.",
+  "presentation": {
+    "situation": "You are the purchasing lead for a company buying a fictional staff training package from Alex, a supplier representative. Package: 20 seats, USD 12000 list price, delivery in 30 days and 3 months of support. Prepare your limits, explore priorities, and either confirm executable terms or explain a justified no-deal decision.",
+    "opening": "Thanks for making time. We're offering 20 training seats for USD 12000, delivered in 30 days with three months of support. What matters most to you here?",
+    "opening_speaker": "p1",
+    "learner_role": "Purchasing lead"
+  },
+  "brief": {
+    "you_are": "You are the purchasing lead. You can approve a deal for your company.",
+    "situation": "Alex sells a staff training package: 20 seats, USD 12000, delivery in 30 days, 3 months of support. A similar package sold for USD 11000 before. Your private limits and your alternative are in your preparation notes. Do not tell Alex your limits.",
+    "task": "Write your private preparation, find out what Alex cares about, make offers with reasons, trade rather than just give in, and finish with complete confirmed terms or a justified no-deal.",
+    "done_looks_like": "Either a confirmed package with price, seats, delivery and support, or a respectful walk-away you can justify against your alternative."
+  },
+  "participants": [
+    {"id": "p0", "name": "You", "role": "Purchasing lead", "kind": "learner", "team": "learner", "party": "buyer", "relationship": "Represent the buyer in this package negotiation", "authority": "Approve feasible terms for your party", "can_finalize": true, "goals": ["Reach a sound agreement or a justified no-deal"], "voice_index": 0},
+    {
+      "id": "p1", "name": "Alex", "role": "Supplier representative", "kind": "ai", "team": "opponent", "party": "seller", "relationship": "Represent the seller in this package negotiation", "authority": "Approve feasible terms for your party", "can_finalize": true, "voice_index": 0,
+      "topics": ["price", "delivery", "support", "seats", "discount", "offer"],
+      "card": {
+        "want": "Close this package at a good margin without giving away margin for nothing.",
+        "hidden_need": "Has spare delivery capacity next quarter, so a later delivery date is worth a lot and costs little.",
+        "attitude": "Friendly, commercially sharp, and never in a hurry. Respects good reasons and clear trades.",
+        "speech": "Natural business English. Short and concrete. Talks about the package, never about private limits.",
+        "tactics": ["Ask why a number is right before moving", "Give only in exchange for something", "Compare like with like when an alternative is mentioned"],
+        "pressure": {"gentle": "Explains reasons patiently and suggests what could be traded.", "balanced": "Holds position until given a reason or a trade.", "challenging": "Anchors hard and tests whether the learner's limits are real, without bullying."}
+      }
+    }
+  ],
+  "ledger": [
+    {"id": "f1", "text": "The package covers 20 seats, lists at USD 12000, and includes delivery in 30 days and 3 months of support."},
+    {"id": "f2", "text": "A similar fictional package previously sold for USD 11000 with 20 seats, 30 days and 3 months of support."},
+    {"id": "f3", "text": "Delivery can be between 21 and 45 days. Support can be between 1 and 6 months. Faster delivery and longer support cost more."},
+    {"id": "f4", "text": "All figures in this case are fictional simulation facts, not market data."}
+  ],
+  "objectives": [
+    {"id": "n1", "description": "Prepare justified targets, alternatives and walk-away limits", "evidence": "Private preparation with reasons. Disclosure to the counterpart is not required.", "alternatives": ["Accept equivalent wording."]},
+    {"id": "n2", "description": "Discover and accurately summarize interests", "evidence": "Relevant questions and confirmation of the other side's actual priorities, not generic phrases.", "alternatives": ["What makes the delivery date difficult for you?"]},
+    {"id": "n3", "description": "Evaluate feasible multi-issue offers", "evidence": "Uses supplied benchmarks and a rationale, and considers more than price, or explains why no feasible trade exists.", "alternatives": ["Accept equivalent wording and a well-justified no-deal outcome."]},
+    {"id": "n4", "description": "Use conditional, disciplined concessions", "evidence": "Links a change to a requested return, or explains why further concessions would breach limits.", "alternatives": ["If you can lower the price, I can accept 45-day delivery."]},
+    {"id": "n5", "description": "Respect confidentiality and decision authority", "evidence": "Does not reveal private limits or fabricate evidence or authority, and is clear who can approve.", "alternatives": ["Accept equivalent wording."]},
+    {"id": "n6", "description": "Close with executable terms or a justified no-deal decision", "evidence": "Mutually confirms price, seats, delivery and support, or justifies a respectful walk-away against the alternative.", "alternatives": ["So we agree this price, 20 seats, 45 days and 3 months of support."]}
+  ],
+  "examples": ["What matters most to you on delivery?", "If you can do ..., I can accept ...", "So to confirm: price ..., seats ..., delivery ..., support ..."],
+  "prerequisites": ["Write your private preparation notes before you make an offer."],
+  "beats": [
+    {
+      "id": "explore", "goal": "Find out what each side actually cares about before any bargaining.", "driver": "p1", "objectives": ["n1", "n2", "n5"],
+      "signals": ["\\b(?:what matters|priority|priorities|why|important|flexib|what makes|your (?:capacity|margin|schedule))\\b"],
+      "stall_turns": 2,
+      "opportunity": ["Is it mainly the price, or does the delivery date matter as much?", "Tell me what your team actually needs from this."],
+      "orient": "You're buying this training package and I'm selling it. Let's start with what you need. Is price, delivery date or support most important to you? You don't have to tell me your limits.",
+      "fallback": ["What matters most to you: price, delivery or support?", "Help me understand what your team needs from this package."]
+    },
+    {
+      "id": "bargain", "goal": "Exchange offers. Alex moves only for reasons and trades.", "driver": "p1", "objectives": ["n3", "n4"],
+      "signals": ["\\b(?:offer|if you|if we|in exchange|instead|counter|usd|\\d{4,}|thousand|trade)\\b"],
+      "stall_turns": 3,
+      "opportunity": ["What number did you have in mind, and how did you get to it?", "If price is the issue, what could you be flexible on in return?"],
+      "orient": "We're bargaining now. Make me an offer and give me a reason, or offer me something in return, like a later delivery date.",
+      "fallback": ["What would you offer, and why?", "What could you be flexible on in return?"]
+    },
+    {
+      "id": "close", "goal": "Confirm complete terms, or walk away respectfully with a reason.", "driver": "p1", "objectives": ["n6"],
+      "signals": ["\\b(?:confirm|agreed|we agree|walk away|no deal|can't accept|cannot accept|go with (?:the )?alternative|other supplier)\\b"],
+      "stall_turns": 3,
+      "opportunity": ["Where does that leave us? Do we have terms we can both confirm?", "If we can't get there, it's fine to say so. What's your decision?"],
+      "orient": "It's decision time. Either say the full terms you accept: price, seats, delivery and support. Or tell me you're walking away, and why.",
+      "fallback": ["Do we have complete terms we can both confirm?", "What's your decision?"]
+    }
+  ],
+  "closing_line": "Thanks, that's clear. I appreciate how you handled this.",
+  "expert_notes": {
+    "n1": {"good": "A target, a walk-away limit and your best alternative, each with a reason, written before the first offer.", "common_mistakes": ["Starting without a walk-away limit", "Treating a hope as a limit"], "micro_lesson": "Your alternative decides your limit. Know what you will do if there is no deal.", "model": "My target is based on last year's budget, and I walk away above my limit because the other supplier costs less overall.", "smaller_step": "Write down what you will do if this deal fails.", "subskills": ["discovery"]},
+    "n2": {"good": "Questions that reveal why the other side wants something, followed by a summary they can confirm.", "common_mistakes": ["Going straight to price", "A generic 'what do you want?'"], "micro_lesson": "Ask why they care. A reason gives you something to trade; a position does not.", "model": "What makes a shorter delivery difficult for you? So capacity next quarter matters more than price?", "smaller_step": "Ask Alex one 'why' question about delivery or support.", "subskills": ["discovery"]},
+    "n3": {"good": "Comparing whole packages using the supplied benchmark and giving a reason for your number.", "common_mistakes": ["Talking only about price", "Using an invented market figure"], "micro_lesson": "Bargain over the whole package. Different priorities are what make a good trade possible.", "model": "The earlier package sold at USD 11000. With a later delivery date, a lower price seems fair to me.", "smaller_step": "Name one thing besides price that you could change.", "subskills": ["trade-offs"]},
+    "n4": {"good": "Every move is conditional: if you do this, I can do that.", "common_mistakes": ["Giving ground with nothing in return", "Splitting the difference by reflex"], "micro_lesson": "Say 'if you..., then I...' Never give a concession for free.", "model": "If you can come down on price, I can accept delivery in 45 days.", "smaller_step": "Start a sentence with: If you can ...", "subskills": ["trade-offs"]},
+    "n5": {"good": "Being honest while keeping limits private, and being clear who can approve.", "common_mistakes": ["Stating your maximum budget", "Inventing a competing quote"], "micro_lesson": "You may keep your limit private, but do not make up facts.", "model": "I can't share our limit, but that price doesn't work for us.", "smaller_step": "Say that a number doesn't work without saying your limit.", "subskills": ["closing"]},
+    "n6": {"good": "Stating price, seats, delivery and support in one sentence and getting a clear yes, or walking away with a reason.", "common_mistakes": ["Treating a vague 'okay' as a deal", "Accepting a bad deal rather than saying no"], "micro_lesson": "A deal is complete only when all terms are said aloud and confirmed. No deal can be the right answer.", "model": "To confirm: this price, 20 seats, delivery in 45 days, and 3 months of support. Or: we can't reach a deal, so we'll use our alternative.", "smaller_step": "Say all four terms in one sentence.", "subskills": ["closing"]}
+  },
+  "variants": [
+    {
+      "negotiation": {
+        "case": "multi_issue", "currency": "USD",
+        "public": {"product": "Fictional staff training package", "seats": 20, "list_price": 12000, "delivery_days": 30, "support_months": 3, "benchmark": "Fictional prior package: USD 11000, 20 seats, 30 days, 3 months support.", "terms_required": ["price", "currency", "seats", "delivery_days", "support_months"], "service_options": "Delivery can be 21-45 days; support can be 1-6 months. Faster delivery and extended support cost more."},
+        "buyer": {"target": 9500, "maximum": 11500, "alternative": "A fictional alternative supplier offers 20 seats for USD 8500 in 45 days with 1 month support.", "priorities": ["20 seats", "delivery within 30 days", "affordable price"]},
+        "seller": {"minimum": 10000, "target": 12000, "alternative": "Allocate capacity to another fictional customer.", "priorities": ["price", "longer lead time", "limited support"]},
+        "feasibility": {"minimum_delivery_days": 21, "maximum_delivery_days": 45, "minimum_support_months": 1, "maximum_support_months": 6, "rush_cost": 1000, "extra_support_month_cost": 500, "late_delivery_saving": 500}
+      }
+    },
+    {
+      "negotiation": {
+        "case": "no_zopa", "currency": "USD",
+        "public": {"product": "Fictional staff training package", "seats": 20, "list_price": 12000, "delivery_days": 30, "support_months": 3, "benchmark": "Fictional prior package: USD 11000, 20 seats, 30 days, 3 months support.", "terms_required": ["price", "currency", "seats", "delivery_days", "support_months"], "service_options": "Delivery can be 21-45 days; support can be 1-6 months. Faster delivery and extended support cost more."},
+        "buyer": {"target": 8500, "maximum": 9000, "alternative": "A fictional alternative supplier offers 20 seats for USD 8500 in 45 days with 1 month support.", "priorities": ["20 seats", "delivery within 30 days", "affordable price"]},
+        "seller": {"minimum": 10500, "target": 12000, "alternative": "Allocate capacity to another fictional customer.", "priorities": ["price", "longer lead time", "limited support"]},
+        "feasibility": {"minimum_delivery_days": 21, "maximum_delivery_days": 45, "minimum_support_months": 1, "maximum_support_months": 6, "rush_cost": 1000, "extra_support_month_cost": 500, "late_delivery_saving": 0}
+      }
+    }
+  ]
+}

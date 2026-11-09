@@ -1,0 +1,234 @@
+{
+  "archetype": "interview",
+  "level": "intermediate",
+  "setting": "A fictional job interview for a {{role}} role.",
+  "presentation": {
+    "situation": "You are interviewing for a {{role}} role with {{name}}. {{name}} wants a real example of {{focus}}. Use your own experience.",
+    "opening": "Welcome. Thanks for coming in. Could you tell me about a time when you dealt with {{focus}}?",
+    "opening_speaker": "p1",
+    "learner_role": "Job candidate"
+  },
+  "brief": {
+    "you_are": "You are a candidate in a job interview.",
+    "situation": "You are interviewing for a {{role}} role with {{name}}. {{name}} wants a real example of {{focus}}. Use your own experience.",
+    "task": "Give a relevant real example, explain the situation, what you did and the result, and answer confidently.",
+    "done_looks_like": "{{name}} has a specific, relevant example, and knows what you did and what happened."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Job candidate",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are a candidate in a job interview.",
+      "goals": [
+        "Give a relevant real example, explain the situation, what you did and the result, and answer confidently."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Hiring manager",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Would be your manager",
+      "voice_index": 0,
+      "topics": [
+        "role",
+        "team",
+        "experience",
+        "job"
+      ],
+      "card": {
+        "want": "Evidence that you can do this job.",
+        "hidden_need": "",
+        "attitude": "Polite and attentive, and probes vague answers.",
+        "speech": "Fluent, natural professional English. Direct, and free of corporate slogans.",
+        "tactics": [
+          "Ask 'what did you do personally?'",
+          "Ask 'what was the result?'",
+          "Never supply the details of the example"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "The role is {{role}}."
+    },
+    {
+      "id": "f2",
+      "text": "The candidate's examples come from their own experience. {{name}} knows only what the candidate says."
+    },
+    {
+      "id": "f3",
+      "text": "The role involves a lot of {{focus}}.",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Give a relevant example",
+      "evidence": "The learner offers a relevant real example, and sets the context.",
+      "alternatives": [
+        "In my last job, a customer was unhappy about a late order."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Explain your actions and the result",
+      "evidence": "The learner explains their own actions and the result.",
+      "alternatives": [
+        "I called the customer and fixed it, and they stayed with us."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Connect your strengths to the role",
+      "evidence": "The learner connects this to the role with confidence.",
+      "alternatives": [
+        "I can bring that same approach to this role."
+      ]
+    }
+  ],
+  "examples": [
+    "In my last job, a customer was unhappy about a late order.",
+    "I called the customer and fixed it, and as a result they stayed with us.",
+    "I can bring that same approach to this role."
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Hear a relevant example.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:in my (?:last|previous|current)|at my|when i|last year|one time|for example|situation|project)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Can you think of a specific time?",
+        "Tell me about one real situation."
+      ],
+      "orient": "It's a job interview. Tell me about one real time from your own experience. Start with: In my last job.",
+      "fallback": [
+        "Tell me about one real situation.",
+        "Can you think of a specific time?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Hear personal action and the result.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:i (?:did|led|created|worked|called|built|decided|fixed|spoke|changed|made|took)|as a result|the result|in the end)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "What did you do yourself?",
+        "And what was the result?"
+      ],
+      "orient": "Now tell me what you did, and what happened. Use: I did, and: the result was.",
+      "fallback": [
+        "And what was the result?",
+        "What did you do yourself?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Hear a confident close.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:i can|i will|i have|i would bring|this role|this job|i bring)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Why does that matter for this role?",
+        "How would that help you here?"
+      ],
+      "orient": "Now connect your example to this job. Start with: I can bring that to this role because.",
+      "fallback": [
+        "How would that help you here?",
+        "Why does that matter for this role?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Thank you. That is exactly what I wanted to hear about.",
+  "expert_notes": {
+    "o1": {
+      "good": "One real, relevant situation.",
+      "common_mistakes": [
+        "Talking in general"
+      ],
+      "micro_lesson": "Choose one real situation. Start with when and where.",
+      "model": "In my last job, a customer was unhappy about a late order.",
+      "smaller_step": "Say: In my last job.",
+      "subskills": [
+        "relevance"
+      ]
+    },
+    "o2": {
+      "good": "Your own actions, then a real result.",
+      "common_mistakes": [
+        "Only saying 'we'"
+      ],
+      "micro_lesson": "Say 'I' for what you did, and end with the result.",
+      "model": "I called the customer and fixed it, and as a result they stayed with us.",
+      "smaller_step": "Say: I, and one action.",
+      "subskills": [
+        "STAR evidence"
+      ]
+    },
+    "o3": {
+      "good": "A plain statement of what you can do.",
+      "common_mistakes": [
+        "Undermining yourself: I am not sure, but"
+      ],
+      "micro_lesson": "Say: I can, and how it helps this job.",
+      "model": "I can bring that same approach to this role.",
+      "smaller_step": "Say: I can.",
+      "subskills": [
+        "confidence"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Mina",
+      "role": "customer success",
+      "focus": "a dissatisfied customer"
+    },
+    {
+      "name": "George",
+      "role": "project coordination",
+      "focus": "conflicting priorities"
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "archetype": "social",
+  "level": "beginner",
+  "setting": "A fictional first meeting between neighbours in the entrance of an apartment building.",
+  "presentation": {
+    "situation": "You meet Alex, who moved into {{flat}} {{moved}}, in the entrance of your building. Say hello, tell Alex your name, have a short friendly chat, and say goodbye.",
+    "opening": "Hi! I'm Alex, your neighbour. I just moved in to {{flat}}. What's your name?",
+    "opening_speaker": "p1",
+    "learner_role": "Neighbour"
+  },
+  "brief": {
+    "you_are": "You live in this building and you are meeting a new neighbour.",
+    "situation": "Your new neighbour Alex says hello to you in the entrance.",
+    "task": "Say hello, tell Alex your name, ask or answer one friendly question, then say goodbye.",
+    "done_looks_like": "Alex knows your name, you had a short friendly chat, and you said goodbye politely."
+  },
+  "participants": [
+    {"id": "p0", "name": "You", "role": "Neighbour", "kind": "learner", "team": "learner", "relationship": "New neighbour of Alex", "goals": ["Greet Alex, share your name and close politely"], "voice_index": 0},
+    {
+      "id": "p1", "name": "Alex", "role": "Neighbour", "kind": "ai", "team": "opponent", "relationship": "Just moved into your building", "voice_index": 0,
+      "topics": ["move", "building", "shop", "work", "name"],
+      "card": {
+        "want": "Get to know one friendly person in the new building and find out where the nearest shop is.",
+        "hidden_need": "Feels a little lonely after the move.",
+        "attitude": "Warm, patient, happy to chat for a minute.",
+        "speech": "Very simple everyday English. Short sentences. One easy question at a time.",
+        "tactics": ["Use the learner's name once you know it", "If the learner gives a very short answer, ask one easy question"],
+        "pressure": {"gentle": "Always friendly and slow.", "balanced": "Friendly, normal pace.", "challenging": "Friendly, normal pace, slightly longer sentences."}
+      }
+    }
+  ],
+  "ledger": [
+    {"id": "f1", "text": "Alex moved into {{flat}} {{moved}}."},
+    {"id": "f2", "owner": "p1", "text": "Alex works as {{job}}."},
+    {"id": "f3", "owner": "p1", "text": "Alex is looking for the nearest food shop and does not know the area yet."},
+    {"id": "f4", "owner": "p1", "text": "Alex has to leave soon to {{errand}}."}
+  ],
+  "objectives": [
+    {"id": "o1", "description": "Use a natural greeting", "evidence": "The learner says hello or an equivalent greeting to Alex.", "alternatives": ["Hi", "Good morning", "Nice to meet you"]},
+    {"id": "o2", "description": "Say your name", "evidence": "The learner tells Alex their own name.", "alternatives": ["I'm Sara", "My name is Sara", "Call me Sara"]},
+    {"id": "o3", "description": "Close the conversation politely", "evidence": "The learner ends the chat with a goodbye or an equivalent polite closing.", "alternatives": ["See you later", "Have a nice day", "Nice meeting you, bye"]}
+  ],
+  "examples": ["Hello, my name is ...", "Nice to meet you.", "Goodbye. See you soon."],
+  "prerequisites": ["No preparation needed."],
+  "beats": [
+    {
+      "id": "greet", "goal": "Exchange greetings and names.", "driver": "p1", "objectives": ["o1", "o2"],
+      "signals": ["\\b(?:my name is|i am|i'm|call me|name's)\\s+\\w+"],
+      "stall_turns": 2,
+      "opportunity": ["Sorry, I didn't get your name. What is your name?", "I'm Alex. And you?"],
+      "orient": "We are neighbours and we are just saying hello. I'm Alex. Please tell me your name.",
+      "fallback": ["Nice to meet you. What's your name?", "Hello! I'm happy to meet you."]
+    },
+    {
+      "id": "chat", "goal": "Have a short friendly chat about the building or the area.", "driver": "p1", "objectives": [],
+      "signals": ["\\b(?:shop|store|market|work|job|live|building|near)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["Is there a food shop near here?", "Do you like living here?", "What do you do for work?"],
+      "orient": "We are just having a short chat. You can tell me about the area. Is there a food shop near here?",
+      "fallback": ["Is there a food shop near here?", "I like this building. Do you like it here?"]
+    },
+    {
+      "id": "close", "goal": "End the chat politely because Alex has to leave.", "driver": "p1", "objectives": ["o3"],
+      "signals": ["\\b(?:bye|goodbye|see you|take care|nice (?:meeting|to meet)|have a (?:nice|good))\\b"],
+      "stall_turns": 2,
+      "opportunity": ["Oh, I have to {{errand}} now. It was nice to meet you!", "I really must go now. See you later?"],
+      "orient": "I have to go now, so we are saying goodbye. You can say: goodbye, see you soon.",
+      "fallback": ["I have to go now. It was nice to meet you!", "See you soon!"]
+    }
+  ],
+  "closing_line": "Thank you. See you around the building!",
+  "expert_notes": {
+    "o1": {"good": "A short greeting that matches the moment, such as Hi or Good morning, before anything else.", "common_mistakes": ["Answering the question without any greeting"], "micro_lesson": "Start with a small greeting. Just 'Hi' is friendly and enough.", "model": "Hi, nice to meet you.", "smaller_step": "Say just one word of greeting to Alex.", "subskills": ["greeting"]},
+    "o2": {"good": "Saying your own name in a full short sentence so the other person can use it.", "common_mistakes": ["Giving only the name with no sentence is fine, but some learners forget to answer the question at all"], "micro_lesson": "When someone asks your name, use: My name is, or I'm, then your name.", "model": "I'm Sara. Nice to meet you.", "smaller_step": "Say: My name is, and then your own name.", "subskills": ["self-introduction"]},
+    "o3": {"good": "A polite closing when the other person has to leave.", "common_mistakes": ["Stopping without saying goodbye"], "micro_lesson": "When someone says they have to go, answer with a goodbye so the chat ends warmly.", "model": "Nice to meet you too. See you soon!", "smaller_step": "Say goodbye to Alex.", "subskills": ["polite closing"]}
+  },
+  "variants": [
+    {"flat": "flat 12", "moved": "last week", "job": "a nurse", "errand": "catch my bus"},
+    {"flat": "flat 7", "moved": "two days ago", "job": "a bus driver", "errand": "start my shift"},
+    {"flat": "flat 3", "moved": "yesterday", "job": "a teacher", "errand": "meet my sister"}
+  ]
+}

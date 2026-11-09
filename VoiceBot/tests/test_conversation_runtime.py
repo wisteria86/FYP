@@ -10,6 +10,7 @@ from domain.conversation import SessionAction
 from domain.errors import DomainError
 from intelligence.scenario_contracts import learner_definition
 from services.training_orchestrator import TrainingOrchestrator
+from legacy_fixture import previous_engine
 
 
 class RuntimeTests(unittest.TestCase):
@@ -97,7 +98,11 @@ class RuntimeTests(unittest.TestCase):
         self.runtime.start(self.sid,self.payload())
         revision,result=self.evaluated()
         result['criteria'][0]['quotes']=['invented evidence']
-        self.assertFalse(self.runtime.save_evaluation(self.sid,revision,result))
+        # Case packs keep the valid parts of a review; an invented quote earns nothing.
+        self.runtime.save_evaluation(self.sid,revision,result)
+        progress=self.runtime.progress(self.sid)
+        self.assertFalse(progress['criteria'][0]['met'])
+        self.assertFalse(self.runtime.view(self.sid)['completed'])
         revision,result=self.evaluated()
         self.action('correct',{'turn_id':result['criteria'][0]['turn_ids'][0],'text':'Hello, my name is Amina.'})
         self.assertFalse(self.runtime.save_evaluation(self.sid,revision,result))
@@ -205,7 +210,8 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(self.runtime.prompt(self.sid,speaker,[])['context']['corrections_to_acknowledge'],[])
 
     def test_duplicate_names_still_route_by_id_and_identity_checks_keep_learner_separate(self):
-        group=self.training.create_session('demo','english-speaking','advanced','english-22')
+        previous_engine(self)
+        group=self.training.create_session('demo','english-speaking','advanced','english-30')
         definition,state=self.runtime.read(group['id'])
         ai=[p for p in definition['participants'] if p['kind']=='ai']
         ai[1]['name']=ai[0]['name']
@@ -218,7 +224,8 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(self.runtime.validate_sentence(group['id'],speaker,f"Hello {speaker['name']}."),'Hello Amna.')
 
     def test_named_address_selects_speaker_without_requiring_rotation(self):
-        group=self.training.create_session('demo','english-speaking','advanced','english-22')
+        previous_engine(self)
+        group=self.training.create_session('demo','english-speaking','advanced','english-30')
         ai=[p for p in group['runtime']['definition']['participants'] if p['kind']=='ai']
         self.runtime.start(group['id'],self.payload(f"{ai[1]['name']}, what concerns you?"))
         selected=self.runtime.speakers(group['id'])
@@ -301,9 +308,10 @@ class RuntimeTests(unittest.TestCase):
 
 class StructuredTurnTests(unittest.IsolatedAsyncioTestCase):
     async def test_group_contribution_is_bounded_and_uses_the_preceding_delivered_reply(self):
+        previous_engine(self)
         with tempfile.TemporaryDirectory() as directory:
             training=TrainingService(Path(directory)/'group.db')
-            session=training.create_session('demo','english-speaking','advanced','english-22')
+            session=training.create_session('demo','english-speaking','advanced','english-30')
             prompts=[]
             class Provider:
                 def generate_contextual_response(self,prompt):

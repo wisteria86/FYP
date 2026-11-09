@@ -1,12 +1,65 @@
 """Versioned runtime contracts. Private scenario records never cross learner APIs."""
 from typing import Literal
 import math
+import re
 from pydantic import BaseModel, Field, model_validator
 
 
 class ParticipantKnowledge(BaseModel):
     public_knowledge: list[str] = Field(default_factory=list)
     private_knowledge: dict = Field(default_factory=dict)
+
+
+class CharacterCard(BaseModel):
+    """What makes a case-pack character a person rather than a job title."""
+    want: str = Field(min_length=8)
+    hidden_need: str = ''
+    attitude: str = Field(min_length=4)
+    speech: str = Field(min_length=4)
+    tactics: list[str] = Field(default_factory=list)
+    pressure: dict[str, str] = Field(default_factory=dict)
+
+
+class LearnerBrief(BaseModel):
+    """Everything a lost learner needs in order to be re-oriented."""
+    you_are: str = Field(min_length=4)
+    situation: str = Field(min_length=8)
+    task: str = Field(min_length=8)
+    done_looks_like: str = Field(min_length=8)
+
+
+class LedgerFact(BaseModel):
+    """A case fact. Owner 'public' is shared; otherwise only that participant knows it."""
+    id: str
+    owner: str = 'public'
+    text: str = Field(min_length=4)
+    available_from: str | None = None
+
+
+class Beat(BaseModel):
+    """One stage of a scene: who drives it and how it moves on if it stalls."""
+    id: str
+    goal: str = Field(min_length=4)
+    driver: str
+    objectives: list[str] = Field(default_factory=list)
+    signals: list[str] = Field(default_factory=list)
+    opportunity: list[str] = Field(default_factory=list)
+    orient: str = ''
+    fallback: list[str] = Field(default_factory=list)
+    stall_turns: int = Field(default=3, ge=1, le=12)
+    min_turns: int = Field(default=1, ge=1, le=8)
+    second_speaker: str | None = None
+    second_line: str = ''
+
+
+class ExpertNote(BaseModel):
+    """Authored teaching knowledge for one objective."""
+    good: str = Field(min_length=8)
+    common_mistakes: list[str] = Field(default_factory=list)
+    micro_lesson: str = Field(min_length=8)
+    model: str = Field(min_length=4)
+    smaller_step: str = Field(min_length=4)
+    subskills: list[str] = Field(default_factory=list)
 
 
 class Participant(ParticipantKnowledge):
@@ -24,6 +77,7 @@ class Participant(ParticipantKnowledge):
     topics: list[str] = Field(default_factory=list)
     initial_contribution: str = ''
     voice_index: int = 0
+    card: CharacterCard | None = None
 
 
 class Objective(BaseModel):
@@ -48,8 +102,16 @@ class UnknownQuantity(BaseModel):
 
 
 class ScenarioDefinition(BaseModel):
-    version: Literal[2] = 2
+    version: Literal[2, 3] = 2
     activity_id: str
+    archetype: str = 'general'
+    level: Literal['beginner', 'intermediate', 'advanced'] = 'intermediate'
+    brief: LearnerBrief | None = None
+    ledger: list[LedgerFact] = Field(default_factory=list)
+    beats: list[Beat] = Field(default_factory=list)
+    expert_notes: dict[str, ExpertNote] = Field(default_factory=dict)
+    forbidden_claims: list[str] = Field(default_factory=list)
+    closing_line: str = ''
     setting: str
     facts: list[str] = Field(min_length=1, max_length=100)
     participants: list[Participant] = Field(min_length=2, max_length=5)
@@ -87,7 +149,57 @@ class ScenarioDefinition(BaseModel):
             for value in case.get('feasibility',{}).values():
                 if type(value) not in (int,float) or not math.isfinite(value) or value < 0:
                     raise ValueError('Feasibility rules must be finite nonnegative numbers')
+        if self.version == 3:
+            self._validate_case_pack()
         return self
+
+    def _validate_case_pack(self):
+        """A case pack must give every character something real to say and a scene to run."""
+        ai = {p.id: p for p in self.participants if p.kind == 'ai'}
+        objective_ids = {o.id for o in self.objectives}
+        beat_ids = [b.id for b in self.beats]
+        if self.brief is None:
+            raise ValueError('A case pack needs a learner brief')
+        if not self.beats or not self.ledger:
+            raise ValueError('A case pack needs beats and a fact ledger')
+        if len(set(beat_ids)) != len(beat_ids) or len({f.id for f in self.ledger}) != len(self.ledger):
+            raise ValueError('Beat and fact IDs must be unique')
+        for person in ai.values():
+            if person.card is None:
+                raise ValueError(f'{person.name} needs a character card')
+            if person.card.want.lower().startswith('fulfil your role'):
+                raise ValueError(f'{person.name} has a generic goal')
+        generic = ('practice focus', 'participants retain', 'expect a follow-up', 'your partner should', 'keep the lesson setting')
+        for fact in self.ledger:
+            if any(term in fact.text.lower() for term in generic):
+                raise ValueError(f'Fact {fact.id} contains a stage direction')
+            if fact.owner != 'public' and fact.owner not in ai:
+                raise ValueError(f'Fact {fact.id} has an unknown owner')
+            if fact.available_from and fact.available_from not in beat_ids:
+                raise ValueError(f'Fact {fact.id} refers to an unknown beat')
+        covered = set()
+        for beat in self.beats:
+            if beat.driver not in ai:
+                raise ValueError(f'Beat {beat.id} is driven by an unknown character')
+            if beat.second_speaker and beat.second_speaker not in ai:
+                raise ValueError(f'Beat {beat.id} has an unknown second speaker')
+            if not set(beat.objectives) <= objective_ids:
+                raise ValueError(f'Beat {beat.id} refers to an unknown objective')
+            if not beat.opportunity or not beat.fallback or not beat.orient:
+                raise ValueError(f'Beat {beat.id} needs opportunity, orientation and fallback lines')
+            covered |= set(beat.objectives)
+        missing = objective_ids - covered - (set(self.expert_notes) & {o.id for o in self.objectives if o.id.startswith('prep')})
+        if missing:
+            raise ValueError(f'No beat creates a chance to show: {sorted(missing)}')
+        if set(self.expert_notes) != objective_ids:
+            raise ValueError('Every objective needs exactly one expert note')
+        if self.negotiation:
+            # A reservation limit must never sit in text a character can read out.
+            limits = {str(int(self.negotiation[side][key])) for side, key in (('buyer', 'maximum'), ('seller', 'minimum'))}
+            for fact in self.ledger:
+                digits = set(re.findall(r'\d+', fact.text.replace(',', '')))
+                if digits & limits:
+                    raise ValueError(f'Fact {fact.id} exposes a reservation limit')
 
 
 class SessionAction(BaseModel):

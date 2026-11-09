@@ -1,0 +1,230 @@
+{
+  "archetype": "social",
+  "level": "beginner",
+  "setting": "A fictional chat between friends who are choosing a weekend activity.",
+  "presentation": {
+    "situation": "You and your friend {{name}} are choosing something to do this weekend. {{name}} likes {{likes}} but does not like {{dislikes}}. Say what you like, say why, and find something you both enjoy.",
+    "opening": "I'm choosing something for us to do this weekend. I really like {{likes}}. What do you enjoy?",
+    "opening_speaker": "p1",
+    "learner_role": "Friend"
+  },
+  "brief": {
+    "you_are": "You are choosing a weekend activity with a friend.",
+    "situation": "You and your friend {{name}} are choosing something to do this weekend. {{name}} likes {{likes}} but does not like {{dislikes}}. Say what you like, say why, and find something you both enjoy.",
+    "task": "Say what you like or dislike, give one reason with because, and find one thing you both enjoy.",
+    "done_looks_like": "You have found something you both enjoy, and your friend knows why you like it."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Friend",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are choosing a weekend activity with a friend.",
+      "goals": [
+        "Say what you like or dislike, give one reason with because, and find one thing you both enjoy."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Friend",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "A friend making weekend plans",
+      "voice_index": 0,
+      "topics": [
+        "like",
+        "weekend",
+        "food",
+        "film",
+        "music"
+      ],
+      "card": {
+        "want": "To find something fun to do together this weekend.",
+        "hidden_need": "",
+        "attitude": "Easygoing and cheerful.",
+        "speech": "Very simple everyday English. Short sentences. One easy question at a time.",
+        "tactics": [
+          "If the answer is very short, ask one easy question",
+          "Use the person's own words back to them"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "You are choosing an activity for this weekend."
+    },
+    {
+      "id": "f2",
+      "text": "{{name}} likes {{likes}} and does not like {{dislikes}}.",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Say what you like and dislike",
+      "evidence": "The learner says what they like or do not like.",
+      "alternatives": [
+        "I like football."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Give a simple reason",
+      "evidence": "The learner gives a reason.",
+      "alternatives": [
+        "I like it because it is relaxing."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Find one shared interest",
+      "evidence": "The learner proposes or agrees on something both enjoy, or asks what the friend likes.",
+      "alternatives": [
+        "We both like films, so let's see one."
+      ]
+    }
+  ],
+  "examples": [
+    "I like … because …",
+    "I don't really enjoy …",
+    "Do you like …?"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Hear what the learner likes.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:i like|i love|i enjoy|i prefer|i don't like|i dislike)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Do you like {{likes}}?",
+        "What do you like to do at the weekend?"
+      ],
+      "orient": "Tell me something you like. You can say: I like, or: I don't like.",
+      "fallback": [
+        "What do you like to do at the weekend?",
+        "Do you like {{likes}}?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Hear why.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\bbecause\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Oh, why do you like that?",
+        "What do you like about it?"
+      ],
+      "orient": "Now tell me why. Use the word because.",
+      "fallback": [
+        "What do you like about it?",
+        "Oh, why do you like that?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Find something shared.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:do you like|what do you|which do you|we both|let's|shall we|how about)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So what should we do together?",
+        "What do you think we both would like?"
+      ],
+      "orient": "Now find one thing for both of us. Ask me what I like, or say: Let's go to.",
+      "fallback": [
+        "What do you think we both would like?",
+        "So what should we do together?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Great, that sounds fun. See you at the weekend!",
+  "expert_notes": {
+    "o1": {
+      "good": "A clear sentence with like, love or enjoy.",
+      "common_mistakes": [
+        "Saying: I am like"
+      ],
+      "micro_lesson": "Say: I like football. Do not add am.",
+      "model": "I like football, and I enjoy old films.",
+      "smaller_step": "Say: I like, and one thing.",
+      "subskills": [
+        "grammar"
+      ]
+    },
+    "o2": {
+      "good": "A reason makes your answer more interesting.",
+      "common_mistakes": [
+        "Giving no reason"
+      ],
+      "micro_lesson": "Add because and your reason.",
+      "model": "I like football because I can see my friends.",
+      "smaller_step": "Say: because it is fun.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o3": {
+      "good": "Listening to what the other person likes, and matching it with yours.",
+      "common_mistakes": [
+        "Only saying what you want"
+      ],
+      "micro_lesson": "Say: We both like, or: Let's.",
+      "model": "We both like food, so let's try the new cafe.",
+      "smaller_step": "Say: What do you like?",
+      "subskills": [
+        "comprehension"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Alex",
+      "likes": "old films",
+      "dislikes": "very loud music"
+    },
+    {
+      "name": "Nimra",
+      "likes": "walking in the park",
+      "dislikes": "crowded shopping centres"
+    }
+  ]
+}

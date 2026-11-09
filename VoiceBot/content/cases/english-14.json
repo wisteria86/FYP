@@ -1,0 +1,235 @@
+{
+  "archetype": "colleague",
+  "level": "intermediate",
+  "setting": "A fictional office where the learner trains a new coworker.",
+  "presentation": {
+    "situation": "{{name}} started today and needs to learn how to {{process}}. The steps are: {{steps}} Walk {{name}} through it, check understanding, and correct a misunderstanding politely.",
+    "opening": "I'm new to this. Could you walk me through how to {{process}}?",
+    "opening_speaker": "p1",
+    "learner_role": "Experienced coworker"
+  },
+  "brief": {
+    "you_are": "You are showing a new coworker how to do a task.",
+    "situation": "{{name}} started today and needs to learn how to {{process}}. The steps are: {{steps}} Walk {{name}} through it, check understanding, and correct a misunderstanding politely.",
+    "task": "Explain the steps in order, check that your coworker understands, and politely correct any mistake.",
+    "done_looks_like": "{{name}} can repeat the steps correctly."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Experienced coworker",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are showing a new coworker how to do a task.",
+      "goals": [
+        "Explain the steps in order, check that your coworker understands, and politely correct any mistake."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "New coworker",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Started today",
+      "voice_index": 0,
+      "topics": [
+        "step",
+        "first",
+        "next",
+        "form",
+        "system"
+      ],
+      "card": {
+        "want": "To learn this properly, and not to look foolish on day one.",
+        "hidden_need": "",
+        "attitude": "Keen and slightly nervous.",
+        "speech": "Clear everyday English. Natural, not formal.",
+        "tactics": [
+          "Repeat one step back slightly wrong, so it can be corrected",
+          "Ask what happens next"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "{{name}} needs to learn how to {{process}}."
+    },
+    {
+      "id": "f2",
+      "text": "The steps are: {{steps}}"
+    },
+    {
+      "id": "f3",
+      "text": "{{name}} used a different system at a previous job.",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Use sequence markers",
+      "evidence": "The learner explains steps using sequence words.",
+      "alternatives": [
+        "First, open the form. Next, fill in the date."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Check understanding",
+      "evidence": "The learner checks understanding.",
+      "alternatives": [
+        "Does that make sense so far?"
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Correct a misunderstanding politely",
+      "evidence": "The learner politely corrects a misunderstanding.",
+      "alternatives": [
+        "Not quite. Actually, you send it after you save it."
+      ]
+    }
+  ],
+  "examples": [
+    "First …",
+    "Next …",
+    "Does that make sense?"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Learn the steps in order.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\bfirst\\b",
+        "\\b(?:next|then|after that)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So what do I do first?",
+        "And after that?"
+      ],
+      "orient": "I am new, and you are showing me how to {{process}}. The steps are in your brief. Start with: First.",
+      "fallback": [
+        "And after that?",
+        "So what do I do first?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Be checked for understanding.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:does that make sense|is that clear|do you understand|any questions)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Okay. I think so.",
+        "Right. Sorry, it is my first day."
+      ],
+      "orient": "Check that I understood you. You can ask: Does that make sense?",
+      "fallback": [
+        "Right. Sorry, it is my first day.",
+        "Okay. I think so.",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Be corrected kindly.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:actually|not quite|let me clarify|instead)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So I send it first, and then I save it?",
+        "So I can skip the first step?"
+      ],
+      "orient": "I made a mistake just now. Please correct me politely. You can say: Not quite. Actually.",
+      "fallback": [
+        "So I can skip the first step?",
+        "So I send it first, and then I save it?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Thanks, that really helps. I think I can do it now.",
+  "expert_notes": {
+    "o1": {
+      "good": "Sequence words make instructions easy to follow.",
+      "common_mistakes": [
+        "Giving all the steps in one long sentence"
+      ],
+      "micro_lesson": "Use: First, next, then, finally.",
+      "model": "First, open the form. Next, fill in the date.",
+      "smaller_step": "Say: First.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "Pausing to check, before going on.",
+      "common_mistakes": [
+        "Going on without checking"
+      ],
+      "micro_lesson": "Ask: Does that make sense? or: Any questions?",
+      "model": "Does that make sense so far? Any questions?",
+      "smaller_step": "Say: Does that make sense?",
+      "subskills": [
+        "comprehension"
+      ]
+    },
+    "o3": {
+      "good": "Correcting the mistake, not the person.",
+      "common_mistakes": [
+        "Saying: No, that's wrong"
+      ],
+      "micro_lesson": "Say: Not quite, or: Actually, and then the right step.",
+      "model": "Not quite. Actually, you save it first, and then you send it.",
+      "smaller_step": "Say: Not quite.",
+      "subskills": [
+        "grammar"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Tariq",
+      "process": "submit an expense claim",
+      "steps": "open the expenses form, add the receipt photo, choose your manager, then press submit."
+    },
+    {
+      "name": "Grace",
+      "process": "book a meeting room",
+      "steps": "open the calendar, choose the room, add the people, then confirm the booking."
+    }
+  ]
+}

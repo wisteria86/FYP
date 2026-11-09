@@ -1,0 +1,235 @@
+{
+  "archetype": "colleague",
+  "level": "intermediate",
+  "setting": "A fictional conversation with a worried colleague in a quiet corner of the office.",
+  "presentation": {
+    "situation": "{{name}} looks worried and comes to talk to you about {{worry}}. You do not need to solve it. Listen, show that you understand, and ask a useful question.",
+    "opening": "I'm worried that {{worry}}. I don't know what to do.",
+    "opening_speaker": "p1",
+    "learner_role": "Colleague"
+  },
+  "brief": {
+    "you_are": "You are listening to a worried colleague.",
+    "situation": "{{name}} looks worried and comes to talk to you about {{worry}}. You do not need to solve it. Listen, show that you understand, and ask a useful question.",
+    "task": "Acknowledge how they feel, say their main concern in your own words, and ask a useful follow-up question.",
+    "done_looks_like": "{{name}} feels heard, and has said more about what is really worrying them."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Colleague",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are listening to a worried colleague.",
+      "goals": [
+        "Acknowledge how they feel, say their main concern in your own words, and ask a useful follow-up question."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Concerned colleague",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Works with you",
+      "voice_index": 0,
+      "topics": [
+        "worried",
+        "team",
+        "schedule",
+        "overload"
+      ],
+      "card": {
+        "want": "To be heard, more than to be told what to do.",
+        "hidden_need": "{{need}}",
+        "attitude": "Anxious but open, and closes up if given quick advice.",
+        "speech": "Clear everyday English. Natural, not formal.",
+        "tactics": [
+          "Say 'that's not really it' if the summary is wrong",
+          "Open up more when listened to"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "{{name}} has come to talk to you in a quiet corner of the office."
+    },
+    {
+      "id": "f2",
+      "text": "{{name}} is worried that {{worry}}.",
+      "owner": "p1"
+    },
+    {
+      "id": "f3",
+      "text": "{{need}}",
+      "owner": "p1",
+      "available_from": "b1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Acknowledge the speaker",
+      "evidence": "The learner acknowledges the speaker and how they feel.",
+      "alternatives": [
+        "That sounds really stressful. I understand."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Paraphrase the main concern",
+      "evidence": "The learner paraphrases the main concern in their own words.",
+      "alternatives": [
+        "So you're concerned that the team can't cope?"
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Ask a relevant follow-up",
+      "evidence": "The learner asks a relevant follow-up question.",
+      "alternatives": [
+        "What would help most right now?"
+      ]
+    }
+  ],
+  "examples": [
+    "I understand that …",
+    "So you're concerned about …",
+    "What would help most?"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Feel heard.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:i understand|i hear you|that sounds|i appreciate)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "I just feel like nobody has noticed.",
+        "Sorry, I know you are busy."
+      ],
+      "orient": "I'm worried and I want someone to listen. You don't need to fix it. Say something like: That sounds stressful.",
+      "fallback": [
+        "Sorry, I know you are busy.",
+        "I just feel like nobody has noticed.",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Hear the concern repeated.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:so you|if i understand|you mean|it sounds like)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Do you see what I mean?",
+        "I am not sure I am explaining it well."
+      ],
+      "orient": "Now say what I told you, in your own words. Start with: So you are worried that.",
+      "fallback": [
+        "I am not sure I am explaining it well.",
+        "Do you see what I mean?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Be asked a useful question.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:what|how|which|could you)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "I just do not know where to start.",
+        "I do not know what would help."
+      ],
+      "orient": "Ask me one useful question. You could ask: What would help most?",
+      "fallback": [
+        "I do not know what would help.",
+        "I just do not know where to start.",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Thank you. I feel better just having talked about it.",
+  "expert_notes": {
+    "o1": {
+      "good": "Showing you heard the feeling, before anything else.",
+      "common_mistakes": [
+        "Jumping straight to advice"
+      ],
+      "micro_lesson": "Say: That sounds, or: I understand.",
+      "model": "That sounds really stressful.",
+      "smaller_step": "Say: That sounds hard.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "Saying it back in your own words shows real listening.",
+      "common_mistakes": [
+        "Repeating the exact words like a parrot"
+      ],
+      "micro_lesson": "Say: So you're concerned about, or: It sounds like.",
+      "model": "So you're concerned that the team can't cope with it?",
+      "smaller_step": "Say: So you are worried about.",
+      "subskills": [
+        "comprehension"
+      ]
+    },
+    "o3": {
+      "good": "An open question helps the person think, without you taking over.",
+      "common_mistakes": [
+        "Asking a question that is really advice"
+      ],
+      "micro_lesson": "Start with: What, or: How.",
+      "model": "What worries you most about it?",
+      "smaller_step": "Say: What would help?",
+      "subskills": [
+        "grammar"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Hina",
+      "worry": "the new schedule is going to overload our team",
+      "need": "Hina has been covering for an absent colleague for a month and has not told anyone."
+    },
+    {
+      "name": "Mark",
+      "worry": "my project will be cancelled after the reorganization",
+      "need": "Mark has a family to support and fears for his job, but finds that hard to say."
+    }
+  ]
+}

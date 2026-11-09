@@ -10,6 +10,8 @@ from services.catalog_service import CatalogService
 from services.scenario_service import ScenarioService
 from services.session_service import SessionService
 from services.assessment_service import AssessmentService
+from services.organization_service import OrganizationService
+from services.learning_path_service import LearningPathService
 from services.progress_service import ProgressService
 from services.adaptive_service import AdaptiveTrainingService
 from services.knowledge_service import KnowledgeService
@@ -38,6 +40,8 @@ class TrainingService:
         self.context.knowledge = KnowledgeService(self.context)
         self.context.administration = AdministrationService(self.context)
         self.context.runtime = ConversationRuntime(self.context)
+        self.context.organization = OrganizationService(self.context)
+        self.context.learning_path = LearningPathService(self.context)
         self.context.catalog._initialize()
 
     def connect(self):

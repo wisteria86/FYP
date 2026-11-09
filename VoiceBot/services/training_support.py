@@ -35,25 +35,37 @@ SKILLS = [
     ("social-engineering", "Social Engineering Awareness", "Recognise and safely respond to manipulation attempts.", ["risk recognition", "verification", "reporting"]),
     ('company-knowledge','Company Knowledge','Apply your organization’s policies using cited evidence.',['policy application','source evidence','uncertainty']),
     ('email-professionalism','Email Professionalism','Write clear, polite workplace emails with actionable next steps.',['subject clarity','tone','requested action','closing']),
+    ('customer-communication','Customer Communication','Help customers clearly, in plain language.',['clarity','professionalism']),
+    ('concise-communication','Concise Communication','Get to the point quickly and ask for what you need.',['conciseness','clarity']),
+    ('public-speaking','Public Speaking','Give a short, clear talk to an audience and close with a call to action.',['structure','delivery','audience focus']),
+    ('barter','Barter and Exchange','Arrange fair swaps of goods and services without cash.',['discovery','trade-offs','closing']),
 ]
 
 SCENARIOS = {
+    'public-speaking':('Short talk to colleagues','Give a two-minute talk at a team lunch and take one question.','Event host',['Open with why it matters to this audience','Organize main points with an example','Close with one clear call to action']),
+    'customer-communication':('Help a customer in plain language','Support a non-technical customer whose booking tool has stopped working.','Customer',['Find out what the customer is seeing','Explain the cause and fix in plain language','Check understanding and agree the next step']),
+    'concise-communication':('Thirty-second update','Give a busy senior manager the point, the problem and your request in a few sentences.','Senior manager',['Lead with the bottom line','Keep only the detail that matters','Make a clear request']),
+    'barter':('Swap services between businesses','Work out a fair swap of services with another small business, when cash is short.','Business owner',['Discover what the other side really values','Propose a swap with a fair-value reason','Agree clear terms, or decline politely']),
     'company-knowledge':('Company policy practice','Apply an authorized policy to a workplace request.','Policy trainer',['Explain the relevant policy rule','Apply the rule to the request','Verify anything the document does not cover']),
     'email-professionalism':('Professional email','Write a clear professional email for a workplace request.','Colleague',['Use a clear subject and greeting','Explain the purpose politely','Request an action and close professionally']),
     "english-speaking": ("English conversation", "Practise useful spoken English in a guided real-life conversation.", "Conversation partner", ["Speak in complete English sentences", "Listen and respond naturally", "Ask for clarification when needed"]),
     "communication": ("Priority update", "Your team lead asks why a task is late and what will happen next.", "Team lead", ["Explain the issue without blame", "State impact", "Propose a specific next step"]),
-    "active-listening": ("Unclear customer concern", "A customer says the service is unreliable but gives few details.", "Concerned customer", ["Acknowledge the concern", "Ask a useful clarifying question", "Confirm what you understood"]),
+    "active-listening": ("Listening to an upset customer", "A customer says the service is unreliable but gives few details.", "Concerned customer", ["Acknowledge the concern", "Ask a useful clarifying question", "Confirm what you understood"]),
     "conflict-resolution": ("Shared-resource conflict", "A colleague says you monopolised a resource and delayed their work.", "Frustrated colleague", ["De-escalate", "Recognise their impact", "Agree a fair process"]),
-    "negotiation": ("Deadline negotiation", "A client wants delivery two days earlier without changing scope.", "Client", ["Discover the true priority", "Offer a trade-off", "Confirm an agreement"]),
+    "negotiation": ("Training package negotiation", "A client wants delivery two days earlier without changing scope.", "Client", ["Discover the true priority", "Offer a trade-off", "Confirm an agreement"]),
     "interviews": ("Behavioural interview", "An interviewer asks about a time you solved a difficult team problem.", "Interviewer", ["Give a structured example", "Explain your own actions", "Quantify or clarify the result"]),
-    "presentations": ("Executive project brief", "Give a short update to leaders who have little time and no technical context.", "Department director", ["Lead with the main point", "Use a clear structure", "Finish with a decision or next step"]),
+    "presentations": ("Funding brief to a panel", "Give a short update to leaders who have little time and no technical context.", "Department director", ["Lead with the main point", "Use a clear structure", "Finish with a decision or next step"]),
     "storytelling": ("Customer success story", "Explain how your work improved an outcome without overselling it.", "Prospective customer", ["Set context", "Describe the turning point", "Connect the result to the audience"]),
     "critical-thinking": ("Conflicting metrics", "Two reports disagree about whether a pilot succeeded.", "Project sponsor", ["Identify assumptions", "Ask for evidence", "Recommend a defensible next step"]),
-    "ai-literacy": ("AI-generated report", "A colleague wants to send an AI-written report containing customer data.", "Colleague", ["Identify privacy and accuracy risks", "Suggest verification", "Explain responsible disclosure"]),
+    "ai-literacy": ("An AI-drafted document", "A colleague wants to send an AI-written report containing customer data.", "Colleague", ["Identify privacy and accuracy risks", "Suggest verification", "Explain responsible disclosure"]),
     "social-engineering": ("Urgent access request", "Someone claiming to be an executive asks you to bypass normal access checks.", "Impatient caller", ["Do not disclose credentials", "Verify through an approved channel", "Report the attempt"]),
 }
 
 SCENARIO_OPENINGS = {
+    'public-speaking': "Thanks, everyone. Our speaker is ready. The floor is yours. Why should we care about this?",
+    'customer-communication': "Hi, I can't take any online bookings today, and my customers are asking me about it. Can you help?",
+    'concise-communication': "I've got thirty seconds before my next meeting. Where are we on the project?",
+    'barter': "Thanks for coming over. You said you might want to do a swap rather than pay cash. What did you have in mind?",
     'company-knowledge':'What rule applies to this request, and where is it stated?',
     'email-professionalism':'Please draft the email you would send, including the subject and closing.',
     "english-speaking": "Hello! Let's practise English together. Tell me a little about yourself.",
@@ -70,6 +82,10 @@ SCENARIO_OPENINGS = {
 }
 
 SCENARIO_PARTICIPANTS = {
+    'public-speaking': ['Event host'],
+    'customer-communication': ['Customer'],
+    'concise-communication': ['Senior manager'],
+    'barter': ['Business owner'],
     "english-speaking": ["Conversation partner"],
     "communication": ["Team lead"],
     "active-listening": ["Concerned customer"],

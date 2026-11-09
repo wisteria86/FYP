@@ -1,0 +1,82 @@
+{
+  "archetype": "meeting",
+  "level": "intermediate",
+  "setting": "A fictional one-to-one catch-up between a team lead and a team member about a late piece of work.",
+  "presentation": {
+    "situation": "You own {{task}}, due {{due}}. It is late because {{cause}}. {{name}}, your team lead, asks what happened. Explain it without blaming anyone, say what it affects, and propose a specific next step.",
+    "opening": "Thanks for making time. {{task_cap}} was due {{due}}, and {{stakeholder}} has asked me about it. What happened, and what happens next?",
+    "opening_speaker": "p1",
+    "learner_role": "Team member"
+  },
+  "brief": {
+    "you_are": "You are the team member who owns {{task}}.",
+    "situation": "It was due {{due}}. It is late because {{cause}}. It affects {{impact}}. You could finish it by {{new_date}} if {{condition}}.",
+    "task": "Explain what happened without blaming anyone, say what the delay affects, and propose a specific next step with a date.",
+    "done_looks_like": "{{name}} understands the cause and the impact, and you have agreed what happens next and by when."
+  },
+  "participants": [
+    {"id": "p0", "name": "You", "role": "Team member", "kind": "learner", "team": "learner", "relationship": "Owns the late piece of work", "goals": ["Give a clear, honest update and a next step"], "voice_index": 0},
+    {
+      "id": "p1", "name": "{{name}}", "role": "Team lead", "kind": "ai", "team": "opponent", "relationship": "Your team lead, who has to answer to {{stakeholder}}", "voice_index": 0,
+      "topics": ["task", "late", "delay", "deadline", "date", "impact"],
+      "card": {
+        "want": "A straight account, and a date to give {{stakeholder}} today.",
+        "hidden_need": "Was surprised by this delay, and wants earlier warning next time.",
+        "attitude": "Calm, direct and a little under pressure. Not looking for someone to blame.",
+        "speech": "Plain workplace English. Short questions. Uses the details the other person gives.",
+        "tactics": ["Ask 'so what does that affect?' if no impact is mentioned", "Ask 'by when, exactly?' about any vague date", "Ask who else is involved if someone gets blamed"],
+        "pressure": {"gentle": "Patient, and helps with one easy question.", "balanced": "Pushes once on anything vague.", "challenging": "Asks why nobody raised this earlier, firmly and without insults."}
+      }
+    }
+  ],
+  "ledger": [
+    {"id": "f1", "text": "The work is {{task}}, which was due {{due}}."},
+    {"id": "f2", "text": "{{stakeholder}} has asked {{name}} about it."},
+    {"id": "f3", "owner": "p1", "text": "{{name}} has to give {{stakeholder}} a date today."},
+    {"id": "f4", "owner": "p1", "text": "{{name}} can help with {{help}}, if asked."}
+  ],
+  "objectives": [
+    {"id": "o1", "description": "Explain the issue without blame", "evidence": "The learner says what happened factually, and owns their part rather than blaming a person.", "alternatives": ["The supplier file arrived late and I didn't flag it soon enough"]},
+    {"id": "o2", "description": "State the impact", "evidence": "The learner says what the delay affects, for whom.", "alternatives": ["This means the client report goes out two days later"]},
+    {"id": "o3", "description": "Propose a specific next step", "evidence": "The learner proposes a concrete action with a date or owner. A vague promise does not count.", "alternatives": ["I'll finish by Thursday noon and send you a draft on Wednesday"]}
+  ],
+  "examples": ["What happened is ...", "This affects ...", "I'll ... by ..., and I'd like your help with ..."],
+  "prerequisites": ["Read the cause, the impact and your options in the briefing."],
+  "beats": [
+    {
+      "id": "explain", "goal": "Hear what actually happened, without blame.", "driver": "p1", "objectives": ["o1"],
+      "signals": ["\\b(?:what happened|because|the reason|arrived|i didn'?t|i should have|ran into|took longer|waiting|delayed by)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["Walk me through it. What actually got in the way?", "I'm not looking to blame anyone. I just need to understand what happened."],
+      "orient": "I'm your team lead, and the work you own is late. Tell me what got in the way. Your brief has the reason.",
+      "fallback": ["What actually got in the way?", "Can you tell me what happened?"]
+    },
+    {
+      "id": "impact", "goal": "Understand what the delay affects.", "driver": "p1", "objectives": ["o2"],
+      "signals": ["\\b(?:affects?|impact|means that|this means|as a result|delays? the|pushes|knock-on|consequence)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["Okay. So what does that affect?", "What's the knock-on effect if it stays late?"],
+      "orient": "Now tell me what this delay affects. Who or what depends on this work?",
+      "fallback": ["So what does that affect?", "Who else does this hold up?"]
+    },
+    {
+      "id": "next", "goal": "Leave with a specific next step and a date to report.", "driver": "p1", "objectives": ["o3"],
+      "signals": ["\\b(?:i will|i'?ll|by (?:today|tomorrow|monday|tuesday|wednesday|thursday|friday|noon|next|the end)|next step|i propose|i suggest|can you help|could you help)\\b"],
+      "stall_turns": 3,
+      "opportunity": ["What's the plan, then? I need a date for {{stakeholder}}.", "By when, exactly? And do you need anything from me?"],
+      "orient": "Last part. Tell me what you'll do next and by when. Your brief says what date is possible, and what you would need.",
+      "fallback": ["What's the plan, and by when?", "What date can I give {{stakeholder}}?"]
+    }
+  ],
+  "closing_line": "Okay, that's clear. I can tell {{stakeholder}} that. Thanks for being straight with me.",
+  "expert_notes": {
+    "o1": {"good": "Facts first, in a sentence or two, owning your part and not naming a culprit.", "common_mistakes": ["Blaming a colleague or supplier", "A long story with no point"], "micro_lesson": "Describe what happened, not who is at fault. Then say what you could have done sooner.", "model": "The supplier file arrived late, and I didn't flag the risk early enough.", "smaller_step": "Say in one sentence what got in the way.", "subskills": ["professionalism"]},
+    "o2": {"good": "Saying what the delay changes for other people, so your lead can act.", "common_mistakes": ["Assuming the lead already knows", "Saying only that it is late"], "micro_lesson": "Your lead must answer to others. Tell them what this changes for those people.", "model": "This means the client report goes out two days later.", "smaller_step": "Name one person or thing the delay affects.", "subskills": ["clarity"]},
+    "o3": {"good": "One concrete action with a date, and a clear request if you need help.", "common_mistakes": ["'I'll try to get it done soon'", "Waiting to be told what to do"], "micro_lesson": "Bring a plan, not only a problem. Give a date your lead can repeat to others.", "model": "I'll finish by Thursday noon. Could you get me that sign-off by Wednesday?", "smaller_step": "Say the day you can finish it.", "subskills": ["conciseness"]}
+  },
+  "variants": [
+    {"name": "Nadia", "task": "the customer onboarding report", "task_cap": "The customer onboarding report", "due": "on Monday", "cause": "the data export arrived three days late and you did not flag the risk", "stakeholder": "the sales director", "impact": "the sales team's Friday customer review", "new_date": "Thursday noon", "condition": "you get the corrected export by Wednesday", "help": "chasing the data team for the corrected export"},
+    {"name": "David", "task": "the website accessibility fixes", "task_cap": "The website accessibility fixes", "due": "last Friday", "cause": "testing found more problems than the plan allowed for, and two remain", "stakeholder": "the product manager", "impact": "next week's website release", "new_date": "Wednesday", "condition": "someone else takes your support shift on Tuesday", "help": "covering the support shift on Tuesday"},
+    {"name": "Ayesha", "task": "the stock reconciliation", "task_cap": "The stock reconciliation", "due": "yesterday", "cause": "one supplier file was incomplete and you waited too long to ask for it again", "stakeholder": "the finance manager", "impact": "the month-end accounts", "new_date": "tomorrow at 3 pm", "condition": "the supplier resends the file this morning", "help": "phoning the supplier's manager"}
+  ]
+}

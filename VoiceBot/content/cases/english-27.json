@@ -1,0 +1,98 @@
+{
+  "archetype": "meeting",
+  "level": "advanced",
+  "setting": "A fictional short meeting, chaired by the learner, between two colleagues who have fallen out over a shared project plan.",
+  "presentation": {
+    "situation": "Chair a meeting about Sam changing the agreed project plan without telling Alex. Sam moved the internal review from {{from}} to {{to}} after noticing the plan left out an end-to-end test. Hear both sides and agree how future changes will be approved.",
+    "opening": "Sam moved our review from {{from}} to {{to}} without checking with me. I'd already arranged the team around {{from}}.",
+    "opening_speaker": "p1",
+    "learner_role": "Meeting chair"
+  },
+  "brief": {
+    "you_are": "You are chairing this meeting. You work with both of them and you are not their manager.",
+    "situation": "Sam moved the internal review from {{from}} to {{to}} after noticing the plan left out an end-to-end test, and changed the shared plan without telling Alex first. Alex had already arranged the team around {{from}}.",
+    "task": "Let each person be heard, point out what they both want, and propose a fair next step for this review and for future changes.",
+    "done_looks_like": "Both sides have spoken, you have named common ground, and there is an agreed review date and a rule for future changes."
+  },
+  "participants": [
+    {"id": "p0", "name": "You", "role": "Meeting chair", "kind": "learner", "team": "learner", "relationship": "Colleague of both; asked to help them sort this out", "goals": ["Help them reach a fair next step"], "voice_index": 0},
+    {
+      "id": "p1", "name": "Alex", "role": "Delivery coordinator", "kind": "ai", "team": "participant", "relationship": "Colleague of Sam; affected by the unannounced plan change", "voice_index": 0,
+      "topics": ["notice", "agreement", "communication", "client", "approval", "team"],
+      "card": {
+        "want": "Advance notice and joint approval before changes affect other people.",
+        "hidden_need": "Felt embarrassed in front of the team, having told them the wrong day.",
+        "attitude": "Direct and a little frustrated, but fair. Not against the test itself.",
+        "speech": "Everyday language, not corporate speeches. Short and honest.",
+        "tactics": ["Keep returning to the lack of notice, not the test", "Calm down when someone actually reflects your point back"],
+        "pressure": {"gentle": "Frustrated but listens.", "balanced": "Interrupts once when Sam justifies the change.", "challenging": "Doubts that a rule will be followed."}
+      }
+    },
+    {
+      "id": "p2", "name": "Sam", "role": "Testing coordinator", "kind": "ai", "team": "participant", "relationship": "Colleague of Alex; made the unannounced plan change", "voice_index": 1,
+      "topics": ["testing", "test", "check", "reason", "changed", "schedule", "why"],
+      "card": {
+        "want": "Keep the missing end-to-end check in the plan, and agree a workable way to change plans.",
+        "hidden_need": "Knows the change should have been raised first, and wants that to be understood without a formal apology.",
+        "attitude": "Practical and initially defensive.",
+        "speech": "Plain and technical-minded. Owns mistakes in a few words, not in a speech.",
+        "tactics": ["Defend the reason before admitting the process problem", "Admit the process problem if someone asks how Alex was told"],
+        "pressure": {"gentle": "Admits quickly it should have been discussed.", "balanced": "Defends the reason first.", "challenging": "Argues that urgent fixes can't wait for approval."}
+      }
+    }
+  ],
+  "ledger": [
+    {"id": "f1", "text": "The learner is chairing a short meeting between Alex and Sam about changes to a shared project plan."},
+    {"id": "f2", "owner": "p2", "text": "Sam moved the internal review from {{from}} to {{to}} after noticing the agreed plan left out an end-to-end test."},
+    {"id": "f3", "text": "Sam edited the shared plan before discussing the change with Alex. Alex did not change the plan."},
+    {"id": "f4", "owner": "p1", "text": "Alex had already arranged the team around {{from}}. Alex's disagreement is about changing an agreed plan without notice, not about testing."},
+    {"id": "f5", "text": "The duration of the missing test, the final delivery date and any spare schedule buffer have not been confirmed. Nobody can promise delivery is unaffected."},
+    {"id": "f6", "text": "A revised review date and a rule for approving future changes are still open."}
+  ],
+  "forbidden_claims": ["\\bsecurity patch\\b", "\\bvulnerability\\b", "\\bdata migration\\b", "\\brisk assessment\\b"],
+  "objectives": [
+    {"id": "o1", "description": "Let each side be heard", "evidence": "The learner invites or checks both Alex's and Sam's views, rather than deciding on one account.", "alternatives": ["Sam, what happened from your side? Alex, then you"]},
+    {"id": "o2", "description": "Identify shared interests", "evidence": "The learner names something both want, drawn from what was actually said.", "alternatives": ["You both want a release that works and no surprises"]},
+    {"id": "o3", "description": "Propose a fair next step", "evidence": "The learner proposes a specific next step that addresses both concerns.", "alternatives": ["Keep the later review this time, and from now on both of you agree any plan change first"]}
+  ],
+  "examples": ["Let me hear both views.", "It sounds like you both want ...", "A fair next step is ..."],
+  "prerequisites": ["Read what happened in the briefing."],
+  "beats": [
+    {
+      "id": "hear", "goal": "Each person gets to explain their side.", "driver": "p1", "objectives": ["o1"], "min_turns": 2,
+      "signals": ["\\b(?:both|each of you|your (?:side|view|perspective)|hear from|what happened|alex,|sam,|tell me)\\b"],
+      "stall_turns": 3,
+      "second_speaker": "p2",
+      "second_line": "I changed it because the plan left out an end-to-end test. Somebody had to deal with that.",
+      "opportunity": ["Are you going to ask Sam why, or shall I?", "Do you want to hear what happened from both of us?"],
+      "orient": "You're chairing this, and you aren't taking sides. Alex is unhappy that Sam changed the plan without telling Alex. Ask each of us to explain our side.",
+      "fallback": ["I just want someone to hear why this was a problem.", "Who do you want to hear from first?"]
+    },
+    {
+      "id": "common", "goal": "They are stuck in blame until someone points out what they share.", "driver": "p2", "objectives": ["o2"],
+      "signals": ["\\b(?:you both|both of you|both want|shared|in common|same goal|agree that|neither of you)\\b"],
+      "stall_turns": 3,
+      "opportunity": ["So is this about the test, or about how it was done?", "Honestly, I don't think we disagree about the test."],
+      "orient": "They keep blaming each other. Point out one thing they both want. You can start with: It sounds like you both want.",
+      "fallback": ["We keep going round in circles here.", "Is this about the test, or about how it was done?"]
+    },
+    {
+      "id": "next", "goal": "They need a concrete next step, for this review and for next time.", "driver": "p1", "objectives": ["o3"],
+      "signals": ["\\b(?:next step|i propose|i suggest|we could|let'?s agree|from now on|fair|going forward|in future)\\b"],
+      "stall_turns": 3,
+      "opportunity": ["So what happens with this review, and what happens next time?", "What are you suggesting we actually do?"],
+      "orient": "Now suggest what happens next. There are two things to settle: the date of this review, and how plan changes get agreed in future.",
+      "fallback": ["So what do you suggest we do?", "What happens next time someone wants to change the plan?"]
+    }
+  ],
+  "closing_line": "Okay. That works for me. Thanks for sorting this out.",
+  "expert_notes": {
+    "o1": {"good": "Giving each person real space, in turn, before you say anything about the solution.", "common_mistakes": ["Taking the first account as the truth", "Letting one person speak for the other"], "micro_lesson": "Before solving anything, hear both people. Ask each one directly.", "model": "Sam, what happened from your side? Then Alex, I'd like to hear how it affected you.", "smaller_step": "Ask one person, by name, to explain their side.", "subskills": ["comprehension"]},
+    "o2": {"good": "Naming a real goal they share, using what they said, so the conflict becomes a joint problem.", "common_mistakes": ["A vague 'we're all one team'", "Skipping straight to a verdict on who was wrong"], "micro_lesson": "Say what they both want. It turns two opponents into two people with one problem.", "model": "It sounds like you both want a release that works, and neither of you wants surprises.", "smaller_step": "Finish this sentence: You both want ...", "subskills": ["vocabulary"]},
+    "o3": {"good": "A specific step that deals with both concerns: the test and the notice.", "common_mistakes": ["'Let's communicate better'", "A solution that only suits one person"], "micro_lesson": "A fair step deals with both concerns, and is clear enough to check later.", "model": "Keep the later review this time, and from now on you both agree any plan change first.", "smaller_step": "Suggest one thing to do about this review.", "subskills": ["comprehension"]}
+  },
+  "variants": [
+    {"from": "Tuesday", "to": "Thursday"},
+    {"from": "Monday", "to": "Wednesday"}
+  ]
+}

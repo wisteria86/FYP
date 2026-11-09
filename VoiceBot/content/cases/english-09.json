@@ -1,0 +1,81 @@
+{
+  "archetype": "service",
+  "level": "beginner",
+  "setting": "A fictional phone call to the reception desk of a small city clinic.",
+  "presentation": {
+    "situation": "You phone City Clinic to make an appointment. The receptionist, {{name}}, can offer {{slot_a}} or {{slot_b}}. {{full}} is fully booked. Say why you are calling, choose a time, and confirm the details.",
+    "opening": "Good morning, City Clinic, this is {{name}}. How can I help you?",
+    "opening_speaker": "p1",
+    "learner_role": "Patient"
+  },
+  "brief": {
+    "you_are": "You are a patient calling a clinic.",
+    "situation": "You need to see a doctor. The clinic can offer {{slot_a}} or {{slot_b}}.",
+    "task": "Say why you are calling, choose one of the times, then repeat the day and time to confirm.",
+    "done_looks_like": "You and the receptionist both know the day and the time of your appointment."
+  },
+  "participants": [
+    {"id": "p0", "name": "You", "role": "Patient", "kind": "learner", "team": "learner", "relationship": "Calling the clinic for an appointment", "goals": ["Book and confirm an appointment"], "voice_index": 0},
+    {
+      "id": "p1", "name": "{{name}}", "role": "Clinic receptionist", "kind": "ai", "team": "opponent", "relationship": "Answers the phone at City Clinic", "voice_index": 0,
+      "topics": ["appointment", "time", "doctor", "name", "day"],
+      "card": {
+        "want": "Book the patient into a free slot and get their name for the diary.",
+        "attitude": "Polite, calm and a little busy.",
+        "speech": "Very simple, clear English. Short sentences. One question at a time.",
+        "tactics": ["Offer only the times you have", "Ask them to say the time back if they have not confirmed it"],
+        "pressure": {"gentle": "Patient, repeats things willingly.", "balanced": "Polite and efficient.", "challenging": "Polite and brisk, like a busy desk."}
+      }
+    }
+  ],
+  "ledger": [
+    {"id": "f1", "text": "City Clinic has free appointments on {{slot_a}} and {{slot_b}}."},
+    {"id": "f2", "text": "{{full}} is fully booked."},
+    {"id": "f3", "owner": "p1", "text": "An appointment with the doctor lasts about {{length}} minutes."},
+    {"id": "f4", "owner": "p1", "text": "New patients should bring a photo ID."}
+  ],
+  "objectives": [
+    {"id": "o1", "description": "State the reason for calling", "evidence": "The learner says they want an appointment or why they need to see the doctor.", "alternatives": ["I need to see a doctor", "I'd like to make an appointment"]},
+    {"id": "o2", "description": "Suggest or accept a time", "evidence": "The learner chooses or asks for a specific time.", "alternatives": ["Tuesday at ten is good for me"]},
+    {"id": "o3", "description": "Confirm the appointment details", "evidence": "The learner repeats the day and time, or asks the receptionist to confirm them.", "alternatives": ["So that's Tuesday at ten?"]}
+  ],
+  "examples": ["I'm calling to make an appointment.", "Is Tuesday at ten free?", "So that's Tuesday at ten. Thank you."],
+  "prerequisites": ["Look at the free times in the briefing."],
+  "beats": [
+    {
+      "id": "reason", "goal": "Find out why they are calling.", "driver": "p1", "objectives": ["o1"],
+      "signals": ["\\b(?:appointment|see (?:a|the) doctor|i'?m calling|book|my back|pain|sick|i need)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["Would you like to make an appointment?", "Do you want to see the doctor?"],
+      "orient": "You are calling the clinic. I am the receptionist. Please say: I want to make an appointment.",
+      "fallback": ["How can I help you today?", "Do you want to see the doctor?"]
+    },
+    {
+      "id": "time", "goal": "Agree a day and time from the free slots.", "driver": "p1", "objectives": ["o2"],
+      "signals": ["\\b(?:monday|tuesday|wednesday|thursday|friday|morning|afternoon|at \\d|\\d ?(?:am|pm)|first one|second one|that one)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["I have {{slot_a}} or {{slot_b}}. Which is better for you?", "Which time do you want?"],
+      "orient": "Now choose a time. I have {{slot_a}} or {{slot_b}}. Please choose one.",
+      "fallback": ["I have {{slot_a}} or {{slot_b}}. Which is better for you?", "Which day is good for you?"]
+    },
+    {
+      "id": "confirm", "goal": "Get the patient to say the booked time back.", "driver": "p1", "objectives": ["o3"],
+      "signals": ["\\b(?:so that'?s|so it'?s|confirm|see you|that'?s right|correct|thank you|goodbye|bye)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["Can you say the day and time back to me, please?", "Is that all correct for you?"],
+      "orient": "We are almost finished. Please say your day and time again, so we both know.",
+      "fallback": ["Please tell me the day and time again.", "Please bring a photo ID. Is that all right?"]
+    }
+  ],
+  "closing_line": "Thank you. See you then. Goodbye!",
+  "expert_notes": {
+    "o1": {"good": "Saying right away why you are calling, so the other person can help quickly.", "common_mistakes": ["Waiting for the receptionist to guess"], "micro_lesson": "On the phone, say your reason first. 'I'm calling to' is a useful start.", "model": "I'm calling to make an appointment.", "smaller_step": "Say: I need an appointment.", "subskills": ["comprehension"]},
+    "o2": {"good": "Choosing clearly from the times offered.", "common_mistakes": ["Answering 'yes' to a choice of two times"], "micro_lesson": "When you get two choices, say the one you want, not 'yes'.", "model": "Tuesday at ten is good for me.", "smaller_step": "Say only the day you want.", "subskills": ["vocabulary"]},
+    "o3": {"good": "Repeating the day and time so nobody is confused.", "common_mistakes": ["Hanging up without checking"], "micro_lesson": "Repeat important details. It stops mistakes and it is polite on the phone.", "model": "So that's Tuesday at ten. Thank you.", "smaller_step": "Say your day and your time once more.", "subskills": ["comprehension"]}
+  },
+  "variants": [
+    {"name": "Nadia", "slot_a": "Tuesday at 10 am", "slot_b": "Thursday at 2 pm", "full": "Wednesday", "length": "15"},
+    {"name": "Tom", "slot_a": "Monday at 9 am", "slot_b": "Friday at 3 pm", "full": "Tuesday", "length": "20"},
+    {"name": "Hina", "slot_a": "Wednesday at 11 am", "slot_b": "Friday at 4 pm", "full": "Thursday", "length": "15"}
+  ]
+}

@@ -90,6 +90,10 @@ class ScenarioService(ApplicationService):
             for key in ('situation','opening','variant','adaptation_reason'):
                 result[key]=previous[key]
         result['runtime_definition'] = compile_definition(result)
+        if result['runtime_definition'] and result['runtime_definition'].get('version') == 3:
+            adaptation = self._adaptation(user_id, activity['id'], result['runtime_definition'])
+            result['runtime_definition']['adaptation'] = adaptation
+            result['adaptation_reason'] = adaptation['reason']
         authored = json.loads(activity['variables_json'] or '{}').get('runtimeDefinition')
         if authored:
             from domain.conversation import ScenarioDefinition
@@ -112,6 +116,26 @@ class ScenarioService(ApplicationService):
         with self.connect() as db:
             db.execute('INSERT INTO scenario_previews VALUES (?,?,?,?,?,0)',(result['preview_id'],user_id,activity['id'],_json(result),_now()))
         return result
+
+    def _adaptation(self, user_id, activity_id, definition):
+        """Choose challenge and focus from the learner's last attempt at this lesson."""
+        default = {'beginner': 'gentle', 'intermediate': 'balanced', 'advanced': 'balanced'}.get(definition.get('level'), 'balanced')
+        with self.connect() as db:
+            last = db.execute("""SELECT x.overall,x.evidence,s.id FROM assessments x JOIN sessions s ON s.id=x.session_id
+                WHERE s.user_id=? AND s.activity_id=? ORDER BY s.completed_at DESC LIMIT 1""", (user_id, activity_id)).fetchone()
+        if not last:
+            return {'intensity': default, 'focus': None, 'reason': 'First attempt at this lesson, at its standard challenge level.'}
+        descriptions = {o['id']: o['description'] for o in definition['objectives']}
+        evidence = json.loads(last['evidence'] or '[]')
+        missed = next((oid for oid, text in descriptions.items() if any(item.startswith(text + ':') and 'not shown yet' in item for item in evidence)), None)
+        if last['overall'] >= 80 and not missed:
+            intensity, change = 'challenging', 'You did well last time, so this new case pushes back harder.'
+        elif last['overall'] < 50:
+            intensity, change = 'gentle', 'This new case is a little gentler, so you can build on what you did last time.'
+        else:
+            intensity, change = default, 'This is a new case at the same challenge level.'
+        focus = f" Focus on this: {descriptions[missed].lower()}, which was not shown yet last time." if missed else ''
+        return {'intensity': intensity, 'focus': missed, 'reason': change + focus}
 
     def prompt(self, session_id: str, knowledge: list[dict[str, str]] | None = None,
                speaker: dict[str, str] | None = None) -> str:

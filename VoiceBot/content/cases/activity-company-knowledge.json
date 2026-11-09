@@ -1,0 +1,76 @@
+{
+  "archetype": "knowledge",
+  "level": "intermediate",
+  "setting": "A fictional conversation with a colleague about applying a real uploaded company document at work.",
+  "presentation": {
+    "situation": "A colleague asks you to apply a rule from your uploaded company document.",
+    "opening": "Have you got a minute? I need to know what our policy says about this.",
+    "opening_speaker": "p1",
+    "learner_role": "Employee"
+  },
+  "brief": {
+    "you_are": "You are an employee who knows how to use the company's documents.",
+    "situation": "A colleague wants to know how a company rule applies. The relevant passage from your uploaded document appears in your lesson sources.",
+    "task": "Say what the document actually requires, apply it to your colleague's situation, and be honest about anything the document does not cover.",
+    "done_looks_like": "Your colleague knows the rule, what to do now, and who to check with for anything not covered."
+  },
+  "participants": [
+    {"id": "p0", "name": "You", "role": "Employee", "kind": "learner", "team": "learner", "relationship": "Colleague asked for help with a company rule", "goals": ["Apply the document accurately"], "voice_index": 0},
+    {
+      "id": "p1", "name": "Jamie", "role": "Colleague", "kind": "ai", "team": "opponent", "relationship": "A colleague in a hurry who wants a quick answer", "voice_index": 0,
+      "topics": ["policy", "rule", "document", "step", "exception"],
+      "card": {
+        "want": "A quick answer about the rule, ideally that a step can be skipped.",
+        "hidden_need": "Is under time pressure from a manager and does not want to get it wrong.",
+        "attitude": "Friendly, rushed, and tempted to cut a corner.",
+        "speech": "Casual workplace English. Short.",
+        "tactics": ["Ask whether a step can be skipped just this once", "Ask 'are you sure that's what it says?'", "Ask something the document might not cover"],
+        "pressure": {"gentle": "Accepts the answer quickly.", "balanced": "Pushes once for an exception.", "challenging": "Claims that a manager said it was fine."}
+      }
+    }
+  ],
+  "ledger": [
+    {"id": "f1", "text": "Jamie has not read the document and depends on what the learner says about it."},
+    {"id": "f2", "owner": "p1", "text": "Jamie would like to skip a step to save time, but has no authority to approve an exception."}
+  ],
+  "objectives": [
+    {"id": "o1", "description": "State what the document actually requires", "evidence": "The learner accurately refers to what the source passage says, without inventing a rule.", "alternatives": ["The document says this step has to be done first"]},
+    {"id": "o2", "description": "Apply the rule to the situation", "evidence": "The learner says what the colleague should do in this situation, based on the document.", "alternatives": ["So in your case, you still need to do that step before you go ahead"]},
+    {"id": "o3", "description": "Handle what the document does not cover", "evidence": "The learner acknowledges uncertainty and says how to verify it, rather than guessing or inventing.", "alternatives": ["The document doesn't cover that, so I'd check with the policy owner"]}
+  ],
+  "examples": ["According to the document ...", "So in your case ...", "It doesn't cover that, so I'd check with ..."],
+  "prerequisites": ["Upload a readable company document and select it for this lesson."],
+  "beats": [
+    {
+      "id": "rule", "goal": "Find out what the rule actually says.", "driver": "p1", "objectives": ["o1"],
+      "signals": ["\\b(?:document|policy|says|states|according|requires|must|rule|section)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["So what does it actually say?", "Are you sure that's what it says?"],
+      "orient": "I'm asking you what our company document says. Look at the passage in your lesson sources, and tell me the rule in your own words.",
+      "fallback": ["What does the document actually say?", "Can you tell me the rule?"]
+    },
+    {
+      "id": "apply", "goal": "Apply it, and resist a shortcut.", "driver": "p1", "objectives": ["o2"],
+      "signals": ["\\b(?:so you|you (?:need|should|must|have to)|in your case|i would|don'?t skip|can'?t skip|first you|you can'?t)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["So what should I do right now? Can I skip that part, just this once?", "My manager's in a hurry. Does that change anything?"],
+      "orient": "Now tell me what I should do in my situation. I'd like to skip a step. Does the document allow that?",
+      "fallback": ["So what should I do right now?", "Can I skip that part, just this once?"]
+    },
+    {
+      "id": "gap", "goal": "Ask about something the document may not cover.", "driver": "p1", "objectives": ["o3"],
+      "signals": ["\\b(?:doesn'?t (?:cover|say|mention)|not (?:covered|sure|mentioned)|i don'?t know|check with|ask|verify|confirm|policy owner|manager)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["And what if this is a special case that isn't in there? What then?", "What if it doesn't say anything about my situation?"],
+      "orient": "Last question: what should I do when the document doesn't cover my case? It's fine to say you don't know, and tell me who to ask.",
+      "fallback": ["What if the document doesn't cover my situation?", "Who should I ask, if it isn't in there?"]
+    }
+  ],
+  "closing_line": "Great, thanks. I'll do it properly, then.",
+  "expert_notes": {
+    "o1": {"good": "Staying close to what the passage says, in your own words, without adding to it.", "common_mistakes": ["Answering from memory", "Stating a rule the document does not contain"], "micro_lesson": "Say what the document actually says, not what seems sensible.", "model": "According to the document, this step has to be done before you go ahead.", "smaller_step": "Read the passage, then say one thing it requires.", "subskills": ["source evidence"]},
+    "o2": {"good": "Turning the rule into a clear instruction for this person, and holding firm if the rule does not allow the shortcut.", "common_mistakes": ["Quoting the rule with no advice", "Giving in to time pressure"], "micro_lesson": "Finish the rule with what this person should do now.", "model": "So in your case, you still need to do that step, even if your manager is in a hurry.", "smaller_step": "Tell Jamie one thing to do next.", "subskills": ["policy application"]},
+    "o3": {"good": "Saying clearly where the document stops, and naming how to find out.", "common_mistakes": ["Guessing to sound helpful", "Saying only 'I don't know'"], "micro_lesson": "'It doesn't say' is a good answer, if you add who to check with.", "model": "The document doesn't cover that, so I'd check with the policy owner before going ahead.", "smaller_step": "Say who Jamie could ask.", "subskills": ["uncertainty"]}
+  },
+  "variants": [{}]
+}

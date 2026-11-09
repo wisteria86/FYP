@@ -1,0 +1,236 @@
+{
+  "archetype": "interview",
+  "level": "advanced",
+  "setting": "A fictional first-round interview for a {{role}} role at {{company}}.",
+  "presentation": {
+    "situation": "You are interviewing for a {{role}} role at {{company}}. {{name}}, the hiring manager, opens with \"tell me about yourself\". Use your own real background.",
+    "opening": "Welcome. To begin, could you tell me about yourself and why this role interests you?",
+    "opening_speaker": "p1",
+    "learner_role": "Job candidate"
+  },
+  "brief": {
+    "you_are": "You are a candidate in a first-round interview.",
+    "situation": "You are interviewing for a {{role}} role at {{company}}. {{name}}, the hiring manager, opens with \"tell me about yourself\". Use your own real background.",
+    "task": "Give a short professional summary, connect your experience to this role, and give one specific example when asked.",
+    "done_looks_like": "{{name}} understands your background, why this role fits, and has heard one specific example."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Job candidate",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are a candidate in a first-round interview.",
+      "goals": [
+        "Give a short professional summary, connect your experience to this role, and give one specific example when asked."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Hiring manager",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Would be your manager",
+      "voice_index": 0,
+      "topics": [
+        "role",
+        "company",
+        "team",
+        "experience"
+      ],
+      "card": {
+        "want": "To find out quickly whether this person fits, and why they want this job.",
+        "hidden_need": "",
+        "attitude": "Courteous and focused, with little patience for a life story.",
+        "speech": "Fluent, natural professional English. Direct, and free of corporate slogans.",
+        "tactics": [
+          "Ask how that relates to this role",
+          "Ask for one specific example",
+          "Never supply details of the candidate's experience"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "The role is {{role}} at {{company}}."
+    },
+    {
+      "id": "f2",
+      "text": "The candidate's background comes from the candidate. {{name}} knows only what the candidate says."
+    },
+    {
+      "id": "f3",
+      "text": "The role mainly involves {{duties}}.",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Give a relevant professional summary",
+      "evidence": "The learner gives a brief, relevant summary of experience.",
+      "alternatives": [
+        "I've worked in support for three years, currently leading a small team."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Connect experience to the role",
+      "evidence": "The learner links their experience to this particular role.",
+      "alternatives": [
+        "This role interests me because it builds on my work with customers."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Answer follow-up questions directly",
+      "evidence": "The learner gives a concrete example or achievement.",
+      "alternatives": [
+        "For example, I reduced waiting times by reorganizing our shifts."
+      ]
+    }
+  ],
+  "examples": [
+    "I am a … with experience in …",
+    "A relevant achievement is …",
+    "This role interests me because …"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Hear a focused summary.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:experience|worked|background|currently)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Give me the short version: who are you, professionally?",
+        "What do you do at the moment?"
+      ],
+      "orient": "This is a job interview, and I've asked you to introduce yourself. Say what you do now and your main experience, in two sentences.",
+      "fallback": [
+        "What do you do at the moment?",
+        "Give me the short version: who are you, professionally?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Connect the experience to the role.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:this role|position|relevant|would help)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Why this role, in particular?",
+        "How does that help you do this job?"
+      ],
+      "orient": "Now say why this role fits you. Start with: This role interests me because.",
+      "fallback": [
+        "How does that help you do this job?",
+        "Why this role, in particular?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Hear a specific example.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:for example|achievement|result|increased|reduced|improved)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Can you give me one example of that?",
+        "What's an achievement you are proud of?"
+      ],
+      "orient": "Give me one real example from your experience. Start with: For example.",
+      "fallback": [
+        "What's an achievement you are proud of?",
+        "Can you give me one example of that?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Thank you. That gives me a good first picture.",
+  "expert_notes": {
+    "o1": {
+      "good": "Present, past and why here, in a few sentences.",
+      "common_mistakes": [
+        "Reciting your whole life story"
+      ],
+      "micro_lesson": "Keep it to what matters for this job.",
+      "model": "I've worked in support for three years, and I currently lead a small team.",
+      "smaller_step": "Say: I currently work as.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "A reason specific to this job, not any job.",
+      "common_mistakes": [
+        "Saying: It's a great company"
+      ],
+      "micro_lesson": "Connect one thing you have done to one thing the job needs.",
+      "model": "This role interests me because it builds on my customer experience.",
+      "smaller_step": "Say: This role interests me because.",
+      "subskills": [
+        "comprehension"
+      ]
+    },
+    "o3": {
+      "good": "A real example is worth more than any adjective.",
+      "common_mistakes": [
+        "Saying: I'm a hard worker"
+      ],
+      "micro_lesson": "Show it, with one real story.",
+      "model": "For example, I reduced our waiting times by reorganizing the shifts.",
+      "smaller_step": "Say: For example, I.",
+      "subskills": [
+        "grammar"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Saima",
+      "role": "team coordinator",
+      "company": "Northline Logistics",
+      "duties": "planning shifts and handling customer escalations"
+    },
+    {
+      "name": "Peter",
+      "role": "junior analyst",
+      "company": "Marlow Foods",
+      "duties": "preparing weekly sales reports and checking data"
+    }
+  ]
+}

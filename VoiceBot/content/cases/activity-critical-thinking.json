@@ -1,0 +1,242 @@
+{
+  "archetype": "meeting",
+  "level": "intermediate",
+  "setting": "A fictional review with a project sponsor who wants to act on two reports.",
+  "presentation": {
+    "situation": "{{name}}, the project sponsor, says that {{claim}}. Your figures: {{good}}, but also {{bad}}. {{unknown}} Test the assumptions, weigh the evidence, and say what you would do.",
+    "opening": "The report says {{claim}}. That proves it's working, so I want to roll it out everywhere. You agree, don't you?",
+    "opening_speaker": "p1",
+    "learner_role": "Analyst"
+  },
+  "brief": {
+    "you_are": "You are an analyst reviewing evidence with a project sponsor.",
+    "situation": "{{name}}, the project sponsor, says that {{claim}}. Your figures: {{good}}, but also {{bad}}. {{unknown}} Test the assumptions, weigh the evidence, and say what you would do.",
+    "task": "Question the assumption, weigh both pieces of evidence, and give a reasoned judgement on what to do next.",
+    "done_looks_like": "{{name}} sees why the conclusion is not yet safe, and has a clear recommendation from you."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Analyst",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are an analyst reviewing evidence with a project sponsor.",
+      "goals": [
+        "Question the assumption, weigh both pieces of evidence, and give a reasoned judgement on what to do next."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Project sponsor",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Owns the project budget",
+      "voice_index": 0,
+      "topics": [
+        "report",
+        "data",
+        "evidence",
+        "decision",
+        "rollout"
+      ],
+      "card": {
+        "want": "To make a quick decision that can be defended.",
+        "hidden_need": "Promised the board an update this month.",
+        "attitude": "Keen, in a hurry, and fair when shown evidence.",
+        "speech": "Fluent, natural professional English. Direct, and free of corporate slogans.",
+        "tactics": [
+          "Push for a quick yes",
+          "Ask 'so what would you do?'",
+          "Accept a well-reasoned recommendation"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "The report says {{claim}}."
+    },
+    {
+      "id": "f2",
+      "text": "The figures show {{good}}."
+    },
+    {
+      "id": "f3",
+      "text": "The figures also show {{bad}}."
+    },
+    {
+      "id": "f4",
+      "text": "{{unknown}}"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Question the assumption",
+      "evidence": "The learner questions an assumption, or looks for alternative explanations.",
+      "alternatives": [
+        "That assumes the change caused it. Could something else explain it?"
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Weigh all of the evidence",
+      "evidence": "The learner uses both pieces of evidence.",
+      "alternatives": [
+        "The data shows one thing improved, but the other got worse."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Give a reasoned recommendation",
+      "evidence": "The learner makes a reasoned recommendation.",
+      "alternatives": [
+        "I recommend a small test before rolling out, because the evidence is mixed."
+      ]
+    }
+  ],
+  "examples": [
+    "That assumes the change caused it. Could something else explain it?",
+    "The data shows one figure improved, but the other got worse.",
+    "I recommend a small test first, because the evidence is mixed."
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Have the assumption challenged.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:assum|could (?:something|there|it)|alternative|compare|what else|cause|because of|risk)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So you agree that it is working?",
+        "What is wrong with that conclusion?"
+      ],
+      "orient": "I've jumped to a conclusion. Question it. You can ask: Could something else explain it?",
+      "fallback": [
+        "What is wrong with that conclusion?",
+        "So you agree that it is working?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Weigh the evidence.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:data|evidence|figures?|numbers?|shows?|however|but also|measured|percent)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "What does the data actually tell us?",
+        "Which number do you trust?"
+      ],
+      "orient": "Look at both figures in your brief. Tell me what they show together.",
+      "fallback": [
+        "Which number do you trust?",
+        "What does the data actually tell us?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Hear a judgement.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:i recommend|i would|i suggest|we should|my (?:view|judgement)|therefore|best)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So what would you do?",
+        "I need a decision. What do you recommend?"
+      ],
+      "orient": "Now tell me what you would do, and why. Start with: I recommend.",
+      "fallback": [
+        "I need a decision. What do you recommend?",
+        "So what would you do?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Fair enough. That's a stronger position than the one I walked in with.",
+  "expert_notes": {
+    "o1": {
+      "good": "Asking what else could explain the result.",
+      "common_mistakes": [
+        "Accepting the headline"
+      ],
+      "micro_lesson": "Ask: What are we assuming? What else could explain it?",
+      "model": "That assumes the change caused it. Could something else explain it?",
+      "smaller_step": "Ask: Could something else explain it?",
+      "subskills": [
+        "analysis"
+      ]
+    },
+    "o2": {
+      "good": "Looking at all the evidence, including what doesn't fit.",
+      "common_mistakes": [
+        "Quoting only the helpful number"
+      ],
+      "micro_lesson": "Say: The data shows, and: but.",
+      "model": "The data shows one figure improved, but the other got worse.",
+      "smaller_step": "Say: The data shows.",
+      "subskills": [
+        "evidence"
+      ]
+    },
+    "o3": {
+      "good": "A clear decision, even with incomplete evidence.",
+      "common_mistakes": [
+        "Saying only: We need more data"
+      ],
+      "micro_lesson": "Say: I recommend, then: because.",
+      "model": "I recommend a small test first, because the evidence is mixed.",
+      "smaller_step": "Say: I recommend.",
+      "subskills": [
+        "judgement"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Zara",
+      "claim": "the new training raised sales by 10 percent",
+      "good": "sales rose by 10 percent in the trained team",
+      "bad": "repeat purchases fell by 6 percent",
+      "unknown": "A seasonal promotion ran at the same time, and nobody has separated its effect."
+    },
+    {
+      "name": "Andrew",
+      "claim": "the new system improved response times by 20 percent",
+      "good": "average response time improved by 20 percent",
+      "bad": "customer satisfaction fell by 5 points",
+      "unknown": "The team also reduced the number of questions it answers per ticket."
+    }
+  ]
+}

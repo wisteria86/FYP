@@ -12,10 +12,12 @@ from core.training_service import TrainingService
 from domain.conversation import SessionAction
 from intelligence.conversation_direction import addressed_people, choose_speakers, reply_handoff, proactive_reaction
 from services.training_orchestrator import TrainingOrchestrator
+from legacy_fixture import previous_engine
 
 
 class MeetingFlowTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
+        previous_engine(self)
         self.temp=tempfile.TemporaryDirectory()
         self.training=TrainingService(Path(self.temp.name)/'meeting.db')
         self.runtime=self.training.context.runtime

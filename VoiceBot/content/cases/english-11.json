@@ -1,0 +1,227 @@
+{
+  "archetype": "social",
+  "level": "intermediate",
+  "setting": "A fictional chat between friends about a memorable day.",
+  "presentation": {
+    "situation": "{{name}} has just told you about {{their_day}}, and now wants to hear a story of yours. Tell {{name}} about a day you remember clearly. Use your own story.",
+    "opening": "That's enough about {{their_day}}! Tell me about a day you still remember clearly. What happened?",
+    "opening_speaker": "p1",
+    "learner_role": "Friend"
+  },
+  "brief": {
+    "you_are": "You are telling a friend a story from your own life.",
+    "situation": "{{name}} has just told you about {{their_day}}, and now wants to hear a story of yours. Tell {{name}} about a day you remember clearly. Use your own story.",
+    "task": "Say when and where it happened, tell the events in order, and say how it ended.",
+    "done_looks_like": "Your friend could retell your story: when it was, what happened in order, and how it ended."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Friend",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are telling a friend a story from your own life.",
+      "goals": [
+        "Say when and where it happened, tell the events in order, and say how it ended."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Friend",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "A good friend who loves stories",
+      "voice_index": 0,
+      "topics": [
+        "story",
+        "happened",
+        "then",
+        "day"
+      ],
+      "card": {
+        "want": "To hear a good story, and to understand what it felt like.",
+        "hidden_need": "",
+        "attitude": "Curious, a good listener.",
+        "speech": "Clear everyday English. Natural, not formal.",
+        "tactics": [
+          "Ask what happened next",
+          "Never invent details of the learner's story"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "The story comes from the learner's own life. {{name}} knows only what the learner says about it."
+    },
+    {
+      "id": "f2",
+      "text": "{{name}} recently had {{their_day}}.",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Set the time and place",
+      "evidence": "The learner sets the past time or place.",
+      "alternatives": [
+        "Last summer, I was in Murree with my cousins."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Sequence events clearly",
+      "evidence": "The learner sequences events in the past.",
+      "alternatives": [
+        "Then the road closed, and after that we had to walk."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Explain how the story ended",
+      "evidence": "The learner explains how the story ended.",
+      "alternatives": [
+        "In the end, we got home late, but it was worth it."
+      ]
+    }
+  ],
+  "examples": [
+    "Last …, I went …",
+    "After that …",
+    "In the end …"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Find out when and where it happened.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:yesterday|last|ago|when i was)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "When was this?",
+        "Where were you?"
+      ],
+      "orient": "Tell me a true story from your own life. Start with when it was, for example: Last year.",
+      "fallback": [
+        "Where were you?",
+        "When was this?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Follow the events in order.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:then|after that|next|later)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Then what happened?",
+        "What did you do next?"
+      ],
+      "orient": "Now tell me what happened, in order. Use words like: then, and: after that.",
+      "fallback": [
+        "What did you do next?",
+        "Then what happened?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Find out how it ended.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:finally|in the end|eventually|ended)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So how did it end?",
+        "What happened in the end?"
+      ],
+      "orient": "Finish your story. Start with: In the end.",
+      "fallback": [
+        "What happened in the end?",
+        "So how did it end?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "What a story. Thanks for telling me.",
+  "expert_notes": {
+    "o1": {
+      "good": "Telling the listener when and where before the action.",
+      "common_mistakes": [
+        "Starting in the middle of the action"
+      ],
+      "micro_lesson": "Start with a time: Last year, or: When I was ten.",
+      "model": "Last summer, I was in Murree with my cousins.",
+      "smaller_step": "Say: Last year, and one thing.",
+      "subskills": [
+        "grammar"
+      ]
+    },
+    "o2": {
+      "good": "Sequence words, with past verbs, help the listener follow.",
+      "common_mistakes": [
+        "Mixing present and past"
+      ],
+      "micro_lesson": "Use past verbs: went, saw, had.",
+      "model": "Then the road closed, so after that we walked.",
+      "smaller_step": "Say: Then I.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o3": {
+      "good": "A clear ending makes a story feel complete.",
+      "common_mistakes": [
+        "Stopping with no ending"
+      ],
+      "micro_lesson": "Finish with: In the end, or: Finally.",
+      "model": "In the end, we got home late, but we were happy.",
+      "smaller_step": "Say: In the end.",
+      "subskills": [
+        "comprehension"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Hassan",
+      "their_day": "a terrible day at the airport"
+    },
+    {
+      "name": "Emma",
+      "their_day": "a funny day at my sister's wedding"
+    }
+  ]
+}

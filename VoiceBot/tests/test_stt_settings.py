@@ -1,3 +1,4 @@
+import isolated_environment  # noqa: F401  (must come before the server)
 import os
 import tempfile
 import unittest

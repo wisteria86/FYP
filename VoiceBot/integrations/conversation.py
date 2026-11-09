@@ -10,6 +10,10 @@ class ConversationAdapter:
     def supports_quota_priority(self): return getattr(self.provider,'supports_quota_priority',False) is True
     def evaluate_runtime(self, context, **kwargs): return self.provider.evaluate_runtime(context,**kwargs)
     def plan_turn(self, context): return self.provider.plan_turn(context)
+    @property
+    def router_enabled(self): return getattr(self.provider, 'router_enabled', False) is True
+    def read_turn(self, context): return self.provider.read_turn(context)
+    def generate_debrief(self, context): return self.provider.generate_debrief(context)
     def check_runtime_reply(self, context): return self.provider.check_runtime_reply(context)
     def generate_scenario(self, context):
         return {'context': ''.join(self.generate_response(context))}

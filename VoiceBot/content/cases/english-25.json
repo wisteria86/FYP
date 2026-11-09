@@ -1,0 +1,242 @@
+{
+  "archetype": "meeting",
+  "level": "advanced",
+  "setting": "A fictional discussion with a project manager who is confident in a team decision.",
+  "presentation": {
+    "situation": "{{name}}, your project manager, decided to {{decision}}. You think that is a mistake, because {{evidence}}. Challenge it without damaging the relationship, and offer an alternative: {{alternative}}.",
+    "opening": "The team has agreed to {{decision}}, so I don't see a reason to reopen this.",
+    "opening_speaker": "p1",
+    "learner_role": "Team member"
+  },
+  "brief": {
+    "you_are": "You disagree with your project manager, and you want to keep a good working relationship.",
+    "situation": "{{name}}, your project manager, decided to {{decision}}. You think that is a mistake, because {{evidence}}. Challenge it without damaging the relationship, and offer an alternative: {{alternative}}.",
+    "task": "Acknowledge common ground, explain your concern with evidence, and offer an alternative.",
+    "done_looks_like": "{{name}} has heard your concern and evidence, has an alternative to consider, and still respects you."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Team member",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You disagree with your project manager, and you want to keep a good working relationship.",
+      "goals": [
+        "Acknowledge common ground, explain your concern with evidence, and offer an alternative."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Project manager",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Your manager on this project",
+      "voice_index": 0,
+      "topics": [
+        "decision",
+        "team",
+        "plan",
+        "evidence",
+        "project"
+      ],
+      "card": {
+        "want": "To keep the project moving, and not to reopen every decision.",
+        "hidden_need": "Is under pressure to show progress, and fears looking indecisive.",
+        "attitude": "Confident, a little impatient, and persuaded only by evidence.",
+        "speech": "Fluent, natural professional English. Direct, and free of corporate slogans.",
+        "tactics": [
+          "Defend the decision at first",
+          "Accept evidence, and reject opinion",
+          "Ask for a practical alternative"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "The decision is to {{decision}}."
+    },
+    {
+      "id": "f2",
+      "text": "The evidence is that {{evidence}}."
+    },
+    {
+      "id": "f3",
+      "text": "A possible alternative is {{alternative}}."
+    },
+    {
+      "id": "f4",
+      "text": "{{name}} made the decision under pressure from senior management to show progress.",
+      "owner": "p1",
+      "available_from": "b1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Acknowledge common ground",
+      "evidence": "The learner acknowledges common ground or the manager's goal.",
+      "alternatives": [
+        "I agree we need to move fast."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Explain the concern with evidence",
+      "evidence": "The learner explains the concern, using evidence.",
+      "alternatives": [
+        "My concern is that we saw this fail last time, because..."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Offer an alternative",
+      "evidence": "The learner proposes a practical alternative.",
+      "alternatives": [
+        "An alternative would be to pilot it with one team first."
+      ]
+    }
+  ],
+  "examples": [
+    "I agree that …",
+    "My concern is … because …",
+    "An alternative would be …"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Hear common ground first.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:i agree|we both|common goal|i understand)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So what is your issue?",
+        "Are you against moving quickly?"
+      ],
+      "orient": "You disagree with me, but you still want to work together. Start by saying what you agree with. You can say: I agree that.",
+      "fallback": [
+        "Are you against moving quickly?",
+        "So what is your issue?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Hear the concern with evidence.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:my concern|however|because|evidence)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "That is an opinion. What makes you say that?",
+        "What is your concern, exactly?"
+      ],
+      "orient": "Now tell me your concern, and use the evidence in your brief. Start with: My concern is.",
+      "fallback": [
+        "What is your concern, exactly?",
+        "That is an opinion. What makes you say that?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Hear an alternative.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:alternative|instead|another option|i suggest)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So what would you do instead?",
+        "If not this, then what?"
+      ],
+      "orient": "Now give me an alternative. Start with: An alternative would be.",
+      "fallback": [
+        "If not this, then what?",
+        "So what would you do instead?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "All right, I hear you. Let's look at that properly. Thanks for raising it directly.",
+  "expert_notes": {
+    "o1": {
+      "good": "Starting with what you share lowers defences.",
+      "common_mistakes": [
+        "Opening with: That is wrong"
+      ],
+      "micro_lesson": "Say: I agree that, or: We both want.",
+      "model": "I agree we need to move fast, and I want this to succeed.",
+      "smaller_step": "Say: I agree that.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "Evidence, not opinion, and about the plan, not the person.",
+      "common_mistakes": [
+        "Saying: I just feel"
+      ],
+      "micro_lesson": "Say: My concern is, then: because.",
+      "model": "My concern is the risk, because of what happened in the last release.",
+      "smaller_step": "Say: My concern is.",
+      "subskills": [
+        "grammar"
+      ]
+    },
+    "o3": {
+      "good": "Bringing a solution as well as a problem.",
+      "common_mistakes": [
+        "Criticizing, with nothing to offer instead"
+      ],
+      "micro_lesson": "Say: An alternative would be.",
+      "model": "An alternative would be to pilot it with one team first.",
+      "smaller_step": "Say: An alternative would be.",
+      "subskills": [
+        "comprehension"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Karen",
+      "decision": "move every customer to the new system in one weekend",
+      "evidence": "last year's one-weekend move caused two days of outages",
+      "alternative": "moving one customer group first"
+    },
+    {
+      "name": "Faisal",
+      "decision": "cut the testing phase in half to meet the date",
+      "evidence": "most serious defects last quarter were found in the second half of testing",
+      "alternative": "keeping full testing for the payment features only"
+    }
+  ]
+}

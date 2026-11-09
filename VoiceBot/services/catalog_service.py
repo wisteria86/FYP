@@ -1,7 +1,9 @@
 """CatalogService: one application responsibility, shared transactional storage."""
+from pathlib import Path
 from services.training_support import *
 from services.training_support import _now, _json, _words, _slug
 from services.service_context import ApplicationService
+from intelligence.case_library import available_cases
 
 
 class CatalogService(ApplicationService):
@@ -64,7 +66,7 @@ class CatalogService(ApplicationService):
                     estimated_minutes,created_at,updated_at,posture_mode,knowledge_mode
                 ) VALUES (?,?,?,?,?,'adaptive',15,?,?,?,?)""",
                 (activity_id, title, description, skill_id, scenario_type, now, now,
-                 'optional' if skill_id in {'presentations','interviews'} else 'off',
+                 'optional' if skill_id in {'presentations','interviews','public-speaking'} else 'off',
                  'required' if skill_id=='company-knowledge' else 'optional'),
             )
             # Keep seeded catalogs current for databases created by an earlier
@@ -122,6 +124,17 @@ class CatalogService(ApplicationService):
                 ) VALUES (?,?,?,?,?,?,?)""",
                 (resource_id, title, description, resource_type, description, now, now),
             )
+        # Titles now match the authored cases. A title edited in admin is left alone.
+        for activity_id, old_title, new_title in (('activity-negotiation', 'Deadline negotiation', 'Training package negotiation'),
+                                                  ('activity-active-listening', 'Unclear customer concern', 'Listening to an upset customer'),
+                                                  ('activity-presentations', 'Executive project brief', 'Funding brief to a panel'),
+                                                  ('activity-ai-literacy', 'AI-generated report', 'An AI-drafted document')):
+            db.execute('UPDATE training_activities SET title=? WHERE id=? AND title=?', (new_title, activity_id, old_title))
+        # Real guidance replaces the seeded one-line placeholder, but never an edited resource.
+        guide_path = Path(__file__).resolve().parents[1] / 'content' / 'resources.json'
+        if guide_path.exists():
+            for resource_id, text in json.loads(guide_path.read_text(encoding='utf-8')).items():
+                db.execute('UPDATE resources SET content_text=? WHERE id=? AND content_text=description', (text, resource_id))
             db.execute(
                 "INSERT OR IGNORE INTO resource_skill_links(resource_id,skill_id,subskill_id) VALUES (?,?,?)",
                 (resource_id, skill_id, None),
@@ -187,13 +200,16 @@ class CatalogService(ApplicationService):
     def skills(self, user_id: str = "demo") -> list[dict[str, Any]]:
         with self.connect() as db:
             values = {r["skill_id"]: dict(r) for r in db.execute("SELECT * FROM proficiency WHERE user_id=?", (user_id,))}
-            subvalues = {(r["skill_id"], r["subskill"]): r["score"] for r in db.execute("SELECT * FROM subskill_proficiency WHERE user_id=?", (user_id,))}
+            subrows = db.execute("SELECT * FROM subskill_proficiency WHERE user_id=?", (user_id,)).fetchall()
+            subvalues = {(r["skill_id"], r["subskill"]): r["score"] for r in subrows}
+            subcounts = {(r["skill_id"], r["subskill"]): r["sessions"] for r in subrows}
             catalog = [(row['id'], row['name'], row['description'],
                         [s['name'] for s in db.execute('SELECT name FROM subskill_catalog WHERE skill_id=? AND active=1', (row['id'],))])
                        for row in db.execute('SELECT * FROM skill_catalog WHERE active=1 ORDER BY rowid')]
         return [
             {"id": sid, "name": name, "description": desc, "subskills": subskills,
              "subskill_scores": {sub: round(subvalues.get((sid, sub), 50), 1) for sub in subskills},
+             "subskill_sessions": {sub: subcounts.get((sid, sub), 0) for sub in subskills},
              "score": round(values.get(sid, {}).get("score", 50), 1), "sessions": values.get(sid, {}).get("sessions", 0)}
             for sid, name, desc, subskills in catalog
         ]
@@ -225,8 +241,10 @@ class CatalogService(ApplicationService):
                 a.training_language,COALESCE(a.sequence_number,999),a.title"""
             ).fetchall()
             result = []
+            upgraded = set(available_cases())
             for row in rows:
                 item = dict(row)
+                item["upgraded"] = item["id"] in upgraded
                 item["subskills"] = [
                     value["name"] for value in db.execute(
                         """SELECT s.name FROM activity_subskills x

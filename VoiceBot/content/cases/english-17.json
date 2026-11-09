@@ -1,0 +1,241 @@
+{
+  "archetype": "meeting",
+  "level": "intermediate",
+  "setting": "A fictional quick update between a team member and a team lead.",
+  "presentation": {
+    "situation": "You work on {{task}}. {{status}} The blocker is that {{blocker}}. {{name}}, your team lead, stops by for a quick update. Give the status, explain the blocker without blame, and commit to a next step.",
+    "opening": "Can you give me a quick update on {{task}}?",
+    "opening_speaker": "p1",
+    "learner_role": "Team member"
+  },
+  "brief": {
+    "you_are": "You are giving your team lead a quick status update.",
+    "situation": "You work on {{task}}. {{status}} The blocker is that {{blocker}}. {{name}}, your team lead, stops by for a quick update. Give the status, explain the blocker without blame, and commit to a next step.",
+    "task": "Lead with the current status, explain the blocker without blaming anyone, and commit to a next step.",
+    "done_looks_like": "{{name}} knows where things stand, what is blocking you, and what you will do next."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Team member",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are giving your team lead a quick status update.",
+      "goals": [
+        "Lead with the current status, explain the blocker without blaming anyone, and commit to a next step."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Team lead",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Your manager",
+      "voice_index": 0,
+      "topics": [
+        "status",
+        "blocker",
+        "task",
+        "deadline"
+      ],
+      "card": {
+        "want": "A fast, honest status, without having to dig for it.",
+        "hidden_need": "Needs to warn the client if the date moves.",
+        "attitude": "Busy, fair and practical.",
+        "speech": "Clear everyday English. Natural, not formal.",
+        "tactics": [
+          "Ask whose job the blocker is, if someone is blamed",
+          "Ask by when"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "The work is {{task}}."
+    },
+    {
+      "id": "f2",
+      "text": "Status: {{status}}"
+    },
+    {
+      "id": "f3",
+      "text": "Blocker: {{blocker}}."
+    },
+    {
+      "id": "f4",
+      "text": "{{name}} can help if asked: {{help}}.",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Lead with current status",
+      "evidence": "The learner opens with the current status.",
+      "alternatives": [
+        "The current status is that it is about 80 percent finished."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Explain the blocker without blame",
+      "evidence": "The learner explains the blocker factually, without blaming a person.",
+      "alternatives": [
+        "I'm waiting for the login details, so I can't test yet."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Commit to a next step",
+      "evidence": "The learner commits to a specific next step.",
+      "alternatives": [
+        "Next, I will chase them today and finish by Thursday."
+      ]
+    }
+  ],
+  "examples": [
+    "The current status is …",
+    "The blocker is …",
+    "Next, I will …"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Hear the status first.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:status|completed|finished|on track|in progress)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So where are we?",
+        "Is it on track?"
+      ],
+      "orient": "I just need a quick update. Start with where things are now.",
+      "fallback": [
+        "Is it on track?",
+        "So where are we?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Hear the blocker without blame.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:blocker|blocked|delay|because|waiting)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Is anything holding it up?",
+        "What is in the way?"
+      ],
+      "orient": "Tell me what is holding it up. Describe the problem, not the person.",
+      "fallback": [
+        "What is in the way?",
+        "Is anything holding it up?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Hear the next step.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:next i|i will|by (?:today|tomorrow|monday|tuesday|wednesday|thursday|friday))\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So what happens next?",
+        "And by when?"
+      ],
+      "orient": "Now tell me what you will do next, and by when. Start with: Next, I will.",
+      "fallback": [
+        "And by when?",
+        "So what happens next?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Okay, that's clear. Thanks for the update.",
+  "expert_notes": {
+    "o1": {
+      "good": "Starting with the status, so your lead does not need to ask.",
+      "common_mistakes": [
+        "Starting with the history"
+      ],
+      "micro_lesson": "First sentence: the status.",
+      "model": "The current status is that it is mostly done, with one thing open.",
+      "smaller_step": "Say: The current status is.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "Describing the situation, not who is at fault.",
+      "common_mistakes": [
+        "Saying: It's because he didn't"
+      ],
+      "micro_lesson": "Say: I'm waiting for, or: The blocker is.",
+      "model": "The blocker is that I'm still waiting for the login details.",
+      "smaller_step": "Say: The blocker is.",
+      "subskills": [
+        "grammar"
+      ]
+    },
+    "o3": {
+      "good": "A clear commitment, with a time.",
+      "common_mistakes": [
+        "Saying: I will try"
+      ],
+      "micro_lesson": "Say: I will, and a day.",
+      "model": "Next, I will chase them today, and finish by Thursday.",
+      "smaller_step": "Say: Next, I will.",
+      "subskills": [
+        "comprehension"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Sophie",
+      "task": "the customer report",
+      "status": "It is about 80 percent complete.",
+      "blocker": "the finance figures have not arrived yet",
+      "help": "asking finance directly"
+    },
+    {
+      "name": "Kamal",
+      "task": "the website update",
+      "status": "It is one day behind.",
+      "blocker": "the test login does not work",
+      "help": "requesting a new login"
+    }
+  ]
+}

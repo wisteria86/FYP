@@ -19,10 +19,15 @@ import { createCleanCapture } from './noiseReduction.mjs'
 import {turnDetection,captureLimitReason} from './turnEnding.mjs'
 import { startSilero } from './sileroVad.mjs'
 import { monitorMicrophone } from './micMonitor.mjs'
+import TeamPanel from './TeamPanel'
+import GoalsPanel from './GoalsPanel'
+import LearningPath from './LearningPath'
 
 const API = '/api'
 const api = async (path, options = {}) => {
-  const response = await fetch(`${API}${path}`, {credentials:'same-origin',...options})
+  let response
+  try{response = await fetch(`${API}${path}`, {credentials:'same-origin',...options})}
+  catch{throw new Error('Hikari can\'t reach the server. Check that the app is still running and your connection is working, then try again.')}
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
     const error=new Error(data.error?.message||data.detail||'Something went wrong')
@@ -62,12 +67,13 @@ function AuthScreen({ onAuthenticated }) {
     }catch(e){setError(e.message)}finally{setBusy(false)}
   }
   const update=event=>setForm(value=>({...value,[event.target.name]:event.target.value}))
-  return <main className="auth-page"><section className="auth-intro"><div className="auth-brand">✦ <strong>Hikari</strong></div><p>AI-powered workplace training</p><h1>Practise difficult conversations before they happen.</h1><span>Private progress, adaptive scenarios, and realistic voice roleplay in one training workspace.</span></section><section className="auth-panel"><div className="auth-card"><p className="eyebrow">{mode==='login'?'WELCOME BACK':'CREATE YOUR WORKSPACE'}</p><h2>{mode==='login'?'Sign in to Hikari':'Start training with Hikari'}</h2><p>Your progress and sessions stay connected to your account.</p><form onSubmit={submit}>{mode==='register'&&<><label>Full name<input name="name" value={form.name} onChange={update} autoComplete="name" required/></label><label>Organization<input name="organization_name" value={form.organization_name} onChange={update} autoComplete="organization" required/></label></>}<label>Email address<input name="email" type="email" value={form.email} onChange={update} autoComplete="email" required/></label><label>Password<input name="password" type="password" value={form.password} onChange={update} autoComplete={mode==='login'?'current-password':'new-password'} minLength={mode==='register'?10:1} required/></label>{mode==='register'&&<small>Use at least 10 characters with a letter and a number.</small>}{error&&<div className="auth-error">{error}</div>}<button className="h-primary" disabled={busy}>{busy?'Please wait…':mode==='login'?'Sign in':'Create account'}</button></form><button className="auth-switch" onClick={()=>{setMode(value=>value==='login'?'register':'login');setError('')}}>{mode==='login'?'New to Hikari? Create an account':'Already have an account? Sign in'}</button></div></section></main>
+  return <main className="auth-page"><section className="auth-intro"><div className="auth-brand"><span aria-hidden="true">光</span> <strong>Hikari</strong></div><p>AI-powered workplace training</p><h1>Practise difficult conversations before they happen.</h1><span>Private progress, adaptive scenarios, and realistic voice roleplay in one training workspace.</span></section><section className="auth-panel"><div className="auth-card"><p className="eyebrow">{mode==='login'?'WELCOME BACK':'CREATE YOUR WORKSPACE'}</p><h2>{mode==='login'?'Sign in to Hikari':'Start training with Hikari'}</h2><p>Your progress and sessions stay connected to your account.</p><form onSubmit={submit}>{mode==='register'&&<><label>Full name<input name="name" value={form.name} onChange={update} autoComplete="name" required/></label><label>Organization<input name="organization_name" value={form.organization_name} onChange={update} autoComplete="organization" required/></label></>}<label>Email address<input name="email" type="email" value={form.email} onChange={update} autoComplete="email" required/></label><label>Password<input name="password" type="password" value={form.password} onChange={update} autoComplete={mode==='login'?'current-password':'new-password'} minLength={mode==='register'?10:1} required/></label>{mode==='register'&&<small>Use at least 10 characters with a letter and a number.</small>}{error&&<div className="auth-error">{error}</div>}<button className="h-primary" disabled={busy}>{busy?'Please wait…':mode==='login'?'Sign in':'Create account'}</button></form><button className="auth-switch" onClick={()=>{setMode(value=>value==='login'?'register':'login');setError('')}}>{mode==='login'?'New to Hikari? Create an account':'Already have an account? Sign in'}</button></div></section></main>
 }
 
 function Sidebar({ view, setView, health, user, onLogout }) {
   const nav = [
     ['home', 'Home', 'dashboard'],
+    ['path', 'Learning Path', 'sparkles'],
     ['training', 'Training', 'practice'],
     ['progress', 'Progress', 'history'],
     ['plan', 'Training Plan', 'docs'],
@@ -75,7 +81,7 @@ function Sidebar({ view, setView, health, user, onLogout }) {
     ['settings', 'Settings', 'settings'],
   ]
   return <aside className="sidebar">
-    <div className="brand"><span className="brand-mark">✦</span><div><strong>Hikari</strong></div></div>
+    <div className="brand"><span className="brand-mark" aria-hidden="true">光</span><div><strong>Hikari</strong></div></div>
     <nav>{nav.map(([id, label, icon]) => <button key={id} className={view === id ? 'active' : ''} onClick={() => setView(id)}><Icon name={icon}/>{label}</button>)}</nav>
     <div className="profile"><span>{(user?.name||'User').slice(0,1)}</span><div><strong>{user?.name||'User'}</strong><small>{health.status==='ready'?'Voice ready':'Limited mode'}</small></div><button onClick={onLogout} title="Sign out">↪</button></div>
   </aside>
@@ -138,8 +144,25 @@ function Practice({ skills, onStart }) {
 
 const prettyHours = minutes => minutes >= 60 ? `${(minutes/60).toFixed(1)} hours` : `${Math.round(minutes)} min`
 
+// Numbers count up once. Text values, and people who prefer reduced motion, see the final value.
+function useCountUp(value,duration=800){
+  const text=String(value),match=text.match(/^(\d+(?:\.\d+)?)(.*)$/)
+  const target=match?Number(match[1]):0,[shown,setShown]=useState(target)
+  useEffect(()=>{
+    if(!match||!target||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){setShown(target);return}
+    let frame,start
+    const step=time=>{start??=time;const progress=Math.min((time-start)/duration,1);setShown(target*(1-(1-progress)**3));if(progress<1)frame=requestAnimationFrame(step)}
+    frame=requestAnimationFrame(step)
+    return()=>cancelAnimationFrame(frame)
+  },[target,duration,!!match])
+  if(!match)return text
+  const decimals=match[1].includes('.')?match[1].split('.')[1].length:0
+  return `${shown.toFixed(decimals)}${match[2]}`
+}
+
 function StatCard({ icon, label, value, detail }) {
-  return <article className="h-stat"><span><Icon name={icon}/></span><div><small>{label}</small><strong>{value}</strong>{detail&&<em>{detail}</em>}</div></article>
+  const shown=useCountUp(value)
+  return <article className="h-stat"><span><Icon name={icon}/></span><div><small>{label}</small><strong>{shown}</strong>{detail&&<em>{detail}</em>}</div></article>
 }
 
 function HomePage({ data, onStart, setView, savedLessons }) {
@@ -150,7 +173,7 @@ function HomePage({ data, onStart, setView, savedLessons }) {
       <StatCard icon="monitor" label="Practice evidence" value={data.completed_sessions?`${Math.round(data.overall)}%`:'Not assessed'} detail="Task evidence, not a certified language level"/>
       <StatCard icon="history" label="Completed Sessions" value={data.completed_sessions} detail={data.completed_sessions?'+ progress saved':'Start your baseline'}/>
       <StatCard icon="sparkles" label="Skills in Progress" value={data.skills_in_progress}/>
-      <StatCard icon="history" label="Current Streak" value={`${data.current_streak} days`} detail={data.current_streak?'Great consistency!':'Complete a session today'}/>
+      <StatCard icon="history" label="Current Streak" value={`${data.current_streak} ${data.current_streak===1?'day':'days'}`} detail={data.current_streak>1?'Great consistency!':data.current_streak?'Good start. Come back tomorrow.':'Complete a session today'}/>
     </section>
     <section className="h-home-grid"><article className="h-card h-skills"><div className="h-card-title"><h2>Your Skills</h2><button onClick={()=>setView('progress')}>View All ›</button></div>{data.skills.slice(0,5).map(skill=><div className="h-skill-row" key={skill.id}><span>{skill.name.slice(0,1)}</span><strong>{skill.name}</strong><div><i style={{width:`${skill.sessions?skill.score:0}%`}}/></div><b>{skill.sessions?`${Math.round(skill.score)}%`:'—'}</b></div>)}</article>
       <article className="h-card h-recommended"><h2>Recommended Next Activity</h2><div className="h-feature"><span className="feature-icon">♟</span><h3>{data.recommendation.skill}</h3><p>{data.recommendation.reason}</p><div className="h-tags"><span>{data.recommendation.skill}</span><span>{data.recommendation.difficulty}</span></div><button className="h-primary" onClick={()=>onStart(data.recommendation.skill_id,data.recommendation.difficulty,data.recommendation.activity_id)}>▶ Start Activity</button></div></article>
@@ -164,14 +187,18 @@ function TrainingPage({ activities, onStart }) {
   const [query,setQuery]=useState(''),[category,setCategory]=useState('All'),[language,setLanguage]=useState('All languages')
   const roleplayLabels={one_to_one:'1-to-1 AI',learner_with_ai_team:'You + AI vs AI',ai_team_vs_learner:'AI Team vs You',round_robin:'Round Robin'}
   const multiCategory='Multiple AI Roleplay'
-  const categories=['All',...new Set(activities.map(item=>item.skill_name)),multiCategory,'You + AI vs AI','AI Team vs You','Round Robin']
+  const upgradedCategory='Upgraded lessons'
+  const hasOlder=activities.some(item=>!item.upgraded)
+  const categories=['All',...(hasOlder?[upgradedCategory]:[]),...new Set(activities.map(item=>item.skill_name)),multiCategory,'You + AI vs AI','AI Team vs You','Round Robin']
   const languages=['All languages',...new Set(activities.map(item=>item.training_language).filter(Boolean))]
   const filtered=activities.filter(item=>{
-    const matchesCategory=category==='All'||category===item.skill_name||(category===multiCategory&&item.scenario_type==='multi_ai_roleplay')||category===roleplayLabels[item.roleplay_mode]
+    const matchesCategory=category==='All'||(category===upgradedCategory&&item.upgraded)||category===item.skill_name||(category===multiCategory&&item.scenario_type==='multi_ai_roleplay')||category===roleplayLabels[item.roleplay_mode]
     const matchesLanguage=language==='All languages'||item.training_language===language
     return matchesCategory&&matchesLanguage&&`${item.title} ${item.description} ${item.subskills.join(' ')}`.toLowerCase().includes(query.toLowerCase())
   })
-  return <main className="page hikari-page"><header className="h-page-head"><div><h1>Training</h1><p>Practice languages, workplace communication, negotiation, interviews, critical thinking, and more.</p></div></header><div className="h-search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search training activities…"/></div><div className="h-filter-row language-filters">{languages.map(item=><button key={item} className={language===item?'active':''} onClick={()=>setLanguage(item)}>{item}</button>)}</div><div className="h-filter-row">{categories.map(item=><button key={item} className={category===item?'active':''} onClick={()=>setCategory(item)}>{item}</button>)}</div><section className="h-training-grid">{filtered.map(item=><article className="h-training-card" key={item.id}><span className="training-icon">◉</span>{item.sequence_number&&<small>ENGLISH {item.sequence_number} / 30</small>}<h2>{item.title}</h2><p>{item.description}</p><div className="training-meta"><span>◷ {item.estimated_minutes} min</span><span>▥ {item.proficiency_level||item.difficulty}</span></div><div className="h-tags">{item.training_language&&<span>{item.training_language}</span>}<span>{item.skill_name}</span><span>{roleplayLabels[item.roleplay_mode]||'AI Roleplay'}</span>{item.subskills.slice(0,1).map(tag=><span key={tag}>{tag}</span>)}</div><button className="h-primary" onClick={()=>onStart(item.primary_skill_id,item.difficulty==='adaptive'?'intermediate':item.difficulty,item.id)}>▶ Start Training</button></article>)}</section></main>
+  // Upgraded lessons come first, keeping their order. Sorting a copy leaves the catalog untouched.
+  const ordered=[...filtered].sort((a,b)=>Number(!!b.upgraded)-Number(!!a.upgraded))
+  return <main className="page hikari-page"><header className="h-page-head"><div><h1>Training</h1><p>Practice languages, workplace communication, negotiation, interviews, critical thinking, and more.</p></div></header><div className="h-search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search training activities…"/></div><div className="h-filter-row language-filters">{languages.map(item=><button key={item} className={language===item?'active':''} onClick={()=>setLanguage(item)}>{item}</button>)}</div><div className="h-filter-row">{categories.map(item=><button key={item} className={category===item?'active':''} onClick={()=>setCategory(item)}>{item}</button>)}</div><section className="h-training-grid">{ordered.map(item=><article className="h-training-card" key={item.id}><span className="training-icon">◉</span>{hasOlder&&item.upgraded&&<span className="training-upgraded">Upgraded conversation</span>}{item.sequence_number&&<small>ENGLISH {item.sequence_number} / 30</small>}<h2>{item.title}</h2><p>{item.description}</p><div className="training-meta"><span>◷ {item.estimated_minutes} min</span><span>▥ {item.proficiency_level||item.difficulty}</span></div><div className="h-tags">{item.training_language&&<span>{item.training_language}</span>}<span>{item.skill_name}</span><span>{roleplayLabels[item.roleplay_mode]||'AI Roleplay'}</span>{item.subskills.slice(0,1).map(tag=><span key={tag}>{tag}</span>)}</div><button className="h-primary" onClick={()=>onStart(item.primary_skill_id,item.difficulty==='adaptive'?'intermediate':item.difficulty,item.id)}>▶ Start Training</button></article>)}</section></main>
 }
 
 function ProgressChart({ points }) {
@@ -180,9 +207,21 @@ function ProgressChart({ points }) {
   return <svg className="h-progress-chart" viewBox="0 0 760 220"><line x1="30" y1="190" x2="730" y2="190"/><line x1="30" y1="40" x2="730" y2="40"/><polyline points={coords}/>{values.map((value,index)=><circle key={index} cx={30+index*(700/Math.max(values.length-1,1))} cy={190-value*1.5} r="5"/>)}</svg>
 }
 
-function ProgressPage({ data }) {
+function SkillEvidence({ skill }) {
+  const observed=Object.entries(skill.subskill_scores||{}).filter(([name])=>(skill.subskill_sessions?.[name]||0)>0)
+  return <details className="h-skill-detail"><summary><div className="h-skill-row"><strong>{skill.name}</strong><div><i style={{width:`${skill.sessions?skill.score:0}%`}}/></div><b>{skill.sessions?`${Math.round(skill.score)}%`:'—'}</b></div></summary>
+    {skill.sessions&&observed.length?<ul>{observed.map(([name,score])=><li key={name}><span>{name}</span><b>{Math.round(score)}%</b></li>)}</ul>:<p>No subskill evidence recorded yet.</p>}
+  </details>
+}
+
+function SessionHistory({ rows=[] }) {
+  if(!rows.length)return <div className="h-empty">No sessions yet. Start a lesson to build your history.</div>
+  return <div className="h-history">{rows.map(row=><div className="h-history-row" key={row.id}><div><strong>{row.title}</strong><small>{row.skill_id.replaceAll('-',' ')} · {row.difficulty} · {new Date(row.completed_at||row.created_at).toLocaleDateString()}</small></div><span className={`h-status ${row.status}`}>{row.status==='active'?'In progress':row.status==='canceled'?'Left early':'Completed'}</span><b>{row.overall==null?'—':`${Math.round(row.overall)}%`}</b></div>)}</div>
+}
+
+function ProgressPage({ data, history }) {
   if(!data)return <Loading/>
-  return <main className="page hikari-page"><header className="h-page-head"><div><h1>Progress</h1><p>Track your learning journey and see how you’re improving over time.</p></div></header><section className="h-stats"><StatCard icon="monitor" label="Practice evidence" value={data.completed_sessions?`${Math.round(data.overall)}%`:'Not assessed'}/><StatCard icon="history" label="Completed Sessions" value={data.completed_sessions}/><StatCard icon="sparkles" label="Total Practice Time" value={prettyHours(data.practice_minutes)}/><StatCard icon="history" label="Current Streak" value={`${data.current_streak} days`}/></section><section className="h-progress-grid"><article className="h-card"><h2>Weekly Improvement</h2><p>Performance from your stored assessments.</p><ProgressChart points={data.progress_history}/></article><article className="h-card"><h2>Recorded practice evidence</h2>{data.skills.slice(0,6).map(skill=><div className="h-skill-row" key={skill.id}><strong>{skill.name}</strong><div><i style={{width:`${skill.sessions?skill.score:0}%`}}/></div><b>{skill.sessions?`${Math.round(skill.score)}%`:'—'}</b></div>)}</article><article className="h-card"><h2>Recent Completed Sessions</h2>{data.recent_sessions.length?data.recent_sessions.map(item=><div className="h-session-row" key={item.id}><span>✓</span><div><strong>{item.title}</strong><small>{new Date(item.completed_at).toLocaleDateString()}</small></div><b>{Math.round(item.overall)}%</b></div>):<div className="h-empty">No completed sessions yet.</div>}</article><article className="h-card"><h2>Strengths & Focus Areas</h2><div className="h-focus good"><strong>Your Strengths</strong><div className="h-tags">{data.strengths.map(item=><span key={item.id}>{item.name}</span>)}</div></div><div className="h-focus"><strong>Focus Areas</strong><div className="h-tags">{data.focus_areas.map(item=><span key={item.id}>{item.name}</span>)}</div></div></article></section></main>
+  return <main className="page hikari-page"><header className="h-page-head"><div><h1>Progress</h1><p>Track your learning journey and see how you’re improving over time.</p></div></header><section className="h-stats"><StatCard icon="monitor" label="Practice evidence" value={data.completed_sessions?`${Math.round(data.overall)}%`:'Not assessed'}/><StatCard icon="history" label="Completed Sessions" value={data.completed_sessions}/><StatCard icon="sparkles" label="Total Practice Time" value={prettyHours(data.practice_minutes)}/><StatCard icon="history" label="Current Streak" value={`${data.current_streak} ${data.current_streak===1?'day':'days'}`}/></section><section className="h-progress-grid"><article className="h-card"><h2>Weekly Improvement</h2><p>Performance from your stored assessments.</p><ProgressChart points={data.progress_history}/></article><article className="h-card"><h2>Recorded practice evidence</h2><p>Select a skill to see its subskills. These scores describe practice in Hikari, not a certified level.</p>{data.skills.map(skill=><SkillEvidence key={skill.id} skill={skill}/>)}</article><article className="h-card h-history-card"><h2>All sessions</h2><SessionHistory rows={history}/></article><article className="h-card"><h2>Recent Completed Sessions</h2>{data.recent_sessions.length?data.recent_sessions.map(item=><div className="h-session-row" key={item.id}><span>✓</span><div><strong>{item.title}</strong><small>{new Date(item.completed_at).toLocaleDateString()}</small></div><b>{Math.round(item.overall)}%</b></div>):<div className="h-empty">No completed sessions yet.</div>}</article><article className="h-card"><h2>Strengths & Focus Areas</h2><div className="h-focus good"><strong>Your Strengths</strong><div className="h-tags">{data.strengths.map(item=><span key={item.id}>{item.name}</span>)}</div></div><div className="h-focus"><strong>Focus Areas</strong><div className="h-tags">{data.focus_areas.map(item=><span key={item.id}>{item.name}</span>)}</div></div></article></section></main>
 }
 
 function PlanPage({ data, onStart }) {
@@ -219,17 +258,17 @@ function SettingsHub({ dashboard, health, setView, onChanged }) {
   </main>
 }
 
-function ScenarioPreparation({ briefing, onBegin, onCancel, busy, documents=[], onConfigure }) {
+function ScenarioPreparation({ briefing, onBegin, onCancel, busy, documents=[], onConfigure, challenge, onChallenge }) {
   const isGroup=briefing.scenario_type==='multi_ai_roleplay'
   const learning=briefing.learning_design
   return <main className="prep-page">
-    <header className="prep-header"><button onClick={onCancel}>← Back to training</button><div><span>✦</span><strong>Hikari Training</strong></div></header>
+    <header className="prep-header"><button onClick={onCancel}>← Back to training</button><div><span aria-hidden="true">光</span><strong>Hikari Training</strong></div></header>
     <section className="prep-hero"><p className="eyebrow">SCENARIO PREPARATION</p><h1>{briefing.title}</h1><p>{briefing.description}</p><div className="prep-badges"><span>{briefing.difficulty}</span><span>{briefing.estimated_minutes} minutes</span><span>{isGroup?'Multiple AI Roleplay':'1-to-1 AI Roleplay'}</span></div><p>{briefing.adaptation_reason}</p></section>
-    <section className="prep-grid"><article><small>YOUR ROLE</small><h2>{briefing.learner_role}</h2><p>{briefing.situation}</p></article>
+    <section className="prep-grid"><article><small>YOUR ROLE</small><h2>{briefing.learner_role}</h2><p>{briefing.brief?.situation||briefing.situation}</p>{briefing.brief&&<><p><strong>Your task:</strong> {briefing.brief.task}</p><p><strong>You're done when:</strong> {briefing.brief.done_looks_like}</p></>}</article>
       <article><small>PARTICIPANTS</small><h2>{briefing.participants.length} AI {briefing.participants.length===1?'participant':'participants'}</h2><div className="prep-people">{briefing.participants.map(person=><span key={person}>● {person}</span>)}</div></article>
       <article className="prep-objectives"><small>YOUR OBJECTIVES</small><h2>What to practise</h2><ol>{briefing.objectives.map(item=><li key={item}>{item}</li>)}</ol>{briefing.previous_feedback?.map(item=><p key={item}>{item}</p>)}</article>
       <article><small>{learning?'LANGUAGE TOOLKIT':'TARGET SKILL'}</small><h2>{learning?.focus||briefing.target_skill}</h2>{learning?<><p>{learning.grammar}</p><div className="h-tags">{learning.vocabulary.map(item=><span key={item}>{item}</span>)}</div><div className="prep-models">{learning.examples.map(item=><p key={item}>“{item}”</p>)}</div></>:<div className="h-tags">{briefing.subskills.map(item=><span key={item}>{item}</span>)}</div>}<p className="prep-note">Practise the objectives with your own information. If a target is missing, the lesson continues with guidance.</p></article>
-      <article><h2>Lesson capabilities</h2>{briefing.posture_mode==='optional'?<label><input type="checkbox" checked={briefing.posture_enabled} disabled={busy} onChange={event=>onConfigure({posture_enabled:event.target.checked})}/> Optional posture assessment (camera consent required)</label>:<p>Posture assessment is not used for this lesson. Camera video alone does not affect your score.</p>}
+      <article><h2>Lesson capabilities</h2><label className="prep-challenge">How hard should the other person push?<select value={challenge} onChange={event=>onChallenge(event.target.value)}><option value="">Let Hikari choose from your last attempt</option><option value="gentle">Gentle</option><option value="balanced">Balanced</option><option value="challenging">Challenging</option></select></label>{briefing.posture_mode==='optional'?<label><input type="checkbox" checked={briefing.posture_enabled} disabled={busy} onChange={event=>onConfigure({posture_enabled:event.target.checked})}/> Optional posture assessment (camera consent required)</label>:<p>Posture assessment is not used for this lesson. Camera video alone does not affect your score.</p>}
         {briefing.knowledge_mode!=='off'&&<><h3>Company knowledge {briefing.knowledge_mode==='required'?'— required':'— optional'}</h3><p>Select the documents this attempt may use. Excerpts may be sent to your configured AI provider.</p>{documents.filter(item=>item.status==='ready').map(doc=><label className="lesson-document" key={doc.id}><input type="checkbox" checked={briefing.document_ids?.includes(doc.id)} disabled={busy} onChange={event=>onConfigure({document_ids:event.target.checked?[...(briefing.document_ids||[]),doc.id]:(briefing.document_ids||[]).filter(id=>id!==doc.id)})}/>{doc.name}</label>)}{!documents.length&&<p>Upload authorized documents from Resources before using company-knowledge training.</p>}</>}
       </article></section>
     <footer className="prep-actions"><button onClick={onCancel}>Choose another lesson</button><button className="h-primary" onClick={onBegin} disabled={busy}>{busy?'Preparing session…':'Join training session →'}</button></footer>
@@ -759,7 +798,7 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
     micVad.current?.stop();micVad.current=null
     micDenoiser.current?.destroy();micDenoiser.current=null
     micLevelGraph.current?.destroy();micLevelGraph.current=null
-    playbackContext.current?.close();playbackContext.current=null;playbackTail.current=0
+    playbackContext.current?.close().catch(()=>{});playbackContext.current=null;playbackTail.current=0
   }
   const startCall = async () => {
     if (health?.components?.stt === false) {
@@ -859,7 +898,7 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
   const aiParticipants=participants.filter(person=>person.participant_type==='ai')
   const multipleAI=aiParticipants.length>1
   const formatTime=value=>`${String(Math.floor(value/60)).padStart(2,'0')}:${String(value%60).padStart(2,'0')}`
-  const finishSession=async()=>{try{await onComplete();stopCall()}catch(error){setError(error.message)}}
+  const finishSession=async(endAttempt=false)=>{try{await onComplete(endAttempt===true);stopCall()}catch(error){setError(error.message)}}
   const leaveSession=async()=>{try{stopCall();await onCancel()}catch(error){setError(error.message)}}
   const participantTile=(person,index,isLearner=false)=><div key={person.id||`${person.display_name}-${index}`} className={`participant-tile ${!isLearner&&person.display_name===activeSpeaker&&(voiceState==='speaking'||voiceState==='streaming')?'active-speaker':''}`}>
     {isLearner&&camera?<video ref={video} autoPlay muted playsInline/>:<div className={`participant-avatar ${!isLearner&&index===0&&callActive?'pulse':''}`}><span>●</span></div>}
@@ -869,8 +908,8 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
   return <main className={`session-window ${runtime?'has-runtime':''}`}>
 
 
-    <header className="session-header"><div><h1>{session.title}</h1><p>{session.description||session.situation}</p></div><div className="session-header-actions"><div className="session-clock"><span/> <strong>{formatTime(elapsed)}</strong><small>{callActive?'In Session':'Ready'}</small></div><i/><button className="h-small" onClick={finishSession} disabled={busy||sessionProgress?.outcome!=='success'}>Finish lesson</button><button className="session-end-top" onClick={leaveSession}>☎ &nbsp; End Session</button></div></header>
-    <ConversationCoach runtime={runtime} turns={session.turns} addressed={addressed} onAddress={setAddressed} onAction={runtimeAction} busy={busy} onRetry={()=>send(runtime.latest_input,0,{},true)} onDebrief={finishSession} onPause={async()=>{if(runtime.paused){await runtimeAction('resume')}else{await interrupt(false);stopCall();await runtimeAction('pause')}}} onDelete={async()=>{stopCall();await api(`/sessions/${session.id}/conversation-data`,{method:'DELETE'});await onCancel(true)}}/>
+    <header className="session-header"><div><h1>{session.title}</h1><p>{session.description||session.situation}</p></div><div className="session-header-actions"><div className="session-clock"><span/> <strong>{formatTime(elapsed)}</strong><small>{callActive?'In Session':'Ready'}</small></div><i/>{!runtime?.scene&&<button className="h-small" onClick={()=>finishSession()} disabled={busy||sessionProgress?.outcome!=='success'}>Finish lesson</button>}<button className="session-end-top" onClick={leaveSession}>☎ &nbsp; End Session</button></div></header>
+    <ConversationCoach runtime={runtime} turns={session.turns} addressed={addressed} onAddress={setAddressed} onAction={runtimeAction} busy={busy} onRetry={()=>send(runtime.latest_input,0,{},true)} onDebrief={()=>finishSession()} onEndAttempt={()=>finishSession(true)} onPause={async()=>{if(runtime.paused){await runtimeAction('resume')}else{await interrupt(false);stopCall();await runtimeAction('pause')}}} onDelete={async()=>{stopCall();await api(`/sessions/${session.id}/conversation-data`,{method:'DELETE'});await onCancel(true)}}/>
     <div className="session-body">
       <section className="session-call-area">
         {error&&<div className="session-error" role="alert">{error}{lastCapture.current&&['error','retry'].includes(micState)&&<button onClick={downloadCapture}>Save microphone recording</button>}{callActive&&!recording&&!busy&&['error','retry'].includes(micState)&&<button onClick={()=>{setError('');beginListening.current?.()}} disabled={muted}>Retry microphone</button>}</div>}
@@ -914,8 +953,20 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
   </main>
 }
 
-function Assessment({ session, assessment, onDone }) {
-  return <main className="assessment"><div className="assessment-hero"><p className="eyebrow">SESSION COMPLETE</p><h1>{session.title}</h1><ScoreRing score={assessment.overall} size={150}/><p>{assessment.feedback}</p></div><div className="assessment-grid"><section><p className="eyebrow">RUBRIC BREAKDOWN</p>{Object.entries(assessment.scores).map(([k,v])=><div className="metric" key={k}><span>{k.replaceAll('_',' ')}</span><div><i style={{width:`${v}%`}}/></div><strong>{Math.round(v)}</strong></div>)}</section><section><p className="eyebrow">COACHING NOTES</p><h3>What worked</h3>{assessment.strengths.map(x=><p className="note good" key={x}>✓ {x}</p>)}<h3>Improve next</h3>{assessment.improvements.map(x=><p className="note improve" key={x}>↗ {x}</p>)}</section></div>{Object.keys(assessment.visual_scores||{}).length>0&&<section className="evidence"><h3>Posture indicators · separate from proficiency</h3>{Object.entries(assessment.visual_scores).map(([k,v])=><p key={k}>{k.replaceAll("_"," ")}: {v}/100</p>)}<small>{assessment.posture_sample_count} camera samples · prototype presentation indicators, not medical advice</small></section>}<section className="evidence"><p className="eyebrow">EVIDENCE</p>{assessment.evidence.map(x=><p key={x}>{x}</p>)}</section><button className="primary done" onClick={onDone}>Back to overview</button></main>
+function Reflection({ sessionId }) {
+  const [text,setText]=useState(''),[state,setState]=useState('')
+  const save=async()=>{try{setState('');await api(`/sessions/${sessionId}/actions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'reflect',request_id:crypto.randomUUID(),data:{text}})});setState('Saved.')}catch(e){setState(e.message)}}
+  return <section className="evidence reflection-box"><p className="eyebrow">YOUR REFLECTION</p><label>What would you change in your next attempt? This is optional.<textarea value={text} maxLength={2000} onChange={e=>setText(e.target.value)}/></label><button className="h-soft" disabled={!text.trim()} onClick={save}>Save reflection</button>{state&&<small role="status"> {state}</small>}</section>
+}
+
+function PostureSummary({ summary }) {
+  if(!summary)return null
+  if(!summary.available)return <section className="evidence"><h3>Posture indicators</h3><p>{summary.note}</p></section>
+  return <section className="evidence"><h3>Posture indicators · separate from proficiency</h3>{summary.indicators.map(item=><p key={item.name}><strong>{item.name.replaceAll('_',' ')}:</strong> {Math.round(item.average)}/100, in a good position {item.steady_share}% of the time{item.trend==='not enough samples'?'':`, ${item.trend} during the session`}.{item.cue?` ${item.cue}`:''}</p>)}<small>{summary.samples} camera samples. {summary.note}</small></section>
+}
+
+function Assessment({ session, assessment, onDone, onRetry }) {
+  return <main className="assessment"><div className="assessment-hero"><p className="eyebrow">SESSION COMPLETE</p><h1>{session.title}</h1><ScoreRing score={assessment.overall} size={150}/><p>{assessment.feedback}</p></div><div className="assessment-grid"><section><p className="eyebrow">RUBRIC BREAKDOWN</p>{Object.entries(assessment.scores).map(([k,v])=><div className="metric" key={k}><span>{k.replaceAll('_',' ')}</span><div><i style={{width:`${v}%`}}/></div><strong>{Math.round(v)}</strong></div>)}</section><section><p className="eyebrow">COACHING NOTES</p>{assessment.strengths.length>0&&<h3>What worked</h3>}{assessment.strengths.map(x=><p className="note good" key={x}>✓ {x}</p>)}<h3>Improve next</h3>{assessment.improvements.map(x=><p className="note improve" key={x}>↗ {x}</p>)}</section></div><PostureSummary summary={assessment.posture_summary}/>{assessment.speech_signal&&<section className="evidence"><h3>Speech recognition signal</h3><p>Average recognizer confidence across {assessment.speech_signal.turns} voice turns: {assessment.speech_signal.average}.</p><small>{assessment.speech_signal.note}</small></section>}<section className="evidence"><p className="eyebrow">EVIDENCE</p>{assessment.evidence.map(x=><p key={x}>{x}</p>)}</section><Reflection sessionId={session.id}/><div className="assessment-actions"><button className="h-soft" onClick={onRetry}>Try a new case of this lesson</button><button className="primary done" onClick={onDone}>Back to overview</button></div></main>
 }
 
 function History({ rows }) { return <main className="page"><header className="page-head compact"><div><p className="eyebrow">YOUR RECORD</p><h1>Training history</h1><p>Review completed and in-progress practice sessions.</p></div></header><div className="history-table"><div className="table-head"><span>Scenario</span><span>Difficulty</span><span>Status</span><span>Score</span></div>{rows.length?rows.map(r=><div className="table-row" key={r.id}><span><strong>{r.title}</strong><small>{r.skill_id.replaceAll('-',' ')}</small></span><span>{r.difficulty}</span><span><i className={r.status}/>{r.status}</span><b>{r.overall?Math.round(r.overall):'—'}</b></div>):<div className="empty-panel">No sessions yet. Start a roleplay to build your history.</div>}</div></main> }
@@ -1519,19 +1570,22 @@ export default function App(){
   useEffect(()=>{api('/auth/me').then(async result=>{setAccount(result.user);await load()}).catch(e=>{if(e.status===401)setAccount(null);else{setAccount(null);setError(e.message)}})},[load])
   const authenticated=async user=>{setAccount(user);await load()}
   const logout=async()=>{await api('/auth/logout',{method:'POST'}).catch(()=>{});setAccount(null);setDashboard(null);setSession(null);setPreparation(null);setAssessment(null);setView('home')}
+  const [challenge,setChallenge]=useState('')
   const start=async(skillId,difficulty='intermediate',activityId=null,options={})=>{try{setError('');const preview=await api('/scenarios/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({skill_id:skillId,difficulty,activity_id:activityId,...options})});setPreparation(preview)}catch(e){setError(e.message)}}
-  const beginSession=async()=>{try{setStarting(true);setError('');const s=await api('/sessions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({skill_id:preparation.skill_id,difficulty:preparation.difficulty,activity_id:preparation.activity_id,preview_id:preparation.preview_id})});setSession(s);setPreparation(null);setAssessment(null)}catch(e){setError(e.message)}finally{setStarting(false)}}
+  const beginSession=async()=>{try{setStarting(true);setError('');const s=await api('/sessions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({skill_id:preparation.skill_id,difficulty:preparation.difficulty,activity_id:preparation.activity_id,preview_id:preparation.preview_id})});
+    if(challenge&&s.runtime){const out=await api(`/sessions/${s.id}/actions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'preferences',request_id:crypto.randomUUID(),data:{intensity:challenge,challenge:{gentle:'beginner',balanced:'intermediate',challenging:'advanced'}[challenge]}})});s.runtime=out.runtime}
+    setChallenge('');setSession(s);setPreparation(null);setAssessment(null)}catch(e){setError(e.message)}finally{setStarting(false)}}
   const resumeSession=async id=>{
     const saved=await api(`/sessions/${id}`)
     if(saved.runtime?.paused)await api(`/sessions/${id}/actions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'resume',request_id:crypto.randomUUID()})})
     setSession(await api(`/sessions/${id}`));setAssessment(null);setError('')
   }
-  const complete=async()=>{try{const a=await api(`/sessions/${session.id}/complete`,{method:'POST'});setAssessment(a);await load()}catch(e){setError(e.message);throw e}}
+  const complete=async(endAttempt=false)=>{try{const a=await api(`/sessions/${session.id}/complete${endAttempt?'?end_attempt=true':''}`,{method:'POST'});setAssessment(a);await load()}catch(e){setError(e.message);throw e}}
   if(account===undefined)return <Loading/>
   if(!account)return <AuthScreen onAuthenticated={authenticated}/>
   if(privacyAccount!==account.id&&localStorage.getItem(`hikari-privacy-v1-${account.id}`)!=='accepted')return <main className="auth-page"><section className="auth-panel"><div className="auth-card"><h2>Before you start training</h2><p>Your transcript, AI responses, assessments and progress are saved in your local Hikari database. Organization documents are shared only within that organization.</p><p>The configured AI provider may receive your conversation and relevant excerpts from uploaded documents. Do not share passwords or confidential data without your organization’s permission. Microphone and camera access are optional browser permissions; pose analysis runs locally.</p><p>Scores are prototype estimates, not certified language proficiency or medical posture advice.</p><button className="h-primary" onClick={()=>{localStorage.setItem(`hikari-privacy-v1-${account.id}`,'accepted');setPrivacyAccount(account.id)}}>I understand — continue</button><button className="h-small" onClick={logout}>Sign out</button></div></section></main>
-  if(session&&assessment)return <Assessment session={session} assessment={assessment} onDone={()=>{setSession(null);setAssessment(null);setView('home')}}/>
+  if(session&&assessment)return <Assessment session={session} assessment={assessment} onRetry={async()=>{const {skill_id,difficulty,activity_id}=session;setSession(null);setAssessment(null);await start(skill_id,difficulty,activity_id)}} onDone={()=>{setSession(null);setAssessment(null);setView('home')}}/>
   if(session)return <><Roleplay session={session} setSession={setSession} onComplete={complete} onCancel={async(deleted=false)=>{if(!deleted&&session.runtime)await api(`/sessions/${session.id}/actions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'pause',request_id:crypto.randomUUID()})});else if(!deleted)await api(`/sessions/${session.id}/cancel`,{method:'POST'});setSession(null);setAssessment(null);await load()}} health={health} userSettings={userSettings} onOpenSettings={()=>setSettingsModal(true)}/><SettingsModal isOpen={settingsModal} onClose={()=>setSettingsModal(false)} onChanged={load}/></>
-  if(preparation)return <><ScenarioPreparation briefing={preparation} documents={docs} onConfigure={options=>start(preparation.skill_id,preparation.difficulty,preparation.activity_id,{preview_id:preparation.preview_id,document_ids:preparation.document_ids,posture_enabled:preparation.posture_enabled,...options})} onBegin={beginSession} onCancel={()=>setPreparation(null)} busy={starting}/>{error&&<div className="global-error" role="alert">{error}</div>}</>
-  return <div className="app-shell"><Sidebar view={view} setView={setView} health={health} user={dashboard?.user||account} onLogout={logout}/><div className="content">{error&&<div className="global-error">{error}</div>}{view==='home'&&<HomePage data={dashboard} onStart={start} setView={setView} savedLessons={<SavedLessons lessons={history} skills={skills} onResume={resumeSession}/>}/>} {view==='training'&&<TrainingPage activities={activities} onStart={start}/>} {view==='progress'&&<ProgressPage data={dashboard}/>} {view==='plan'&&<PlanPage data={dashboard} onStart={start}/>} {view==='resources'&&<ResourcesPage resources={resources} docs={docs} reload={load}/>} {view==='monitor'&&<Monitor/>} {view==='settings'&&<SettingsHub dashboard={dashboard} health={health} setView={setView} onChanged={load}/>}{view==='settings'&&account.is_admin&&<Administration request={api}/>}</div><SettingsModal isOpen={settingsModal} onClose={()=>setSettingsModal(false)} onChanged={load}/></div>
+  if(preparation)return <><ScenarioPreparation briefing={preparation} documents={docs} onConfigure={options=>start(preparation.skill_id,preparation.difficulty,preparation.activity_id,{preview_id:preparation.preview_id,document_ids:preparation.document_ids,posture_enabled:preparation.posture_enabled,...options})} challenge={challenge} onChallenge={setChallenge} onBegin={beginSession} onCancel={()=>setPreparation(null)} busy={starting}/>{error&&<div className="global-error" role="alert">{error}</div>}</>
+  return <div className="app-shell"><Sidebar view={view} setView={setView} health={health} user={dashboard?.user||account} onLogout={logout}/><div className="content">{error&&<div className="global-error">{error}</div>}{view==='home'&&<HomePage data={dashboard} onStart={start} setView={setView} savedLessons={<SavedLessons lessons={history} skills={skills} onResume={resumeSession}/>}/>} {view==='path'&&<LearningPath request={api} onStart={start}/>} {view==='training'&&<TrainingPage activities={activities} onStart={start}/>} {view==='progress'&&<ProgressPage data={dashboard} history={history}/>} {view==='plan'&&<PlanPage data={dashboard} onStart={start}/>} {view==='resources'&&<ResourcesPage resources={resources} docs={docs} reload={load}/>} {view==='monitor'&&<Monitor/>} {view==='settings'&&<SettingsHub dashboard={dashboard} health={health} setView={setView} onChanged={load}/>}{view==='settings'&&<GoalsPanel request={api} onChanged={load}/>}{view==='settings'&&<TeamPanel request={api}/>}{view==='settings'&&account.is_admin&&<Administration request={api}/>}</div><SettingsModal isOpen={settingsModal} onClose={()=>setSettingsModal(false)} onChanged={load}/></div>
 }

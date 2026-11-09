@@ -1,0 +1,95 @@
+{
+  "archetype": "panel",
+  "level": "intermediate",
+  "setting": "A fictional five-minute briefing to a decision-making panel at a mid-sized company.",
+  "presentation": {
+    "situation": "Brief a panel on {{proposal}}. The figures you may use: {{evidence}}. Limitation: {{limit}}. Make a clear request, support it with evidence, and answer challenges. Speak as you would to the real panel.",
+    "opening": "Thanks for coming. We have a few minutes, and we need to decide on {{proposal}}. Go ahead when you're ready.",
+    "opening_speaker": "p1",
+    "learner_role": "Presenter"
+  },
+  "brief": {
+    "you_are": "You are presenting to a decision-making panel.",
+    "situation": "You want the panel to approve {{proposal}}. Your evidence: {{evidence}}. An honest limitation: {{limit}}.",
+    "task": "Say what you recommend early, give your evidence, be honest about the limitation, answer questions, and ask for a decision.",
+    "done_looks_like": "The panel knows what you want them to decide and why, and you have answered at least one challenge with evidence."
+  },
+  "participants": [
+    {"id": "p0", "name": "You", "role": "Presenter", "kind": "learner", "team": "learner", "relationship": "Presenting a proposal to the panel", "goals": ["Get a clear decision from the panel"], "voice_index": 0},
+    {
+      "id": "p1", "name": "Farah", "role": "Panel chair", "kind": "ai", "team": "opponent", "relationship": "Chairs the decision panel", "can_finalize": true, "authority": "Makes the final decision", "voice_index": 0,
+      "topics": ["decision", "recommend", "approve", "time", "why"],
+      "card": {
+        "want": "A clear recommendation early, and a decision made in the time available.",
+        "attitude": "Busy, fair and impatient with long introductions.",
+        "speech": "Brisk professional English. Asks direct questions.",
+        "tactics": ["Ask 'what are you asking us to do?' if no recommendation arrives early", "Ask for the decision needed at the end"],
+        "pressure": {"gentle": "Patient and encouraging.", "balanced": "Interrupts once if it takes too long.", "challenging": "Interrupts politely and asks for the bottom line."}
+      }
+    },
+    {
+      "id": "p2", "name": "Marcus", "role": "Finance lead", "kind": "ai", "team": "opponent", "relationship": "Reviews the cost of proposals for the panel", "voice_index": 1,
+      "topics": ["cost", "budget", "money", "evidence", "data", "risk", "price"],
+      "card": {
+        "want": "To know whether the evidence justifies the cost, and what happens if it fails.",
+        "attitude": "Sceptical, precise, not unfriendly.",
+        "speech": "Measured, precise English. Asks about evidence and alternatives.",
+        "tactics": ["Ask how strong the evidence is", "Ask what the alternative would be"],
+        "pressure": {"gentle": "One gentle question on evidence.", "balanced": "Challenges the weakest claim.", "challenging": "Presses until the limitation is admitted."}
+      }
+    }
+  ],
+  "ledger": [
+    {"id": "f1", "text": "The proposal is {{proposal}}."},
+    {"id": "f2", "text": "The evidence available is: {{evidence}}."},
+    {"id": "f3", "text": "A known limitation is: {{limit}}."},
+    {"id": "f4", "owner": "p2", "text": "The cost is {{cost}}."},
+    {"id": "f5", "owner": "p1", "text": "The panel has one more item after this one, so it needs to finish soon."}
+  ],
+  "objectives": [
+    {"id": "o1", "description": "State the recommendation early and clearly", "evidence": "The learner says near the start what they want the panel to approve.", "alternatives": ["I'm recommending we renew the pilot for three more months"]},
+    {"id": "o2", "description": "Support the case with evidence", "evidence": "The learner uses the supplied evidence, and honestly acknowledges the limitation when relevant.", "alternatives": ["Response times fell, although we only have one quarter of data"]},
+    {"id": "o3", "description": "Answer a challenge and request a decision", "evidence": "The learner answers a panel challenge directly and asks for a specific decision.", "alternatives": ["I understand the cost concern. I'm asking you to approve the next phase today"]}
+  ],
+  "examples": ["I recommend ...", "The evidence shows ..., although ...", "I'm asking you to approve ... today."],
+  "prerequisites": ["Read your evidence and limitation in the briefing."],
+  "beats": [
+    {
+      "id": "recommend", "goal": "Get to the recommendation early.", "driver": "p1", "objectives": ["o1"],
+      "signals": ["\\b(?:i recommend|my recommendation|i(?:'m| am) (?:recommending|proposing|asking)|we should|i propose|my proposal)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["Before the detail, what are you actually asking us to do?", "What's the bottom line?"],
+      "orient": "You're presenting to us, and we need to make a decision. Start by telling us what you recommend, in one sentence.",
+      "fallback": ["What are you asking us to do?", "What's your recommendation?"]
+    },
+    {
+      "id": "evidence", "goal": "Test how strong the evidence is.", "driver": "p2", "objectives": ["o2"],
+      "signals": ["\\b(?:evidence|data|shows|results?|measured|fell|rose|although|limitation|however|only have)\\b"],
+      "stall_turns": 3,
+      "opportunity": ["What's the evidence that this works?", "How confident are you in those figures?"],
+      "orient": "We need your reasons. Tell us your evidence from the briefing, and one honest limitation.",
+      "fallback": ["What evidence do you have for that?", "How strong is that evidence?"]
+    },
+    {
+      "id": "decide", "goal": "Answer the hardest challenge and ask for the decision.", "driver": "p1", "objectives": ["o3"],
+      "signals": ["\\b(?:approve|asking you to|decision|i understand|that concern|sign off|today)\\b"],
+      "stall_turns": 3,
+      "second_speaker": "p2",
+      "second_line": "That cost is hard to justify on one set of results. What would you say to that?",
+      "opportunity": ["So what exactly do you need from us today?", "What are we deciding, specifically?"],
+      "orient": "To finish, answer the cost question and ask us for one specific decision. You could say: I'm asking you to approve this today.",
+      "fallback": ["What exactly do you need from us today?", "What are we deciding?"]
+    }
+  ],
+  "closing_line": "Thank you. That's clear, and we can take it from here.",
+  "expert_notes": {
+    "o1": {"good": "The recommendation comes first, so everything after it is understood as support.", "common_mistakes": ["A long history before the point", "Never actually asking for anything"], "micro_lesson": "Say what you want first. Decision-makers listen differently once they know the ask.", "model": "I'm recommending we renew the pilot for three more months.", "smaller_step": "Finish this sentence: I recommend ...", "subskills": ["structure"]},
+    "o2": {"good": "Using the evidence you have and admitting its limit. Honesty makes the rest more believable.", "common_mistakes": ["Inventing figures", "Hiding the weak point until asked"], "micro_lesson": "Name your weakest point before they do. It builds trust.", "model": "Response times fell over the pilot, although we only have one quarter of data.", "smaller_step": "Say one piece of evidence from your briefing.", "subskills": ["structure"]},
+    "o3": {"good": "Taking the objection seriously, answering it, then asking for one clear decision.", "common_mistakes": ["Getting defensive", "Ending without asking for a decision"], "micro_lesson": "Answer the objection first, then finish with the exact decision you need.", "model": "I understand the cost concern. That's why I'm asking for three months, not a year. Can you approve that today?", "smaller_step": "Say the one decision you need from them.", "subskills": ["audience focus"]}
+  },
+  "variants": [
+    {"proposal": "renewing the customer support pilot for three more months", "evidence": "average first response time fell from 9 hours to 5 hours during the pilot", "limit": "there is only one quarter of data", "cost": "USD 18000 for three months"},
+    {"proposal": "a trial of a new shift scheduling system in one department", "evidence": "scheduling errors in the current system caused 14 missed shifts last quarter", "limit": "the new system has not been tested with night shifts", "cost": "USD 6000 for the trial"},
+    {"proposal": "extra stock-checking staff for the busy season", "evidence": "stock errors rose from 2 percent to 5 percent during last year's busy season", "limit": "the staff cost has only been estimated", "cost": "about USD 12000 for the season"}
+  ]
+}

@@ -1,0 +1,236 @@
+{
+  "archetype": "social",
+  "level": "beginner",
+  "setting": "A fictional relaxed conversation over tea with a friendly person from the neighbourhood.",
+  "presentation": {
+    "situation": "You are having tea with {{name}}, who {{about}}. Keep the conversation going for a few minutes. If you do not understand something, ask.",
+    "opening": "Hello! Let me get us some tea. How has your day been so far?",
+    "opening_speaker": "p1",
+    "learner_role": "Conversation partner"
+  },
+  "brief": {
+    "you_are": "You are having tea and a chat with someone new.",
+    "situation": "You are having tea with {{name}}, who {{about}}. Keep the conversation going for a few minutes. If you do not understand something, ask.",
+    "task": "Answer in full sentences, ask for clarification at least once if you need it, and give a reason with because or more detail.",
+    "done_looks_like": "You kept the conversation going with full answers, at least one question, and at least one reason."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Conversation partner",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are having tea and a chat with someone new.",
+      "goals": [
+        "Answer in full sentences, ask for clarification at least once if you need it, and give a reason with because or more detail."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Conversation partner",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Lives nearby",
+      "voice_index": 0,
+      "topics": [
+        "day",
+        "work",
+        "family",
+        "tea",
+        "hobby"
+      ],
+      "card": {
+        "want": "To have a friendly chat and hear about you.",
+        "hidden_need": "",
+        "attitude": "Warm, relaxed and talkative.",
+        "speech": "Simple everyday English, sometimes with one less common word so you can practise asking about it.",
+        "tactics": [
+          "Use one slightly harder word, so the learner can ask about it",
+          "Ask follow-up questions"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "You are having tea together."
+    },
+    {
+      "id": "f2",
+      "text": "{{name}} {{about}}.",
+      "owner": "p1"
+    },
+    {
+      "id": "f3",
+      "text": "{{name}} has a {{hobby}}.",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Keep the exchange going",
+      "evidence": "The learner gives a complete answer of their own.",
+      "alternatives": [
+        "I was busy today because I had two classes."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Ask for clarification when needed",
+      "evidence": "The learner asks a question or asks for clarification.",
+      "alternatives": [
+        "What do you mean? Could you say that again?"
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Use complete simple sentences",
+      "evidence": "The learner extends an answer with a reason or extra detail.",
+      "alternatives": [
+        "I like it because I can relax."
+      ]
+    }
+  ],
+  "examples": [
+    "Could you say that again?",
+    "That sounds …",
+    "What about you?"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Hear about the learner in full sentences.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:i am|i'm|i was|i like|i think|my)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So what did you do today?",
+        "Tell me about your day."
+      ],
+      "orient": "We are just chatting. Tell me one thing about your day. Use a full sentence.",
+      "fallback": [
+        "Tell me about your day.",
+        "So what did you do today?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Hear a question or clarification.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:what about you|could you|what do you mean|again)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "I love my hobby, it is quite absorbing. What about you?",
+        "Is there anything you want to ask me?"
+      ],
+      "orient": "If you do not understand me, you can say: What do you mean? Or ask me something about my day.",
+      "fallback": [
+        "Is there anything you want to ask me?",
+        "I love my hobby, it is quite absorbing. What about you?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Hear more detail.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\bbecause\\b",
+        "\\band then\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Why do you say that?",
+        "Tell me a bit more about that."
+      ],
+      "orient": "Tell me a little more. Use the word because.",
+      "fallback": [
+        "Tell me a bit more about that.",
+        "Why do you say that?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "That was lovely. Thank you for the chat!",
+  "expert_notes": {
+    "o1": {
+      "good": "Full sentences give the other person more to talk about.",
+      "common_mistakes": [
+        "One-word answers"
+      ],
+      "micro_lesson": "Say a full sentence: I was, I am, or I like.",
+      "model": "I was busy today. I had two classes.",
+      "smaller_step": "Say: Today I was.",
+      "subskills": [
+        "grammar"
+      ]
+    },
+    "o2": {
+      "good": "Asking when you do not understand is a real skill, not a mistake.",
+      "common_mistakes": [
+        "Pretending to understand"
+      ],
+      "micro_lesson": "Say: Could you say that again? or: What do you mean?",
+      "model": "Sorry, what does absorbing mean?",
+      "smaller_step": "Say: What do you mean?",
+      "subskills": [
+        "comprehension"
+      ]
+    },
+    "o3": {
+      "good": "Adding because turns a short answer into a real conversation.",
+      "common_mistakes": [
+        "Stopping after one sentence"
+      ],
+      "micro_lesson": "Add because, or add: and then.",
+      "model": "I like it because I can relax after work.",
+      "smaller_step": "Say: because.",
+      "subskills": [
+        "vocabulary"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Mrs Khan",
+      "about": "retired last year and lives two streets away",
+      "hobby": "small garden"
+    },
+    {
+      "name": "Daniel",
+      "about": "just moved here for a new job",
+      "hobby": "collection of old radios"
+    }
+  ]
+}

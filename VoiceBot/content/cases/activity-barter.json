@@ -1,0 +1,81 @@
+{
+  "archetype": "negotiation",
+  "level": "intermediate",
+  "setting": "A fictional conversation between two small local businesses about swapping services instead of paying cash.",
+  "presentation": {
+    "situation": "You run {{yours}}. You need {{you_need}}, but cash is short. {{name}} runs {{theirs}} and needs {{they_need}}. Work out whether a fair swap is possible, and agree exactly who does what and when. All details are fictional.",
+    "opening": "Thanks for coming over. You said you might want to do a swap rather than pay cash. What did you have in mind?",
+    "opening_speaker": "p1",
+    "learner_role": "Small business owner"
+  },
+  "brief": {
+    "you_are": "You run {{yours}}.",
+    "situation": "You need {{you_need}}, normally worth about {{value_you}}. You could offer {{you_offer}}, normally worth about {{value_them}}. {{name}} runs {{theirs}}.",
+    "task": "Find out what {{name}} really needs, propose a swap with a reason it is fair, and agree the amounts, the dates and who goes first. Walk away politely if it is not worth it.",
+    "done_looks_like": "You both know exactly what each side provides, how much, by when, and who goes first. Or you have politely decided not to swap."
+  },
+  "participants": [
+    {"id": "p0", "name": "You", "role": "Small business owner", "kind": "learner", "team": "learner", "relationship": "Proposing a swap of services", "can_finalize": true, "goals": ["Reach a fair, clear swap, or decline"], "voice_index": 0},
+    {
+      "id": "p1", "name": "{{name}}", "role": "Small business owner", "kind": "ai", "team": "opponent", "relationship": "Runs a nearby small business", "can_finalize": true, "voice_index": 0,
+      "topics": ["swap", "exchange", "worth", "value", "when", "first"],
+      "card": {
+        "want": "A swap that is fair in value, and doesn't leave you doing your part with nothing in return.",
+        "hidden_need": "{{hidden}}",
+        "attitude": "Friendly, practical and careful about being left out of pocket.",
+        "speech": "Plain, friendly business English.",
+        "tactics": ["Ask how they worked out that it is fair", "Ask who goes first", "Ask to get vague amounts pinned down"],
+        "pressure": {"gentle": "Open to the first reasonable idea.", "balanced": "Asks for one improvement.", "challenging": "Questions the value of what is offered, and asks for more."}
+      }
+    }
+  ],
+  "ledger": [
+    {"id": "f1", "text": "{{name}} runs {{theirs}} and needs {{they_need}}."},
+    {"id": "f2", "text": "Both businesses are short of cash this month, and all details are fictional."},
+    {"id": "f3", "owner": "p1", "text": "{{name}} could provide {{you_need}}, normally worth about {{value_you}}."},
+    {"id": "f4", "owner": "p1", "text": "{{hidden}}", "available_from": "bargain"}
+  ],
+  "objectives": [
+    {"id": "o1", "description": "Discover what the other side really values", "evidence": "The learner asks a question that reveals what the other business needs or why.", "alternatives": ["What would actually help your business most this month?"]},
+    {"id": "o2", "description": "Propose a swap with a fair-value reason", "evidence": "The learner proposes a specific exchange and gives a reason it is fair.", "alternatives": ["If I do your logo, which usually costs about the same as your photo shoot, would that be even?"]},
+    {"id": "o3", "description": "Agree clear terms, or decline politely", "evidence": "The learner confirms what each side provides, when, and who goes first, or politely declines with a reason.", "alternatives": ["So I deliver by Friday, you shoot the following Monday"]}
+  ],
+  "examples": ["What would help your business most right now?", "If I ..., could you ...? It seems fair because ...", "So to confirm: I'll ... by ..., and you'll ... by ..."],
+  "prerequisites": ["Decide what you could offer before you begin."],
+  "beats": [
+    {
+      "id": "explore", "goal": "Find out what each side actually needs.", "driver": "p1", "objectives": ["o1"],
+      "signals": ["\\b(?:what (?:do|would) you|what would help|what do you need|what matters|why do you|your business|most useful)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["Before we talk about a swap, have you asked what I actually need?", "What makes you think I'd want that?"],
+      "orient": "We're two small businesses thinking about swapping services rather than paying cash. Start by asking what I need.",
+      "fallback": ["What do you know about what I need?", "What did you have in mind?"]
+    },
+    {
+      "id": "bargain", "goal": "Reach a swap both sides find fair.", "driver": "p1", "objectives": ["o2"],
+      "signals": ["\\b(?:if i|if you|in exchange|in return|swap|trade|fair|worth|same value|even)\\b"],
+      "stall_turns": 3,
+      "opportunity": ["How did you work out that it's fair?", "So what exactly would you give me, and how much of it?"],
+      "orient": "Now propose the swap. Say what you'd give, what you'd get, and why that is fair for both of us.",
+      "fallback": ["How is that fair for both of us?", "What exactly are you offering?"]
+    },
+    {
+      "id": "close", "goal": "Pin down amounts, dates and who goes first.", "driver": "p1", "objectives": ["o3"],
+      "signals": ["\\b(?:to confirm|so i(?:'ll| will)|by (?:friday|monday|tuesday|wednesday|thursday|next|the end)|first|agreed|we agree|no thanks|not worth|decline|pass on)\\b"],
+      "stall_turns": 3,
+      "opportunity": ["And who goes first? I don't want to do my part and then hear nothing.", "Can we say exactly who does what, and by when?"],
+      "orient": "We need the details now: what each of us does, by when, and who goes first. Or tell me politely that you'd rather not.",
+      "fallback": ["Who goes first?", "Exactly who does what, and by when?"]
+    }
+  ],
+  "closing_line": "Good, that's clear for both of us. Thanks.",
+  "expert_notes": {
+    "o1": {"good": "Asking what they really need, because a swap only works when each side gets something it values.", "common_mistakes": ["Pitching what you want to give", "Assuming cash value is all that matters"], "micro_lesson": "A swap works when each side gets what it values. So ask first.", "model": "What would actually help your business most this month?", "smaller_step": "Ask one question about what they need.", "subskills": ["discovery"]},
+    "o2": {"good": "A specific exchange with a reason that it is even, using comparable value.", "common_mistakes": ["A vague 'help each other out'", "Giving your work free and hoping for a return"], "micro_lesson": "Be specific about the swap, and say why you think it's even.", "model": "If I design your menu, could you photograph our shop? They're worth about the same.", "smaller_step": "Say one thing you would give, and one thing you'd want.", "subskills": ["trade-offs"]},
+    "o3": {"good": "Saying what each side provides, by when, and who goes first, because nothing is written down.", "common_mistakes": ["A handshake with no dates", "Going first with nothing agreed"], "micro_lesson": "With no invoice, the details are your protection. Say who, what, when, and who goes first.", "model": "So I'll deliver the design by Friday, and you'll do the photos the following Monday.", "smaller_step": "Say who should go first.", "subskills": ["closing"]}
+  },
+  "variants": [
+    {"name": "Tariq", "yours": "a small graphic design studio", "theirs": "a family print shop", "you_need": "500 printed brochures", "they_need": "a new shop logo", "you_offer": "a logo design", "value_you": "USD 300", "value_them": "USD 400", "hidden": "Business cards are also badly needed for a trade fair next month, and those matter more than the logo itself."},
+    {"name": "Mei", "yours": "a small bakery", "theirs": "a local photography business", "you_need": "photos for your website", "they_need": "catering for a client event", "you_offer": "catering for 30 people", "value_you": "USD 250", "value_them": "USD 300", "hidden": "The client event is the most important booking of the year, so reliable delivery matters more than the menu."}
+  ]
+}

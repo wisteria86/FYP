@@ -33,6 +33,10 @@ class Config:
     LLM_API_KEY = os.getenv("LLM_API_KEY", "your-default-key-here")
     LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "qwen/qwen3.8-27b")
     LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1") # GroqCloud base URL
+    # Optional. Live testing found the cheap model misread turns, so scenes read turns locally by default.
+    # Review awards credit: check any change with scripts/conversation_eval/review_calibration.py.
+    LLM_ROUTER_MODEL = os.getenv("LLM_ROUTER_MODEL", "")
+    LLM_REVIEW_MODEL = os.getenv("LLM_REVIEW_MODEL", LLM_MODEL_NAME)
 
     # Whisper Settings
     STT_ENGINE = os.getenv('STT_ENGINE', 'auto').lower()

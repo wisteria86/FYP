@@ -156,7 +156,7 @@ class TrainingServiceTests(unittest.TestCase):
         activities = self.service.activities()
         resources = self.service.resources()
         dashboard = self.service.dashboard()
-        self.assertEqual(len(activities), 42)
+        self.assertEqual(len(activities), 46)
         english = [item for item in activities if item["training_language"] == "English"]
         self.assertEqual(len(english), 30)
         self.assertEqual([item["sequence_number"] for item in english], list(range(1, 31)))

@@ -1,7 +1,7 @@
 import {useEffect,useRef,useState} from 'react'
 import './ConversationCoach.css'
 
-export default function ConversationCoach({runtime,turns,onAction,onAddress,addressed,onDebrief,onPause,onDelete,onRetry,busy}){
+export default function ConversationCoach({runtime,turns,onAction,onAddress,addressed,onDebrief,onEndAttempt,onPause,onDelete,onRetry,busy}){
   const [open,setOpen]=useState(false),[error,setError]=useState(''),[correction,setCorrection]=useState(''),[turnId,setTurnId]=useState('')
   const [reflection,setReflection]=useState(runtime?.reflection||'')
   const [clock,setClock]=useState(Date.now())
@@ -39,7 +39,10 @@ export default function ConversationCoach({runtime,turns,onAction,onAddress,addr
     <div className="runtime-toolbar"><label>Speaking to <select value={addressed} onChange={e=>onAddress(e.target.value)}><option value="">Open floor</option>{people.map(p=><option key={p.id} value={p.id}>{p.name} · {p.role}</option>)}</select></label>
       <button onClick={()=>{setOpen(true);perform('coach')}}>Ask coach</button><button ref={trigger} onClick={()=>setOpen(true)} aria-expanded={open} aria-controls="lesson-support-drawer">Lesson support{last&&<span className="coach-unread" aria-label="Coach feedback available"/>}</button>
       <button onClick={onPause}>{runtime.paused?'Resume lesson':'Pause lesson'}</button>
+      {runtime.scene&&!runtime.completed&&<button disabled={busy} onClick={onEndAttempt}>Finish and get feedback</button>}
     </div>
+    {runtime.definition.brief&&<details className="task-brief"><summary>Your task</summary><p><strong>{runtime.definition.brief.you_are}</strong> {runtime.definition.brief.situation}</p><p>{runtime.definition.brief.task}</p><p><strong>You're done when:</strong> {runtime.definition.brief.done_looks_like}</p></details>}
+    {last?.inline&&<div className="coach-inline" role="status" lang={runtime.preferences.coach_language==='Urdu'?'ur':'en'} dir={runtime.preferences.coach_language==='Urdu'?'rtl':'ltr'}><strong>Coach</strong><span>{last.text}</span></div>}
     {runtime.provider_status?.available===false&&<div className="runtime-notice" role="status"><span>{runtime.provider_status.reason}</span>{runtime.failed_turn_id&&<button disabled={busy||retrySeconds>0} onClick={onRetry}>{busy?'Retrying…':retrySeconds>0?`Retry in ${retrySeconds}s`:'Retry response'}</button>}</div>}
     {runtime.completed&&!runtime.extra_practice&&<div className="lesson-closure" role="status"><strong>You demonstrated the lesson objectives.</strong><p>Finish the exchange at your pace. This records today’s achievement, not permanent mastery.</p><button onClick={onDebrief}>View debrief</button><button onClick={()=>perform('extra_practice')}>Keep practising</button></div>}
     {open&&<div className="coach-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)setOpen(false)}}>

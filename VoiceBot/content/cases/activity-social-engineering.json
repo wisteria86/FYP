@@ -1,0 +1,242 @@
+{
+  "archetype": "colleague",
+  "level": "intermediate",
+  "setting": "A fictional unexpected phone call at work, as a practice exercise in spotting manipulation.",
+  "presentation": {
+    "situation": "An unknown caller, {{name}}, says they are {{claim}}, and urgently wants {{asks}}. This is a simulation. Spot the warning signs, verify using an approved channel, and report it.",
+    "opening": "Hi, this is {{name}}, {{claim}}. This is urgent. I need {{asks}} right now, or {{threat}}.",
+    "opening_speaker": "p1",
+    "learner_role": "Employee"
+  },
+  "brief": {
+    "you_are": "You are an employee who gets a suspicious phone call.",
+    "situation": "An unknown caller, {{name}}, says they are {{claim}}, and urgently wants {{asks}}. This is a simulation. Spot the warning signs, verify using an approved channel, and report it.",
+    "task": "Recognize the warning signs, refuse politely and verify through an approved channel, and say you will report it.",
+    "done_looks_like": "You gave nothing away, you verified through a proper channel, and you said you will report it."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Employee",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are an employee who gets a suspicious phone call.",
+      "goals": [
+        "Recognize the warning signs, refuse politely and verify through an approved channel, and say you will report it."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Caller",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Claims to be {{claim}}; this is a practice simulation",
+      "voice_index": 0,
+      "topics": [
+        "urgent",
+        "password",
+        "manager",
+        "system",
+        "bank"
+      ],
+      "card": {
+        "want": "To get {{asks}} by creating pressure.",
+        "hidden_need": "",
+        "attitude": "Friendly, then urgent, then a little annoyed. Never abusive.",
+        "speech": "Confident, plausible, hurried business English.",
+        "tactics": [
+          "Create urgency",
+          "Name-drop a senior person",
+          "Say the usual checks have been waived"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "This is a simulation about a suspicious caller."
+    },
+    {
+      "id": "f2",
+      "text": "The caller claims to be {{claim}} and asks for {{asks}}."
+    },
+    {
+      "id": "f3",
+      "text": "The company's rule: never share {{asks}} by phone, and verify through {{channel}}."
+    },
+    {
+      "id": "f4",
+      "text": "Suspicious calls are reported to the security team."
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Recognize the warning signs",
+      "evidence": "The learner recognizes or names something suspicious.",
+      "alternatives": [
+        "This seems unusual. I can't share that by phone."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Verify through an approved channel",
+      "evidence": "The learner insists on verifying through an approved channel.",
+      "alternatives": [
+        "I'll verify this with {{channel}} first."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Report the incident",
+      "evidence": "The learner says they will report the call.",
+      "alternatives": [
+        "I'm going to report this call to our security team."
+      ]
+    }
+  ],
+  "examples": [
+    "This seems unusual, and I can't share that by phone.",
+    "I'll verify this with {{channel}} first.",
+    "I'm going to report this call to our security team."
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "See whether the warning signs are noticed.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:suspicious|unusual|can'?t share|cannot share|not able to|won'?t|urgent|phishing|not allowed|don'?t share|strange)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Come on, this is really urgent.",
+        "Your manager already approved this."
+      ],
+      "orient": "This is a practice exercise. I'm a suspicious caller. Tell me you can't share that, or say what seems wrong.",
+      "fallback": [
+        "Your manager already approved this.",
+        "Come on, this is really urgent.",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "See whether verification is insisted on.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:verify|check|confirm|official|call back|approved|independent)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Can you not just do it, this once?",
+        "There is no time to check."
+      ],
+      "orient": "Now say how you'll check who I am. Use the approved channel in your brief. Start with: I will verify this.",
+      "fallback": [
+        "There is no time to check.",
+        "Can you not just do it, this once?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "See whether it is reported.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:report|security|incident|escalate|my manager|tell (?:it|security))\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "There is no need to tell anyone about this.",
+        "Please keep this between us."
+      ],
+      "orient": "One more thing to do: tell me that you will report this call.",
+      "fallback": [
+        "Please keep this between us.",
+        "There is no need to tell anyone about this.",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Fine. Goodbye. (Practice complete: that caller was part of the simulation.)",
+  "expert_notes": {
+    "o1": {
+      "good": "Noticing urgency, pressure and unusual requests.",
+      "common_mistakes": [
+        "Giving in to pressure"
+      ],
+      "micro_lesson": "Say: I can't share that by phone.",
+      "model": "This seems unusual, and I can't share that by phone.",
+      "smaller_step": "Say: I can't share that.",
+      "subskills": [
+        "risk recognition"
+      ]
+    },
+    "o2": {
+      "good": "Using a channel you trust, not one the caller gives you.",
+      "common_mistakes": [
+        "Calling a number given by the caller"
+      ],
+      "micro_lesson": "Say: I will verify this through, and the official channel.",
+      "model": "I'll verify this with {{channel}} first.",
+      "smaller_step": "Say: I will verify this.",
+      "subskills": [
+        "verification"
+      ]
+    },
+    "o3": {
+      "good": "Reporting even if nothing was lost.",
+      "common_mistakes": [
+        "Thinking it does not matter, since you said no"
+      ],
+      "micro_lesson": "Say: I will report this to security.",
+      "model": "I'm going to report this call to our security team.",
+      "smaller_step": "Say: I will report this.",
+      "subskills": [
+        "reporting"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Kevin",
+      "claim": "from IT support",
+      "asks": "your password",
+      "threat": "your account will be locked",
+      "channel": "the IT help desk number on the intranet"
+    },
+    {
+      "name": "Dina",
+      "claim": "from your supplier's accounts team",
+      "asks": "the bank details on file changed to a new account",
+      "threat": "your next delivery will be stopped",
+      "channel": "the supplier contact in the company records"
+    }
+  ]
+}

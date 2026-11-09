@@ -9,6 +9,10 @@
 .coach-unread{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--burgundy);margin-left:8px;vertical-align:middle}
 .runtime-notice{display:flex;align-items:center;gap:12px;justify-content:space-between;background:#fff5e5;border:1px solid #e5c99b;padding:9px 13px;margin-bottom:10px;border-radius:9px;font-size:13px;color:#7c5120}
 .runtime-notice button{flex:none}
+.task-brief{background:#fffdfa;border:1px solid var(--h-line);border-radius:9px;padding:8px 13px;margin-bottom:10px;font-size:13px;line-height:1.5}
+.task-brief summary{cursor:pointer;color:var(--burgundy);font-weight:600}.task-brief p{margin:7px 0 0}
+.coach-inline{display:flex;gap:10px;background:#f7e9e4;border-left:3px solid var(--burgundy);padding:9px 13px;margin-bottom:10px;border-radius:6px;color:#713542;font-size:14px;line-height:1.5}
+.coach-inline strong{flex:none}
 .lesson-closure{background:#eaf7ed;border:1px solid #9dceaa;color:#1e7040;padding:12px 16px;border-radius:10px;margin-bottom:12px}
 .lesson-closure p{margin:5px 0 10px}.lesson-closure button+button{margin-left:8px}
 .coach-overlay{position:fixed;inset:0;background:#21151765;z-index:100;display:flex;justify-content:flex-end}

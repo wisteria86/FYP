@@ -1,0 +1,271 @@
+{
+  "archetype": "meeting",
+  "level": "advanced",
+  "setting": "A fictional feedback conversation between two coworkers, with a teammate present, after a client meeting.",
+  "presentation": {
+    "situation": "You and {{name}} attended a client meeting yesterday. {{name}} asked for your feedback. You noticed that {{observation}}. The effect was that {{impact}}. {{mate}}, a teammate who was also there, has joined you.",
+    "opening": "You said you had some feedback on yesterday's client meeting. Are you ready to discuss it?",
+    "opening_speaker": "p1",
+    "learner_role": "Coworker"
+  },
+  "brief": {
+    "you_are": "You are giving a coworker feedback they asked for.",
+    "situation": "You and {{name}} attended a client meeting yesterday. {{name}} asked for your feedback. You noticed that {{observation}}. The effect was that {{impact}}. {{mate}}, a teammate who was also there, has joined you.",
+    "task": "Describe what you observed, explain its impact, and agree one improvement.",
+    "done_looks_like": "{{name}} knows exactly what you noticed and why it mattered, and you both agree one change."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Coworker",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are giving a coworker feedback they asked for.",
+      "goals": [
+        "Describe what you observed, explain its impact, and agree one improvement."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Coworker",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Works with you; asked for this feedback",
+      "voice_index": 0,
+      "topics": [
+        "meeting",
+        "client",
+        "feedback",
+        "next time"
+      ],
+      "card": {
+        "want": "Useful feedback, though it stings a little.",
+        "hidden_need": "Was very nervous in that meeting.",
+        "attitude": "Open, but a bit defensive at first.",
+        "speech": "Fluent, natural professional English. Direct, and free of corporate slogans.",
+        "tactics": [
+          "Ask for a specific example if the feedback is vague",
+          "Explain your reason once, then listen"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    },
+    {
+      "id": "p2",
+      "name": "{{mate}}",
+      "role": "AI teammate",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Also attended the meeting",
+      "voice_index": 1,
+      "topics": [
+        "saw",
+        "noticed",
+        "remember"
+      ],
+      "card": {
+        "want": "To support a fair and useful conversation.",
+        "hidden_need": "",
+        "attitude": "Calm, and only adds facts.",
+        "speech": "Fluent, natural professional English. Direct, and free of corporate slogans.",
+        "tactics": [
+          "Confirm facts when asked",
+          "Do not give the feedback for the learner"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "You both attended a client meeting yesterday."
+    },
+    {
+      "id": "f2",
+      "text": "What you noticed: {{observation}}."
+    },
+    {
+      "id": "f3",
+      "text": "The effect: {{impact}}."
+    },
+    {
+      "id": "f4",
+      "text": "{{name}} did this because of nerves about the client.",
+      "owner": "p1",
+      "available_from": "b1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Use specific observations",
+      "evidence": "The learner gives a specific observation, not a judgement.",
+      "alternatives": [
+        "When the client asked about cost, I noticed that you moved on quickly."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Explain impact",
+      "evidence": "The learner explains the impact.",
+      "alternatives": [
+        "The impact was that the client seemed unsure."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Agree on one improvement",
+      "evidence": "The learner agrees one specific improvement.",
+      "alternatives": [
+        "Next time, could we agree who answers the cost questions?"
+      ]
+    }
+  ],
+  "examples": [
+    "When you …, I noticed …",
+    "The impact was …",
+    "Next time, could we …?"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Hear a specific observation.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:i noticed|when you|specific example)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 1,
+      "opportunity": [
+        "Sure, what did you notice?",
+        "Can you give me a specific example?"
+      ],
+      "orient": "I asked for feedback. Tell me one specific thing you saw. Start with: I noticed that.",
+      "fallback": [
+        "Can you give me a specific example?",
+        "Sure, what did you notice?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Understand the impact.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:impact|meant that|as a result|caused)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 1,
+      "opportunity": [
+        "Why does that matter?",
+        "Okay, was that really a problem?"
+      ],
+      "orient": "Now tell me why it mattered. Start with: The impact was.",
+      "fallback": [
+        "Okay, was that really a problem?",
+        "Why does that matter?",
+        "Please go on."
+      ],
+      "second_speaker": "p2",
+      "second_line": "I noticed the client asked about that again near the end, too."
+    },
+    {
+      "id": "b3",
+      "goal": "Agree one improvement.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:next time|i will|we can|agree to)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 1,
+      "opportunity": [
+        "So what should I do differently?",
+        "What would you suggest?"
+      ],
+      "orient": "Now agree one change for next time. Start with: Next time, could we.",
+      "fallback": [
+        "What would you suggest?",
+        "So what should I do differently?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Thanks. That was useful, and I will do that next time.",
+  "expert_notes": {
+    "o1": {
+      "good": "Something a camera could have seen, not a judgement of the person.",
+      "common_mistakes": [
+        "Saying: You were unprofessional"
+      ],
+      "micro_lesson": "Say: When, then: I noticed.",
+      "model": "When the client asked about cost, I noticed that you moved on quickly.",
+      "smaller_step": "Say: I noticed that.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "Explaining why it matters makes the feedback useful.",
+      "common_mistakes": [
+        "Stopping at the observation"
+      ],
+      "micro_lesson": "Say: The impact was, or: As a result.",
+      "model": "The impact was that the client seemed unsure, and asked again later.",
+      "smaller_step": "Say: The impact was.",
+      "subskills": [
+        "grammar"
+      ]
+    },
+    "o3": {
+      "good": "One achievable change, agreed together.",
+      "common_mistakes": [
+        "A long list of everything"
+      ],
+      "micro_lesson": "Pick one change. Say: Next time.",
+      "model": "Next time, could we agree before the meeting who answers cost questions?",
+      "smaller_step": "Say: Next time.",
+      "subskills": [
+        "comprehension"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Omar",
+      "mate": "Lena",
+      "observation": "Omar spoke over the client twice when they raised concerns",
+      "impact": "the client stopped raising questions"
+    },
+    {
+      "name": "Tina",
+      "mate": "Asad",
+      "observation": "Tina moved on quickly when the client asked about cost",
+      "impact": "the client asked the same question again at the end, and seemed unsure"
+    }
+  ]
+}

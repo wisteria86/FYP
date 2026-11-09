@@ -18,7 +18,7 @@ class MigrationTests(unittest.TestCase):
 
     def test_new_database_reaches_platform_schema(self):
         TrainingService(self.path)
-        self.assertEqual(current_version(self.path), 8)
+        self.assertEqual(current_version(self.path), 10)
         with closing(sqlite3.connect(self.path)) as db:
             tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             self.assertTrue({
@@ -27,14 +27,14 @@ class MigrationTests(unittest.TestCase):
                 "training_plans", "recommendations", "resources", "document_chunks",
                 "auth_sessions",
             }.issubset(tables))
-            self.assertEqual(db.execute("SELECT COUNT(*) FROM skill_catalog").fetchone()[0], 13)
-            self.assertEqual(db.execute("SELECT COUNT(*) FROM scenario_templates").fetchone()[0], 42)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM skill_catalog").fetchone()[0], 17)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM scenario_templates").fetchone()[0], 46)
 
     def test_migrations_are_idempotent(self):
         TrainingService(self.path)
         self.assertEqual(run_migrations(self.path), [])
         with closing(sqlite3.connect(self.path)) as db:
-            self.assertEqual(db.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0], 8)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0], 10)
 
 
 if __name__ == "__main__":

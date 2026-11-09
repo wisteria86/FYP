@@ -1,0 +1,234 @@
+{
+  "archetype": "service",
+  "level": "beginner",
+  "setting": "A fictional small cafe where the learner orders a meal.",
+  "presentation": {
+    "situation": "You are ordering at a small cafe. {{menu}} Order politely, ask about something on the menu, and check your order.",
+    "opening": "Good evening! Here is the menu. What would you like to order?",
+    "opening_speaker": "p1",
+    "learner_role": "Customer"
+  },
+  "brief": {
+    "you_are": "You are a customer in a small cafe.",
+    "situation": "You are ordering at a small cafe. {{menu}} Order politely, ask about something on the menu, and check your order.",
+    "task": "Order politely, ask one question about the menu, and check that your order is right.",
+    "done_looks_like": "The server knows your order, you asked one question, and you confirmed the order."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Customer",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are a customer in a small cafe.",
+      "goals": [
+        "Order politely, ask one question about the menu, and check that your order is right."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Server",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Works at the cafe",
+      "voice_index": 0,
+      "topics": [
+        "menu",
+        "food",
+        "drink",
+        "order",
+        "price"
+      ],
+      "card": {
+        "want": "To take a correct order quickly on a busy evening.",
+        "hidden_need": "",
+        "attitude": "Polite and busy.",
+        "speech": "Very simple everyday English. Short sentences. One easy question at a time.",
+        "tactics": [
+          "Offer only what is on the menu",
+          "Read the order back if nobody does"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "{{menu}}"
+    },
+    {
+      "id": "f2",
+      "text": "Prices are in the local currency."
+    },
+    {
+      "id": "f3",
+      "text": "{{name}} recommends the {{special}} today.",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Order politely",
+      "evidence": "The learner orders politely.",
+      "alternatives": [
+        "I'd like a sandwich, please."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Ask one menu question",
+      "evidence": "The learner asks about something on the menu.",
+      "alternatives": [
+        "What do you recommend?"
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Confirm the order",
+      "evidence": "The learner confirms or corrects the order.",
+      "alternatives": [
+        "Yes, that's correct, thank you."
+      ]
+    }
+  ],
+  "examples": [
+    "I'd like …, please.",
+    "What do you recommend?",
+    "Yes, that's correct."
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Take the order.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:i'd like|i would like|could i have|may i have)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "What would you like?",
+        "Are you ready to order?"
+      ],
+      "orient": "I am the server. Please tell me what you want from the menu. You can say: I would like.",
+      "fallback": [
+        "Are you ready to order?",
+        "What would you like?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Answer a question about the menu.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:what|which|does|is there|do you)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Is there anything you want to ask about the menu?",
+        "Do you have any questions?"
+      ],
+      "orient": "You can ask me about the food. You can say: What do you recommend?",
+      "fallback": [
+        "Do you have any questions?",
+        "Is there anything you want to ask about the menu?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Check the order.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:that's correct|yes,? please|that is all|sounds good)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So, is that everything?",
+        "Let me check. Is your order correct?"
+      ],
+      "orient": "Now check the order. You can say: Yes, that is correct.",
+      "fallback": [
+        "Let me check. Is your order correct?",
+        "So, is that everything?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Thank you. Your food will be ready soon.",
+  "expert_notes": {
+    "o1": {
+      "good": "Using would like and please sounds polite and natural.",
+      "common_mistakes": [
+        "Saying: Give me"
+      ],
+      "micro_lesson": "Say: I'd like, and then please.",
+      "model": "I'd like the soup, please.",
+      "smaller_step": "Say: I'd like, and one thing.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "Asking before you choose is normal in a cafe.",
+      "common_mistakes": [
+        "Not asking when you are unsure"
+      ],
+      "micro_lesson": "Use: What is, or: How much is.",
+      "model": "What do you recommend? How much is the soup?",
+      "smaller_step": "Say: What do you recommend?",
+      "subskills": [
+        "comprehension"
+      ]
+    },
+    "o3": {
+      "good": "A quick check stops mistakes.",
+      "common_mistakes": [
+        "Staying silent when the order is wrong"
+      ],
+      "micro_lesson": "Say: That's correct, or: Sorry, I asked for.",
+      "model": "Yes, that's correct. That's all, thank you.",
+      "smaller_step": "Say: That's correct.",
+      "subskills": [
+        "grammar"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Sam",
+      "menu": "Today the cafe serves tea for 2 and a cheese sandwich for 4. Tomato soup is not available.",
+      "special": "cheese sandwich"
+    },
+    {
+      "name": "Hira",
+      "menu": "Today the cafe serves coffee for 3 and vegetable soup for 5. Sandwiches are not available.",
+      "special": "vegetable soup"
+    }
+  ]
+}

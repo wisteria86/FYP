@@ -1,0 +1,225 @@
+{
+  "archetype": "service",
+  "level": "beginner",
+  "setting": "A fictional clothes shop where the learner buys something they need.",
+  "presentation": {
+    "situation": "You need {{need}} from a small clothes shop. {{stock}} Say what you need, ask about the price or size, and then buy it or say no politely.",
+    "opening": "Welcome! What are you looking for today?",
+    "opening_speaker": "p1",
+    "learner_role": "Customer"
+  },
+  "brief": {
+    "you_are": "You are a customer in a clothes shop.",
+    "situation": "You need {{need}} from a small clothes shop. {{stock}} Say what you need, ask about the price or size, and then buy it or say no politely.",
+    "task": "Say what you need, ask about price or size, then buy it or politely say no.",
+    "done_looks_like": "You know the price and size, and you have decided to buy or not."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Customer",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are a customer in a clothes shop.",
+      "goals": [
+        "Say what you need, ask about price or size, then buy it or politely say no."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Shop assistant",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Works in the shop",
+      "voice_index": 0,
+      "topics": [
+        "shirt",
+        "jacket",
+        "size",
+        "colour",
+        "price"
+      ],
+      "card": {
+        "want": "To help you find the right thing, and to make a sale if it fits.",
+        "hidden_need": "",
+        "attitude": "Helpful and friendly, never pushy.",
+        "speech": "Very simple everyday English. Short sentences. One easy question at a time.",
+        "tactics": [
+          "Say only the prices and sizes you have",
+          "Accept a polite no happily"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "{{stock}}"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Explain what you need",
+      "evidence": "The learner says what they are looking for.",
+      "alternatives": [
+        "I'm looking for a shirt."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Ask about price or size",
+      "evidence": "The learner asks about price, size or colour.",
+      "alternatives": [
+        "How much is it? Do you have it in medium?"
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Accept or decline politely",
+      "evidence": "The learner accepts or politely declines.",
+      "alternatives": [
+        "I'll take it, thank you."
+      ]
+    }
+  ],
+  "examples": [
+    "I'm looking for …",
+    "Do you have this in …?",
+    "I'll take it / No, thank you."
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Find out what the customer needs.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:i'm looking for|i need|do you have)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Are you looking for something for you?",
+        "What do you need today?"
+      ],
+      "orient": "I work in this shop. Tell me what you want to buy. You can say: I'm looking for.",
+      "fallback": [
+        "What do you need today?",
+        "Are you looking for something for you?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Answer questions about price and size.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:price|cost|how much|size|colour|color)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Would you like to know the price or the sizes?",
+        "Do you want to ask me anything about it?"
+      ],
+      "orient": "Now ask me about it. You can say: How much is it?",
+      "fallback": [
+        "Do you want to ask me anything about it?",
+        "Would you like to know the price or the sizes?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Get a decision.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:i'll take|i will take|no thank you|not today|that's all)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So, would you like to take it?",
+        "What do you think? Do you want it?"
+      ],
+      "orient": "Now decide. You can say: I'll take it, or: No, thank you.",
+      "fallback": [
+        "What do you think? Do you want it?",
+        "So, would you like to take it?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Thank you for coming. Have a nice day!",
+  "expert_notes": {
+    "o1": {
+      "good": "Saying what you want clearly, so the assistant can help.",
+      "common_mistakes": [
+        "Only pointing or saying the word"
+      ],
+      "micro_lesson": "Say: I'm looking for.",
+      "model": "I'm looking for a blue shirt.",
+      "smaller_step": "Say: I'm looking for, and one thing.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "Asking before you buy.",
+      "common_mistakes": [
+        "Saying: How much it is"
+      ],
+      "micro_lesson": "The order is: How much is it?",
+      "model": "How much is it? Do you have it in medium?",
+      "smaller_step": "Say: How much is it?",
+      "subskills": [
+        "grammar"
+      ]
+    },
+    "o3": {
+      "good": "A clear, polite decision, whichever it is.",
+      "common_mistakes": [
+        "Walking away without saying anything"
+      ],
+      "micro_lesson": "Say: I'll take it, or: Not today, thank you.",
+      "model": "It's a little expensive, so not today, thank you.",
+      "smaller_step": "Say: I'll take it.",
+      "subskills": [
+        "comprehension"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Robin",
+      "need": "a shirt",
+      "stock": "The blue shirt costs 20 and comes in small and medium. The red shirt costs 25 and comes in large."
+    },
+    {
+      "name": "Asma",
+      "need": "a jacket",
+      "stock": "The black jacket costs 40 and comes in medium. The green jacket costs 35 and comes in small and large."
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "archetype": "meeting",
+  "level": "intermediate",
+  "setting": "A fictional thirty-second update to a senior manager in a corridor between meetings.",
+  "presentation": {
+    "situation": "You run {{project}}. {{name}}, a senior manager, catches you between meetings and has about thirty seconds. Status: {{status}}. Problem: {{problem}}. What you need: {{need}}. Give the point first, keep it short, and ask for what you need.",
+    "opening": "I've got thirty seconds before my next meeting. Where are we on {{project}}?",
+    "opening_speaker": "p1",
+    "learner_role": "Project lead"
+  },
+  "brief": {
+    "you_are": "You lead {{project}}.",
+    "situation": "Status: {{status}}. Problem: {{problem}}. What you need from your manager: {{need}}. Your manager has almost no time.",
+    "task": "Start with the bottom line, give only the detail that matters, and ask for what you need.",
+    "done_looks_like": "In a few short sentences, your manager knows where things stand, what the problem is, and what you need."
+  },
+  "participants": [
+    {"id": "p0", "name": "You", "role": "Project lead", "kind": "learner", "team": "learner", "relationship": "Reports to this manager", "goals": ["Get your point across quickly"], "voice_index": 0},
+    {
+      "id": "p1", "name": "{{name}}", "role": "Senior manager", "kind": "ai", "team": "opponent", "relationship": "Your manager's manager, between meetings", "voice_index": 0,
+      "topics": ["status", "project", "decision", "time", "problem"],
+      "card": {
+        "want": "To know in seconds whether there is a problem and whether a decision is needed.",
+        "attitude": "Friendly but truly short of time. Starts walking away if the answer wanders.",
+        "speech": "Very short sentences. Direct questions.",
+        "tactics": ["Interrupt long answers with 'so what's the bottom line?'", "Ask 'what do you need from me?' if no request comes"],
+        "pressure": {"gentle": "Lets a longer answer finish.", "balanced": "Interrupts once.", "challenging": "Interrupts quickly and checks the time."}
+      }
+    }
+  ],
+  "ledger": [
+    {"id": "f1", "text": "The project is {{project}}."},
+    {"id": "f2", "text": "The status is: {{status}}."},
+    {"id": "f3", "text": "The problem is: {{problem}}."},
+    {"id": "f4", "text": "The project lead needs: {{need}}."},
+    {"id": "f5", "owner": "p1", "text": "{{name}} can approve small decisions immediately, and has a meeting starting in under a minute."}
+  ],
+  "objectives": [
+    {"id": "o1", "description": "Lead with the bottom line", "evidence": "The learner's first substantive sentence says where things stand, not the background.", "alternatives": ["We're on track, except for one risk"]},
+    {"id": "o2", "description": "Keep only the detail that matters", "evidence": "The learner states the problem briefly, without a long history or unrelated detail.", "alternatives": ["The vendor is a week late, which affects testing"]},
+    {"id": "o3", "description": "Make a clear request", "evidence": "The learner asks for one specific thing.", "alternatives": ["Can you approve the extra week today?"]}
+  ],
+  "examples": ["Short answer: ...", "The one problem is ...", "What I need from you is ..."],
+  "prerequisites": ["Read the three points in the briefing."],
+  "beats": [
+    {
+      "id": "bottom", "goal": "Get to the point at once.", "driver": "p1", "objectives": ["o1"],
+      "signals": ["\\b(?:on track|behind|ahead|short answer|bottom line|in short|we'?re|at risk|nearly done|finished)\\b"],
+      "stall_turns": 1,
+      "opportunity": ["So what's the bottom line?", "In one sentence, is it on track?"],
+      "orient": "I have no time. Tell me in one sentence whether the project is on track.",
+      "fallback": ["In one sentence: is it on track?", "What's the bottom line?"]
+    },
+    {
+      "id": "detail", "goal": "Hear the one problem, briefly.", "driver": "p1", "objectives": ["o2"],
+      "signals": ["\\b(?:problem|issue|risk|because|late|delay|blocked|waiting|only)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["Is anything in the way?", "What's the one thing I should worry about?"],
+      "orient": "Good. Now tell me the one problem, in one sentence. Leave out the history.",
+      "fallback": ["What's the one problem?", "Is anything in the way?"]
+    },
+    {
+      "id": "ask", "goal": "Find out what is needed before leaving.", "driver": "p1", "objectives": ["o3"],
+      "signals": ["\\b(?:can you|could you|i need|i'?d like you|please|approve|decision|sign off|would you)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["I have to go. What do you need from me?", "Is there a decision for me here?"],
+      "orient": "I'm leaving now. Ask me for the one thing you need.",
+      "fallback": ["What do you need from me?", "Do you need a decision from me?"]
+    }
+  ],
+  "closing_line": "Got it. Thanks for keeping that short.",
+  "expert_notes": {
+    "o1": {"good": "The answer comes first and the explanation only if asked for.", "common_mistakes": ["Starting at the beginning of the story", "'So, basically, what happened was'"], "micro_lesson": "Answer first. Busy people decide from the first sentence whether to keep listening.", "model": "Short answer: we're on track, with one risk.", "smaller_step": "Say one sentence: on track or not?", "subskills": ["conciseness"]},
+    "o2": {"good": "One problem, one sentence, and why it matters.", "common_mistakes": ["Explaining how it came about", "Listing everything"], "micro_lesson": "Give the problem and its effect. Leave out how it came about, unless asked.", "model": "The supplier is a week late, which delays our testing.", "smaller_step": "Name the problem in five words.", "subskills": ["conciseness"]},
+    "o3": {"good": "Asking directly for one specific thing, so the person can say yes.", "common_mistakes": ["Hoping they will offer", "Only saying 'just keeping you informed' when you need something"], "micro_lesson": "End with the request. Make it something they can answer with yes or no.", "model": "Can you approve one extra week today?", "smaller_step": "Say: I need ...", "subskills": ["clarity"]}
+  },
+  "variants": [
+    {"name": "Sara", "project": "the website release", "status": "on track for the 20th, with one risk", "problem": "the design agency is a week late with the final images", "need": "approval to use the older images for launch"},
+    {"name": "Imran", "project": "the new payroll rollout", "status": "one week behind", "problem": "two departments have not sent their staff data", "need": "an email from the manager to those two department heads"},
+    {"name": "Claire", "project": "the customer survey", "status": "finished, with results ready", "problem": "only 40 percent of customers responded", "need": "a decision on whether to send one reminder"}
+  ]
+}

@@ -1,0 +1,280 @@
+{
+  "archetype": "meeting",
+  "level": "advanced",
+  "setting": "A fictional decision meeting with an executive sponsor and two stakeholders.",
+  "presentation": {
+    "situation": "You are recommending what to do about {{issue}}. Your options are {{options}}. Your evidence: {{evidence}}. {{a}} is the executive sponsor, and {{b}} leads the affected team. Lead the discussion to a decision.",
+    "opening": "We are ready for your recommendation on {{issue}}. Please lead us through it.",
+    "opening_speaker": "p1",
+    "learner_role": "Project lead"
+  },
+  "brief": {
+    "you_are": "You are leading a decision meeting with a sponsor and a team lead.",
+    "situation": "You are recommending what to do about {{issue}}. Your options are {{options}}. Your evidence: {{evidence}}. {{a}} is the executive sponsor, and {{b}} leads the affected team. Lead the discussion to a decision.",
+    "task": "Make a supported recommendation, respond to both viewpoints, and summarise the decision and next steps.",
+    "done_looks_like": "There is a decision, both viewpoints have been answered, and everyone knows the next steps."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Project lead",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are leading a decision meeting with a sponsor and a team lead.",
+      "goals": [
+        "Make a supported recommendation, respond to both viewpoints, and summarise the decision and next steps."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{a}}",
+      "role": "Executive sponsor",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Owns the budget and the final decision",
+      "voice_index": 0,
+      "topics": [
+        "cost",
+        "decision",
+        "board",
+        "risk",
+        "budget"
+      ],
+      "card": {
+        "want": "A clear recommendation she can defend to the board.",
+        "hidden_need": "Must report the decision to the board this month.",
+        "attitude": "Decisive, and tests every assumption.",
+        "speech": "Fluent, natural professional English. Direct, and free of corporate slogans.",
+        "tactics": [
+          "Ask what you are recommending",
+          "Ask about the cost of being wrong"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    },
+    {
+      "id": "p2",
+      "name": "{{b}}",
+      "role": "Team lead",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Leads the team affected by the decision",
+      "voice_index": 1,
+      "topics": [
+        "team",
+        "workload",
+        "people",
+        "capacity",
+        "staff"
+      ],
+      "card": {
+        "want": "A plan that the team can actually deliver.",
+        "hidden_need": "",
+        "attitude": "Protective of the team, and practical.",
+        "speech": "Fluent, natural professional English. Direct, and free of corporate slogans.",
+        "tactics": [
+          "Raise the workload on your team",
+          "Ask who will do the extra work"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "The issue is {{issue}}."
+    },
+    {
+      "id": "f2",
+      "text": "The options are {{options}}."
+    },
+    {
+      "id": "f3",
+      "text": "The evidence is: {{evidence}}."
+    },
+    {
+      "id": "f4",
+      "text": "{{a}} must report the decision to the board this month.",
+      "owner": "p1"
+    },
+    {
+      "id": "f5",
+      "text": "{{b}}'s team is already at full capacity this quarter.",
+      "owner": "p2"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Speak clearly and confidently",
+      "evidence": "The learner makes a recommendation with a reason.",
+      "alternatives": [
+        "My recommendation is option A, because the evidence shows..."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Respond to multiple viewpoints",
+      "evidence": "The learner responds to the sponsor's and the team lead's viewpoints.",
+      "alternatives": [
+        "I hear both perspectives: the cost concern and the workload."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Summarise the final decision and next steps",
+      "evidence": "The learner summarises the decision and the next steps.",
+      "alternatives": [
+        "To summarise: we decided on the pilot; next steps are..."
+      ]
+    }
+  ],
+  "examples": [
+    "My recommendation is …",
+    "I hear both perspectives …",
+    "To summarise, we decided …"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Hear a supported recommendation.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:my recommendation|i recommend|we should|i propose)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 1,
+      "opportunity": [
+        "So what do you recommend?",
+        "What would you do, and why?"
+      ],
+      "orient": "You're leading this meeting. Tell us which option you recommend and why. Start with: My recommendation is.",
+      "fallback": [
+        "What would you do, and why?",
+        "So what do you recommend?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Have both views answered.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:your point|your concern|both perspectives|i understand)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 2,
+      "opportunity": [
+        "And what about the cost if this goes wrong?",
+        "And what about the people who have to do this work?"
+      ],
+      "orient": "We have different concerns: cost and workload. Respond to each of us.",
+      "fallback": [
+        "And what about the people who have to do this work?",
+        "And what about the cost if this goes wrong?",
+        "Please go on."
+      ],
+      "second_speaker": "p2",
+      "second_line": "Before we go further, my team is at full capacity this quarter. Who does this work?"
+    },
+    {
+      "id": "b3",
+      "goal": "Hear the summary and next steps.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:to summarise|in summary|we decided|next steps)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 1,
+      "opportunity": [
+        "So where have we ended up?",
+        "What do I tell the board?"
+      ],
+      "orient": "Close the meeting. Say what we decided, and the next steps. Start with: To summarise.",
+      "fallback": [
+        "What do I tell the board?",
+        "So where have we ended up?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Thank you. That is a clear decision, and I can take that to the board.",
+  "expert_notes": {
+    "o1": {
+      "good": "A clear choice, with the reason attached.",
+      "common_mistakes": [
+        "Listing options with no recommendation"
+      ],
+      "micro_lesson": "Say: My recommendation is, then: because.",
+      "model": "My recommendation is the first option, because the evidence shows the risk is lower.",
+      "smaller_step": "Say: My recommendation is.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "Answering each person's actual concern.",
+      "common_mistakes": [
+        "Answering only the most senior person"
+      ],
+      "micro_lesson": "Name each concern and answer it.",
+      "model": "I hear both perspectives. On cost, ...; on workload, ...",
+      "smaller_step": "Answer one concern by name.",
+      "subskills": [
+        "comprehension"
+      ]
+    },
+    "o3": {
+      "good": "Closing with a decision, owners and dates.",
+      "common_mistakes": [
+        "Ending with: We will think about it"
+      ],
+      "micro_lesson": "Say: To summarise, we decided.",
+      "model": "To summarise, we decided on the pilot. Next steps: I will send the plan on Friday.",
+      "smaller_step": "Say: To summarise.",
+      "subskills": [
+        "grammar"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "a": "Rebecca",
+      "b": "Imran",
+      "issue": "the failing customer support system",
+      "options": "replacing it this year, or repairing it and replacing it next year",
+      "evidence": "it failed four times last quarter, and repairs cost a third of what a replacement costs"
+    },
+    {
+      "a": "Sadia",
+      "b": "Luke",
+      "issue": "the delay in opening the second warehouse",
+      "options": "opening late with full staff, or opening on time with reduced hours",
+      "evidence": "hiring is six weeks behind, and customers mostly order in the mornings"
+    }
+  ]
+}

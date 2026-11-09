@@ -1,0 +1,272 @@
+{
+  "archetype": "meeting",
+  "level": "advanced",
+  "setting": "A fictional video call with international project partners after a misunderstanding.",
+  "presentation": {
+    "situation": "Your team's message said the work would be done \"{{phrase}}\". {{a}}'s team took that to mean {{a_view}}. Clear up what went wrong with {{a}} and {{b}}, and agree how to communicate from now on.",
+    "opening": "Our teams understood your last message very differently. How do we stop that from happening again?",
+    "opening_speaker": "p1",
+    "learner_role": "Project lead"
+  },
+  "brief": {
+    "you_are": "You lead the project team and are working with international partners.",
+    "situation": "Your team's message said the work would be done \"{{phrase}}\". {{a}}'s team took that to mean {{a_view}}. Clear up what went wrong with {{a}} and {{b}}, and agree how to communicate from now on.",
+    "task": "Clarify what people meant, avoid idioms and vague language, check understanding, and agree a communication rule.",
+    "done_looks_like": "Everyone understands what went wrong, and you have agreed one clear communication rule."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Project lead",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You lead the project team and are working with international partners.",
+      "goals": [
+        "Clarify what people meant, avoid idioms and vague language, check understanding, and agree a communication rule."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{a}}",
+      "role": "Regional partner",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Leads the partner team abroad",
+      "voice_index": 0,
+      "topics": [
+        "deadline",
+        "message",
+        "meant",
+        "understood"
+      ],
+      "card": {
+        "want": "Clear, literal communication, so that the team can plan.",
+        "hidden_need": "Was embarrassed in front of a local client because of this.",
+        "attitude": "Polite and direct, and tells you when something is unclear.",
+        "speech": "Precise international English. Asks what idioms mean.",
+        "tactics": [
+          "Ask what an idiom means",
+          "Say how your team understood it"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    },
+    {
+      "id": "p2",
+      "name": "{{b}}",
+      "role": "Partner team member",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Works with {{a}}",
+      "voice_index": 1,
+      "topics": [
+        "time",
+        "timezone",
+        "understand",
+        "team"
+      ],
+      "card": {
+        "want": "To know exactly who does what, and when.",
+        "hidden_need": "",
+        "attitude": "Quiet and careful. Agrees politely even when unsure, unless asked directly.",
+        "speech": "Careful, precise English. Says yes politely, even when unsure.",
+        "tactics": [
+          "Say yes without being sure, unless asked directly",
+          "Answer honestly when asked"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "The earlier message said the work would be done \"{{phrase}}\"."
+    },
+    {
+      "id": "f2",
+      "text": "{{a}}'s team took that to mean {{a_view}}."
+    },
+    {
+      "id": "f3",
+      "text": "The learner's team meant {{meant}}."
+    },
+    {
+      "id": "f4",
+      "text": "{{a}} was embarrassed in front of a local client because of this.",
+      "owner": "p1",
+      "available_from": "b1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Avoid idioms and ambiguity",
+      "evidence": "The learner clarifies what was meant, or asks what the others understood.",
+      "alternatives": [
+        "When you read that, what did you understand by it?"
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Check shared understanding",
+      "evidence": "The learner checks shared understanding, including with the quieter person.",
+      "alternatives": [
+        "{{b}}, is that the same as how you understood it?"
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Agree communication norms",
+      "evidence": "The learner proposes a clear communication norm.",
+      "alternatives": [
+        "Let's agree that from now on, we always write the date and time zone."
+      ]
+    }
+  ],
+  "examples": [
+    "When you say …, do you mean …?",
+    "To avoid ambiguity …",
+    "Let's agree to …"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Have the meaning clarified.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:do you mean|when you say|when you read|could you clarify|to clarify|did you understand|you understood|we meant|what we meant|what did you)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 1,
+      "opportunity": [
+        "What did you actually mean by that?",
+        "How were we supposed to read it?"
+      ],
+      "orient": "There was a misunderstanding. Ask what we understood, or say clearly what your team meant.",
+      "fallback": [
+        "How were we supposed to read it?",
+        "What did you actually mean by that?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Have understanding checked.",
+      "driver": "p2",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:is that correct|have i understood|same understanding|does that mean|how you understood|how do you understand|you understand|in your own words|same as)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 1,
+      "opportunity": [
+        "Yes, yes. I think that is fine.",
+        "That seems okay, I suppose."
+      ],
+      "orient": "{{b}} said yes, but may not be sure. Check directly. You can ask: {{b}}, how do you understand it?",
+      "fallback": [
+        "That seems okay, I suppose.",
+        "Yes, yes. I think that is fine.",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Agree a norm.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:let's agree|we will|from now on|communication norm)\\b"
+      ],
+      "stall_turns": 3,
+      "min_turns": 1,
+      "opportunity": [
+        "So what do we do differently from now on?",
+        "What is the rule, then?"
+      ],
+      "orient": "Propose one clear rule. Start with: Let's agree that.",
+      "fallback": [
+        "What is the rule, then?",
+        "So what do we do differently from now on?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Good. That is clear for both teams. Thank you.",
+  "expert_notes": {
+    "o1": {
+      "good": "Finding out what each side thought, without blame.",
+      "common_mistakes": [
+        "Insisting that it was obvious"
+      ],
+      "micro_lesson": "Ask: What did you understand? Then say what you meant.",
+      "model": "When you read \"{{phrase}}\", what did you understand by it?",
+      "smaller_step": "Ask: What did you understand?",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "Asking people to say it back, as a polite yes may not mean they understood.",
+      "common_mistakes": [
+        "Accepting a polite yes"
+      ],
+      "micro_lesson": "Ask them to say it in their own words.",
+      "model": "{{b}}, could you tell me how you understand the plan?",
+      "smaller_step": "Ask {{b}} a direct question.",
+      "subskills": [
+        "comprehension"
+      ]
+    },
+    "o3": {
+      "good": "A rule simple enough to check.",
+      "common_mistakes": [
+        "Saying: We will communicate better"
+      ],
+      "micro_lesson": "Say: Let's agree that, from now on.",
+      "model": "Let's agree that from now on, we write an exact date and time zone.",
+      "smaller_step": "Say: Let's agree.",
+      "subskills": [
+        "grammar"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "a": "Kenji",
+      "b": "Yuki",
+      "phrase": "by end of play Friday",
+      "a_view": "Friday morning, their time",
+      "meant": "Friday at 6 pm, UK time"
+    },
+    {
+      "a": "Lucia",
+      "b": "Marco",
+      "phrase": "in the next couple of days",
+      "a_view": "exactly two days",
+      "meant": "within about a week"
+    }
+  ]
+}

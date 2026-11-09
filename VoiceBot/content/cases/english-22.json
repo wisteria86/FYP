@@ -1,0 +1,96 @@
+{
+  "archetype": "interview",
+  "level": "advanced",
+  "setting": "A fictional panel interview for a {{role}} role at {{company}}, a mid-sized company.",
+  "presentation": {
+    "situation": "You are interviewing for a {{role}} role at {{company}}. {{lead}}, the hiring manager, and {{second}}, a senior team member, will ask for a real example of a difficult problem you solved. They will probe what you personally did and how you know it worked. Use your own real or realistic experience.",
+    "opening": "Thanks for coming in. I'm {{lead}}, the hiring manager, and this is {{second}}. Tell us about a difficult problem you solved at work, and what difference your work made.",
+    "opening_speaker": "p1",
+    "learner_role": "Job candidate"
+  },
+  "brief": {
+    "you_are": "You are a candidate for a {{role}} role.",
+    "situation": "Two interviewers want one real example of a hard problem you solved. Choose an example from your own experience. You can use a study or volunteer example if you have no work example.",
+    "task": "Explain the situation briefly, say what you personally did, and give a result with evidence. Answer follow-up questions directly.",
+    "done_looks_like": "The interviewers understand the problem, your own actions, and the measurable or observable result."
+  },
+  "participants": [
+    {"id": "p0", "name": "You", "role": "Job candidate", "kind": "learner", "team": "learner", "relationship": "Interviewing for the role", "goals": ["Give a clear, evidenced example"], "voice_index": 0},
+    {
+      "id": "p1", "name": "{{lead}}", "role": "Hiring manager", "kind": "ai", "team": "opponent", "relationship": "Would be your manager", "voice_index": 0,
+      "topics": ["experience", "role", "team", "company", "hiring", "salary"],
+      "card": {
+        "want": "Find out whether this person really solved the problem or only stood nearby.",
+        "hidden_need": "The last hire looked strong in interview but could not work without direction.",
+        "attitude": "Courteous, attentive and sceptical. Not hostile.",
+        "speech": "Calm, professional English. Short, pointed questions that use the candidate's own words.",
+        "tactics": ["When you hear 'we', ask what they did themselves", "When you hear 'it went well', ask how they know", "Never accept a vague result without asking once"],
+        "pressure": {"gentle": "Asks one follow-up, then moves on.", "balanced": "Probes twice on a weak answer.", "challenging": "Keeps politely asking for specifics, and tests whether the numbers hold up."}
+      }
+    },
+    {
+      "id": "p2", "name": "{{second}}", "role": "Senior team member", "kind": "ai", "team": "opponent", "relationship": "Would be your colleague", "voice_index": 1,
+      "topics": ["how", "detail", "technical", "colleagues", "disagree", "mistake"],
+      "card": {
+        "want": "Learn how this person works with other people when things go wrong.",
+        "attitude": "Friendly and curious, interested in the practical detail.",
+        "speech": "Conversational professional English. Asks about people and decisions.",
+        "tactics": ["Ask what they would do differently", "Ask how others reacted"],
+        "pressure": {"gentle": "Encouraging.", "balanced": "Asks one awkward question.", "challenging": "Asks about what went wrong."}
+      }
+    }
+  ],
+  "ledger": [
+    {"id": "f1", "text": "The role is {{role}} at {{company}}."},
+    {"id": "f2", "text": "The interview is scheduled for 30 minutes with two interviewers."},
+    {"id": "f3", "owner": "p1", "text": "The role reports to {{lead}} and manages no people at first."},
+    {"id": "f4", "owner": "p2", "text": "The team has {{team_size}} people and works closely across departments."},
+    {"id": "f5", "text": "The candidate's example comes from their own experience, so only the candidate knows its details. The interviewers never supply those details."}
+  ],
+  "objectives": [
+    {"id": "o1", "description": "Structure the example clearly", "evidence": "The learner sets out the situation and what needed doing, briefly and in an order the listener can follow.", "alternatives": ["Our complaint volume was rising, and my job was to bring it down"]},
+    {"id": "o2", "description": "Explain your own actions", "evidence": "The learner identifies specific things they personally did, rather than only what the team did.", "alternatives": ["I rebuilt the tracking sheet and I ran the weekly review"]},
+    {"id": "o3", "description": "Quantify or evidence the result", "evidence": "The learner gives a measurable or observable result and how they know it.", "alternatives": ["Complaints fell by a third over three months, according to our ticket system"]}
+  ],
+  "examples": ["The situation was ...", "What I did personally was ...", "As a result ..., and I know that because ..."],
+  "prerequisites": ["Think of one real example before you begin."],
+  "beats": [
+    {
+      "id": "story", "goal": "Hear the situation and the task.", "driver": "p1", "objectives": ["o1"],
+      "signals": ["\\b(?:situation|problem was|my (?:task|job|role)|i was responsible|needed to|we had|last year|in my)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["Start with the situation. What was going wrong, and what was your job?", "Take us back to the start. What was the problem?"],
+      "orient": "This is a job interview. We want one real example from your experience. Tell us about a problem you solved. What was going wrong, and what was your job?",
+      "fallback": ["What was going wrong, and what was your job in it?", "Can you start with the situation?"]
+    },
+    {
+      "id": "actions", "goal": "Separate what the candidate personally did from what the team did.", "driver": "p1", "objectives": ["o2"], "min_turns": 2,
+      "signals": ["\\b(?:i (?:built|created|led|decided|ran|wrote|changed|organi[sz]ed|set up|took|persuaded|designed|reviewed|called|spoke|started))\\b"],
+      "stall_turns": 3,
+      "second_speaker": "p2",
+      "second_line": "That sounds hard to pull off. Who disagreed with you along the way?",
+      "opportunity": ["You said 'we'. What did you personally do?", "If I asked your manager, what would they say you did?"],
+      "orient": "We want to know what you did yourself, not your whole team. Try starting with: I decided, or I built.",
+      "fallback": ["What did you personally do?", "Which decision was yours?"]
+    },
+    {
+      "id": "result", "goal": "Establish the result and how the candidate knows.", "driver": "p1", "objectives": ["o3"],
+      "signals": ["\\b(?:result|percent|%|fell|rose|reduced|increased|improved|saved|measured|\\d+|as a result|in the end)\\b"],
+      "stall_turns": 3,
+      "opportunity": ["What changed because of what you did?", "How do you know it worked?"],
+      "orient": "Last part. Tell us the result of your work, and how you know. A number helps, but something you saw happen is fine too.",
+      "fallback": ["And what was the result?", "How do you know it worked?"]
+    }
+  ],
+  "closing_line": "Thank you, that gives us a clear picture. We'll be in touch.",
+  "expert_notes": {
+    "o1": {"good": "One or two sentences of context, then straight to your part. The listener always knows where they are.", "common_mistakes": ["Spending most of the time on background", "Starting in the middle"], "micro_lesson": "Keep the situation short. It is only there so your actions make sense.", "model": "Our complaint volume was rising, and my job was to bring it down within a quarter.", "smaller_step": "Say in one sentence what was going wrong.", "subskills": ["comprehension"]},
+    "o2": {"good": "Saying 'I' for what you did and 'we' only for what the team did. Interviewers are hiring you, not your team.", "common_mistakes": ["'We' all the way through", "Describing a process with no person in it"], "micro_lesson": "Say 'I' for your own actions. It is not boasting; it is what they asked.", "model": "I rebuilt the tracking sheet, and I ran a weekly review with the support leads.", "smaller_step": "Name one thing you did yourself. Start with: I.", "subskills": ["vocabulary"]},
+    "o3": {"good": "A specific result and how you know it. A real observation is better than an invented number.", "common_mistakes": ["'It went really well'", "Inventing a figure you can't defend"], "micro_lesson": "End with what changed and how you know. Never invent a number you can't defend.", "model": "Complaints fell by about a third over three months, according to our ticket system.", "smaller_step": "Say one thing that was different afterwards.", "subskills": ["comprehension"]}
+  },
+  "variants": [
+    {"role": "project coordinator", "company": "Northline Logistics", "lead": "Priya", "second": "Daniel", "team_size": "six"},
+    {"role": "customer success specialist", "company": "Brightdesk", "lead": "Hannah", "second": "Bilal", "team_size": "eight"},
+    {"role": "operations analyst", "company": "Marlow Foods", "lead": "Grace", "second": "Yusuf", "team_size": "five"}
+  ]
+}

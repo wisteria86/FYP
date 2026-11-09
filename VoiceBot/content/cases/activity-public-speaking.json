@@ -1,0 +1,81 @@
+{
+  "archetype": "panel",
+  "level": "intermediate",
+  "setting": "A fictional short talk to colleagues at a monthly team lunch, introduced by a friendly host.",
+  "presentation": {
+    "situation": "{{host}} has invited you to give a two-minute talk at the team lunch about {{topic}}. Use your own ideas and examples. Speak in a few longer turns: open with why it matters, give your main points, and finish with what you want people to do. Then take one question.",
+    "opening": "Thanks, everyone. Our speaker today is going to talk about {{topic}}. The floor is yours. Why should we care about this?",
+    "opening_speaker": "p1",
+    "learner_role": "Speaker"
+  },
+  "brief": {
+    "you_are": "You are giving a short talk to about twenty colleagues at a team lunch.",
+    "situation": "Your topic is {{topic}}. The audience is friendly and busy, and they have not prepared anything. {{host}} is hosting, and will ask you one question at the end.",
+    "task": "Open by saying why this matters to them, give two or three clear points with an example, and finish by asking them to do one thing. Then answer the question.",
+    "done_looks_like": "People know why it matters, can repeat your main points, and know the one thing you want them to do."
+  },
+  "participants": [
+    {"id": "p0", "name": "You", "role": "Speaker", "kind": "learner", "team": "learner", "relationship": "Invited to speak to colleagues", "goals": ["Give a clear, memorable short talk"], "voice_index": 0},
+    {
+      "id": "p1", "name": "{{host}}", "role": "Event host", "kind": "ai", "team": "opponent", "relationship": "Hosts the monthly team lunch and introduces the speakers", "voice_index": 0,
+      "topics": ["talk", "audience", "time", "question"],
+      "card": {
+        "want": "A short, useful talk that the audience will remember, finishing on time.",
+        "hidden_need": "Wants the speaker to do well, and the lunch to feel worthwhile.",
+        "attitude": "Warm and encouraging, and keeps an eye on the time. Listens more than speaks.",
+        "speech": "Friendly and very brief. Gives the speaker the floor. Never gives a talk of their own, and never comments on the speaker's English.",
+        "tactics": ["Say very little between parts of the talk", "Ask one audience-style question at the end"],
+        "pressure": {"gentle": "Encouraging, with an easy final question.", "balanced": "Mentions time once, and asks a real question.", "challenging": "Asks a sceptical question from the audience."}
+      }
+    }
+  ],
+  "ledger": [
+    {"id": "f1", "text": "The talk is about {{topic}}, and should last about two minutes."},
+    {"id": "f2", "text": "About twenty colleagues are listening over lunch."},
+    {"id": "f3", "text": "The details and examples in the talk come from the speaker. The host does not supply them."}
+  ],
+  "objectives": [
+    {"id": "o1", "description": "Open with why it matters to this audience", "evidence": "The learner begins by connecting the topic to the listeners, not with apologies or a long introduction.", "alternatives": ["Most of us lose an hour a day to this, so here's how to get it back"]},
+    {"id": "o2", "description": "Organize main points with an example", "evidence": "The learner gives clearly separated points, with at least one concrete example.", "alternatives": ["First, ... For example, ... Second, ..."]},
+    {"id": "o3", "description": "Close with one clear call to action", "evidence": "The learner ends by summing up or asking the audience to do one specific thing.", "alternatives": ["So tomorrow, try one thing: block your first hour"]}
+  ],
+  "examples": ["Most of us have had this problem ...", "First ... For example ... Second ...", "So here's one thing to try this week ..."],
+  "prerequisites": ["Think of one real example you could use."],
+  "beats": [
+    {
+      "id": "open", "goal": "The speaker opens by showing why this matters to the audience.", "driver": "p1", "objectives": ["o1"],
+      "signals": ["\\b(?:most of us|all of us|each of you|you (?:may|might|probably)|have you ever|imagine|why (?:this|it) matters|matters (?:to|for)|every day|we all)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["Before you go further, why does this matter to the people in this room?", "Go on. What's in it for us?"],
+      "orient": "You're giving a short talk, and I'm the host. Your topic is {{topic}}. Start by telling everyone why it matters to them.",
+      "fallback": ["Go ahead. Why does this matter to us?", "We're listening."]
+    },
+    {
+      "id": "points", "goal": "The speaker gives main points. The host keeps quiet.", "driver": "p1", "objectives": ["o2"],
+      "signals": ["\\b(?:first|second|third|another|for example|for instance|my main point|one thing|the next)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["Thanks. What are your main points?", "Can you give us an example of that?"],
+      "orient": "Now give your main points. Two is plenty. Say 'first' and 'second', and give an example from your own experience.",
+      "fallback": ["Please go on.", "Can you give us an example?"]
+    },
+    {
+      "id": "close", "goal": "The speaker ends with what they want the audience to do.", "driver": "p1", "objectives": ["o3"],
+      "signals": ["\\b(?:so (?:try|tomorrow|this week|next time|please|my advice|remember)|in (?:short|summary|conclusion)|to (?:sum|finish|close)|i'?d like you to|i (?:ask|encourage) you|one thing to|try this|remember)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["We're nearly out of time. What's the one thing you'd like us to do?", "How would you like to finish?"],
+      "orient": "Time to finish. Tell everyone the one thing you'd like them to do after this talk.",
+      "fallback": ["What's the one thing you'd like us to do?", "We're nearly out of time. How would you like to finish?"]
+    }
+  ],
+  "closing_line": "Thank you, that was really useful. Let's give our speaker a round of applause.",
+  "expert_notes": {
+    "o1": {"good": "Beginning with the audience's own experience, so they have a reason to listen.", "common_mistakes": ["Apologizing or saying you are nervous", "Starting with a definition"], "micro_lesson": "Your first sentence should be about them, not you.", "model": "Most of us lose an hour a day to this, so here's how to get it back.", "smaller_step": "Say one reason this matters to the people in the room.", "subskills": ["audience focus"]},
+    "o2": {"good": "Few points, clearly marked, with a real example people can remember.", "common_mistakes": ["Too many points", "Abstract advice with no example"], "micro_lesson": "People remember examples. Use 'first' and 'second' so they can follow you.", "model": "First, block the first hour. For example, I stopped checking email until ten.", "smaller_step": "Give one point and say: for example.", "subskills": ["structure"]},
+    "o3": {"good": "Ending on one action, rather than letting the talk fade out.", "common_mistakes": ["'That's all I have'", "Adding a new point at the end"], "micro_lesson": "The last thing you say is what people remember. Make it one action.", "model": "So tomorrow, try one thing: block your first hour.", "smaller_step": "Say one thing you want them to try.", "subskills": ["structure"]}
+  },
+  "variants": [
+    {"host": "Elena", "topic": "one habit that makes your working day better"},
+    {"host": "Junaid", "topic": "something you learned from a mistake at work"},
+    {"host": "Tara", "topic": "how to run a shorter, better meeting"}
+  ]
+}

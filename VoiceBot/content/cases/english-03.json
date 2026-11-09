@@ -1,0 +1,235 @@
+{
+  "archetype": "social",
+  "level": "beginner",
+  "setting": "A fictional chat with a new friend at a family picnic in a park.",
+  "presentation": {
+    "situation": "You are at a picnic with a new friend, {{name}}. {{name}} lives with {{family}}. Talk about the people close to you, and ask about {{name}}'s family.",
+    "opening": "It's so nice here. I came with {{family}}. Who do you live with?",
+    "opening_speaker": "p1",
+    "learner_role": "Friend"
+  },
+  "brief": {
+    "you_are": "You are at a picnic with a new friend.",
+    "situation": "You are at a picnic with a new friend, {{name}}. {{name}} lives with {{family}}. Talk about the people close to you, and ask about {{name}}'s family.",
+    "task": "Talk about someone in your family using words like mother or brother, use he, she or they, and ask about the other person.",
+    "done_looks_like": "Your friend knows about one or two people close to you, and you asked about their family too."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Friend",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are at a picnic with a new friend.",
+      "goals": [
+        "Talk about someone in your family using words like mother or brother, use he, she or they, and ask about the other person."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "New friend",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Someone you met recently",
+      "voice_index": 0,
+      "topics": [
+        "family",
+        "brother",
+        "sister",
+        "mother",
+        "father"
+      ],
+      "card": {
+        "want": "To learn about you and to talk about their family.",
+        "hidden_need": "Misses a brother who lives far away.",
+        "attitude": "Warm and curious.",
+        "speech": "Very simple everyday English. Short sentences. One easy question at a time.",
+        "tactics": [
+          "If the answer is very short, ask one easy question",
+          "Use the person's own words back to them"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "The two of you are at a picnic in the park."
+    },
+    {
+      "id": "f2",
+      "text": "{{name}} lives with {{family}}.",
+      "owner": "p1"
+    },
+    {
+      "id": "f3",
+      "text": "{{name}} has a brother who lives in {{city}}.",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Use family vocabulary",
+      "evidence": "The learner names at least one family member or close person.",
+      "alternatives": [
+        "I live with my parents."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Use he, she, and they correctly",
+      "evidence": "The learner uses he, she or they correctly about someone.",
+      "alternatives": [
+        "She works in a school."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Ask about another person",
+      "evidence": "The learner asks a question about the friend or their family.",
+      "alternatives": [
+        "Do you have a brother?"
+      ]
+    }
+  ],
+  "examples": [
+    "I live with my …",
+    "He/She works …",
+    "What about your family?"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Hear who the learner lives with.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:family|parent|mother|father|brother|sister|wife|husband|friend)s?\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Do you have brothers or sisters?",
+        "Who is in your family?"
+      ],
+      "orient": "We are talking about family. Tell me one person in your family. You can say: I live with my mother.",
+      "fallback": [
+        "Who is in your family?",
+        "Do you have brothers or sisters?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Hear something about that person.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:he|she|they)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Tell me about one of them. What do they do?",
+        "What is your sister or brother like?"
+      ],
+      "orient": "Now tell me about that person. Start with he or she. For example: She works in a school.",
+      "fallback": [
+        "What is your sister or brother like?",
+        "Tell me about one of them. What do they do?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "The learner asks back.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:who|what|how many|do you)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "I talk too much! Is there anything you want to know about my family?",
+        "Do you want to ask me something?"
+      ],
+      "orient": "Now ask me about my family. You can say: Do you have a brother?",
+      "fallback": [
+        "Do you want to ask me something?",
+        "I talk too much! Is there anything you want to know about my family?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Thank you. I enjoyed talking with you.",
+  "expert_notes": {
+    "o1": {
+      "good": "Naming real people in your life.",
+      "common_mistakes": [
+        "Answering only yes or no"
+      ],
+      "micro_lesson": "Use family words: mother, father, brother, sister.",
+      "model": "I live with my parents and my sister.",
+      "smaller_step": "Say one family word.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "Using he for a man, she for a woman, and they for a group.",
+      "common_mistakes": [
+        "Mixing up he and she"
+      ],
+      "micro_lesson": "Choose he or she, then say one thing about the person.",
+      "model": "She is a teacher. She works near our house.",
+      "smaller_step": "Say one sentence starting with he or she.",
+      "subskills": [
+        "grammar"
+      ]
+    },
+    "o3": {
+      "good": "Asking back shows you care about the other person.",
+      "common_mistakes": [
+        "Not asking anything"
+      ],
+      "micro_lesson": "Use: Do you have, or: Who do you.",
+      "model": "Who do you live with? Do you have a brother?",
+      "smaller_step": "Say: Do you have a brother?",
+      "subskills": [
+        "comprehension"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Sana",
+      "family": "my mother and my two sisters",
+      "city": "Dubai"
+    },
+    {
+      "name": "Tom",
+      "family": "my wife and our son",
+      "city": "Manchester"
+    }
+  ]
+}

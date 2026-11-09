@@ -1,0 +1,246 @@
+{
+  "archetype": "colleague",
+  "level": "intermediate",
+  "setting": "A fictional disagreement between colleagues over a shared resource.",
+  "presentation": {
+    "situation": "Your team booked {{resource}} for {{your_use}}. {{name}} urgently wants it for {{their_use}} at the same time. {{alternative}} Calm things down and find a fair solution.",
+    "opening": "I need {{resource}} for {{their_use}}, and your team has blocked it. This can't wait.",
+    "opening_speaker": "p1",
+    "learner_role": "Colleague"
+  },
+  "brief": {
+    "you_are": "You are a colleague in a disagreement about a shared resource.",
+    "situation": "Your team booked {{resource}} for {{your_use}}. {{name}} urgently wants it for {{their_use}} at the same time. {{alternative}} Calm things down and find a fair solution.",
+    "task": "Lower the tension, show you understand the concern, and work out a fair solution together.",
+    "done_looks_like": "The tension has come down, and you both accept a specific solution."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Colleague",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are a colleague in a disagreement about a shared resource.",
+      "goals": [
+        "Lower the tension, show you understand the concern, and work out a fair solution together."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Colleague",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "From another team",
+      "voice_index": 0,
+      "topics": [
+        "room",
+        "booking",
+        "urgent",
+        "client",
+        "time"
+      ],
+      "card": {
+        "want": "To get what is needed for their urgent work.",
+        "hidden_need": "{{need}}",
+        "attitude": "Stressed and sharp, and reasonable once heard.",
+        "speech": "Direct, natural workplace English. No insults.",
+        "tactics": [
+          "Start sharply",
+          "Soften when your concern is taken seriously",
+          "Reject one-sided solutions"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "Your team booked {{resource}} for {{your_use}}."
+    },
+    {
+      "id": "f2",
+      "text": "{{name}} wants it for {{their_use}}."
+    },
+    {
+      "id": "f3",
+      "text": "{{alternative}}"
+    },
+    {
+      "id": "f4",
+      "text": "{{need}}",
+      "owner": "p1",
+      "available_from": "b1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "De-escalate the tension",
+      "evidence": "The learner lowers the tension rather than arguing.",
+      "alternatives": [
+        "Let's work this out together. I can see this is urgent."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Show understanding of their concern",
+      "evidence": "The learner shows understanding of the concern.",
+      "alternatives": [
+        "I understand this client briefing really matters."
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Propose a fair, specific solution",
+      "evidence": "The learner proposes a specific solution that works for both sides.",
+      "alternatives": [
+        "What if we swap: you take it at ten, and we move to the other slot?"
+      ]
+    }
+  ],
+  "examples": [
+    "Let's work this out together.",
+    "I understand this client briefing really matters to you.",
+    "What if you take it at ten, and we use the small room?"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Calm the situation.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:let'?s|together|calm|fair|work (?:this|it) out|no problem|i can see)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So you are just going to keep it?",
+        "Are you even listening?"
+      ],
+      "orient": "We're arguing. You don't need to win. Say something calm, like: Let's work this out together.",
+      "fallback": [
+        "Are you even listening?",
+        "So you are just going to keep it?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Feel understood.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:i understand|i appreciate|i can see why|that sounds|must be|sorry|concern|why (?:is|does) (?:this|it))\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Do you know what is at stake for me?",
+        "You have no idea how much pressure I am under."
+      ],
+      "orient": "Show me that you understand why this matters to me. Ask me about it, or say: I understand that.",
+      "fallback": [
+        "You have no idea how much pressure I am under.",
+        "Do you know what is at stake for me?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Find a solution.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:what if|could|option|solution|how about|we could|i propose|instead|swap)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "So what do you suggest?",
+        "How do we fix this, then?"
+      ],
+      "orient": "Now suggest a solution that works for both of us. You can use the option in your brief. Start with: What if we.",
+      "fallback": [
+        "How do we fix this, then?",
+        "So what do you suggest?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Okay. That works. Thanks for sorting this out with me.",
+  "expert_notes": {
+    "o1": {
+      "good": "A calm tone, and no blame.",
+      "common_mistakes": [
+        "Answering sharpness with sharpness"
+      ],
+      "micro_lesson": "Say: Let's work this out.",
+      "model": "Let's work this out together.",
+      "smaller_step": "Say: Let's work this out.",
+      "subskills": [
+        "de-escalation"
+      ]
+    },
+    "o2": {
+      "good": "Understanding their reason, even if you disagree with their approach.",
+      "common_mistakes": [
+        "Defending your booking first"
+      ],
+      "micro_lesson": "Say: I understand that, plus their reason.",
+      "model": "I understand this client briefing really matters to you.",
+      "smaller_step": "Say: I understand.",
+      "subskills": [
+        "empathy"
+      ]
+    },
+    "o3": {
+      "good": "A specific plan that meets both needs.",
+      "common_mistakes": [
+        "Giving in completely, or refusing completely"
+      ],
+      "micro_lesson": "Say: What if we, and what each side gets.",
+      "model": "What if you take it at ten, and we use the small room?",
+      "smaller_step": "Say: What if we.",
+      "subskills": [
+        "problem solving"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Adeel",
+      "resource": "the main meeting room",
+      "your_use": "a team workshop at 10",
+      "their_use": "a client briefing at 10",
+      "alternative": "The small room is free at 10 and the main room is free at 11.",
+      "need": "A very important client is flying in, and only has one hour."
+    },
+    {
+      "name": "Claire",
+      "resource": "the testing environment",
+      "your_use": "your release checks today",
+      "their_use": "an urgent bug fix today",
+      "alternative": "Your checks could run this evening instead, if someone stays late.",
+      "need": "A customer is unable to log in, and the bug fix is needed to restore access."
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import threading
 from intelligence.replies import public_reply
 from domain.errors import DomainError
 from intelligence.conversation_direction import grounded_reply
+from intelligence import scene_director
 from services.group_draft import GroupDraft
 from modules.llm_quota import QuotaDeferred, seconds
 
@@ -17,6 +18,7 @@ PENDING_REVIEWS = {}
 LAST_REVIEW = {}
 REVIEW_IDLE_SECONDS = 12
 REVIEW_INTERVAL_SECONDS = 120
+SCENE_RATE_WAIT_SECONDS = 8
 
 
 async def review_session(training, llm, sid, background=False):
@@ -35,7 +37,14 @@ async def review_session(training, llm, sid, background=False):
     try:
         kwargs={'background':background} if getattr(llm,'supports_quota_priority',False) is True else {}
         result = await asyncio.wait_for(asyncio.to_thread(llm.evaluate_runtime, context, **kwargs), 25)
-        runtime.save_evaluation(sid, context['revision'], result)
+        saved = runtime.save_evaluation(sid, context['revision'], result)
+        definition, _ = runtime.read(sid)
+        if not saved and definition.get('version') == 3 and runtime.read(sid)[1]['evidence_revision'] == context['revision']:
+            # One corrective retry, so a malformed review cannot silently stall progress.
+            context = {**context, 'previous_output_invalid': 'Use the exact JSON shape. Every met criterion needs an exact learner quote and its integer turn id.'}
+            result = await asyncio.wait_for(asyncio.to_thread(llm.evaluate_runtime, context, **kwargs), 25)
+            if not runtime.save_evaluation(sid, context['revision'], result):
+                runtime.unavailable(sid, 'Evidence review could not be read. Your conversation is saved and will be reviewed after your next turn.')
         if isinstance(result,dict):
             grouped={}
             for item in result.get('contradictions',[]) if isinstance(result.get('contradictions'),list) else []:
@@ -86,6 +95,27 @@ def schedule_review(training, llm, sid, immediate=False, min_delay=0):
     task.add_done_callback(BACKGROUND.discard)
 
 
+async def finalize_scene(training, llm, sid):
+    """One final decision at the latest revision, then one expert debrief. Never blocks on quota."""
+    cancel_scheduled_review(training, sid)
+    runtime = training.context.runtime
+    payload = {}
+    if llm:
+        _, state = runtime.read(sid)
+        if (state.get('evaluation') or {}).get('revision') != state['evidence_revision'] and not state['completed']:
+            try:
+                await asyncio.wait_for(review_session(training, llm, sid), 28)
+            except Exception as exc:
+                logger.info('Final review unavailable: %s', type(exc).__name__)
+        if hasattr(llm, 'generate_debrief'):
+            try:
+                context = training.context.assessment.debrief_context(training.session(sid))
+                payload['debrief'] = await asyncio.wait_for(asyncio.to_thread(llm.generate_debrief, context), 15)
+            except Exception as exc:
+                logger.info('Model debrief unavailable; using authored notes: %s', type(exc).__name__)
+    return training.assess(sid, payload)
+
+
 async def wait_for_delivery(runtime,sid,uid,generation,timeout=75):
     deadline=time.monotonic()+timeout
     while time.monotonic()<deadline:
@@ -113,15 +143,32 @@ async def run_structured_turn(owner, sid, payload, sentence_callback=None):
     prefetch = None
     group = None
     stop_prefetch = threading.Event()
+    is_scene = definition.get('version') == 3
+    beat_before = (state.get('scene') or {}).get('beat')
     try:
         sources = []
+        if is_scene and not state.get('directions'):
+            recognition = getattr(payload, 'recognition', None) or {}
+            reading = scene_director.read_local(payload.text, bool(recognition.get('unreliable')))
+            if owner.llm and getattr(owner.llm, 'router_enabled', False) is True and scene_director.needs_router(reading, payload.text):
+                # A cheap reading improves steering. Losing it must never block the reply.
+                try:
+                    with runtime.connect() as db:
+                        recent = [r[0] for r in db.execute("SELECT text FROM turns WHERE session_id=? AND text!='' ORDER BY id DESC LIMIT 4", (sid,))][::-1]
+                    context = scene_director.router_context(definition, state['scene'], payload.text, recent)
+                    answer = await asyncio.wait_for(asyncio.to_thread(owner.llm.read_turn, context), 3)
+                    reading = scene_director.merge_reading(reading, answer, definition['beats'][state['scene']['beat']])
+                except Exception as exc:
+                    logger.info('Turn reading unavailable: %s', type(exc).__name__)
+            runtime.direct_turn(sid, reading)
+            definition, state = runtime.read(sid)
         if session.get('document_ids'):
             ready = {d['id'] for d in owner.training.documents(session['user_id']) if d['status'] == 'ready'}
             if not set(session['document_ids']).issubset(ready):
                 raise DomainError('document_unavailable', 'Prepare a new lesson with available sources.', status_code=409)
             sources = await asyncio.to_thread(owner.training.search, payload.text, session['user_id'], document_ids=session['document_ids'])
         speakers = runtime.speakers(sid)
-        if (owner.llm and getattr(owner.llm,'supports_group_response',False) is True
+        if (not is_scene and owner.llm and getattr(owner.llm,'supports_group_response',False) is True
                 and not grounded_reply(definition,state,speakers[0])
                 and not (state['completed'] and not state['extra_practice'])):
             group_prompt=runtime.group_prompt(sid,speakers,sources)
@@ -134,12 +181,16 @@ async def run_structured_turn(owner, sid, payload, sentence_callback=None):
             uid = runtime.create_utterance(sid, generation, speaker)
             emitted = []
             filtered = []
-            local_reply = grounded_reply(definition,state,speaker) if index==0 else None
-            def emit(sentence):
+            local_reply = speaker.get('_line') if is_scene else (grounded_reply(definition,state,speaker) if index==0 else None)
+            words = speaker.get('_max_words', 30)
+            sentence_limit = 2 if not is_scene or words <= 30 else 3
+            scripted = False
+            def emit(sentence, authored=False):
                 cleaned = public_reply(sentence).strip()
                 if not cleaned or not runtime.active(sid, generation):
                     return
-                cleaned = runtime.validate_sentence(sid, speaker, cleaned)
+                if not (authored and is_scene):
+                    cleaned = runtime.validate_sentence(sid, speaker, cleaned)
                 if not cleaned:
                     filtered.append(sentence)
                     return
@@ -152,10 +203,13 @@ async def run_structured_turn(owner, sid, payload, sentence_callback=None):
                         event=db.execute("SELECT id,revision FROM conversation_events WHERE session_id=? AND utterance_id=? AND kind='speech_text' ORDER BY id DESC LIMIT 1",(sid,uid)).fetchone()
                     sentence_callback(cleaned, speaker['name'], {'event_id':event['id'],'revision':event['revision'],'utterance_id': uid, 'segment': segment, 'participant_id': speaker['id'], 'generation_id': generation, 'voice_index': speaker['voice_index']})
             if state['completed'] and not state['extra_practice']:
-                emit('Thank you. We have covered what we needed to discuss. It was good talking with you.')
+                emit(definition.get('closing_line') or 'Thank you. We have covered what we needed to discuss. It was good talking with you.', authored=True)
             elif local_reply:
                 for sentence in re.findall(r'.+?(?:[.!?](?=\s|$)|$)',local_reply):
-                    if sentence.strip():emit(sentence.strip())
+                    if sentence.strip():emit(sentence.strip(), authored=True)
+            elif is_scene and not owner.llm:
+                scripted = True
+                emit(runtime.fallback_for(sid, speaker), authored=True)
             elif owner.llm:
                 # Deliver the authoritative repair explicitly, once. An unheard
                 # correction stays pending so interruption cannot erase it.
@@ -166,10 +220,24 @@ async def run_structured_turn(owner, sid, payload, sentence_callback=None):
                 instruction = runtime.prompt(sid, speaker, sources)
                 # Already queued ahead of this reply; do not repeat it in generated dialogue.
                 if repairs:instruction['context']['corrections_to_acknowledge'] = []
+                def scene_tokens():
+                    # Wait out a brief per-minute limit rather than dropping to a prepared line.
+                    for attempt in range(2):
+                        try:
+                            yield from owner.llm.generate_contextual_response(instruction)
+                            return
+                        except Exception as exc:
+                            if getattr(exc, 'status_code', None) != 429 or attempt:
+                                raise
+                            headers = getattr(getattr(exc, 'response', None), 'headers', {})
+                            wait = seconds(headers.get('retry-after'), 15)
+                            if wait > SCENE_RATE_WAIT_SECONDS:
+                                raise
+                            time.sleep(wait)
                 def generate():
                     buffer = ''
                     tokens = prefetched_tokens if prefetched_tokens is not None else (
-                        group.tokens(speaker['id']) if group and speaker['id'] in group.ids
+                        scene_tokens() if is_scene else group.tokens(speaker['id']) if group and speaker['id'] in group.ids
                         else owner.llm.generate_contextual_response(instruction))
                     for token in tokens:
                         if not runtime.active(sid, generation):
@@ -181,8 +249,8 @@ async def run_structured_turn(owner, sid, payload, sentence_callback=None):
                                 break
                             emit(match.group(1))
                             buffer = buffer[match.end():]
-                            if len(emitted)>=2:return
-                    if buffer.strip():
+                            if len(emitted)>=sentence_limit:return
+                    if buffer.strip() and not (is_scene and emitted):
                         emit(buffer)
                 try:
                     prefetched_tokens = await prefetch if prefetch else None
@@ -190,13 +258,28 @@ async def run_structured_turn(owner, sid, payload, sentence_callback=None):
                     worker = asyncio.create_task(asyncio.to_thread(generate))
                     await asyncio.wait_for(worker, 20)
                 except asyncio.TimeoutError:
-                    provider_failed = True
-                    runtime.unavailable(sid,'The response timed out. Your words are saved; retry the response when you are ready.',uid)
+                    if is_scene and not emitted:
+                        scripted = True
+                    else:
+                        provider_failed = True
+                        runtime.unavailable(sid,'The response timed out. Your words are saved; retry the response when you are ready.',uid)
                 except asyncio.CancelledError:
                     runtime.fail(sid, generation)
                     raise
                 except Exception as exc:
                     logger.warning('Character provider unavailable: %s', type(exc).__name__)
+                    if is_scene:
+                        # A flagship scene keeps moving on authored lines; review simply waits.
+                        scripted = not emitted
+                        if scripted:
+                            emit(runtime.fallback_for(sid, speaker), authored=True)
+                            runtime.notice(sid, 'The AI limit was reached, so this character is using prepared lines for now. Prepared lines earn no extra credit.')
+                        index += 1
+                        if emitted:
+                            responses.append({'speaker': speaker['name'], 'speaker_role': speaker['role'], 'participant_id': speaker['id'],
+                                'team': speaker['team'], 'text': ' '.join(emitted), 'utterance_id': uid, 'correlation_id': uid,
+                                'response_mode': 'scripted', 'move': speaker.get('_move')})
+                        continue
                     provider_failed = True
                     limited=getattr(exc,'status_code',None)==429
                     headers=getattr(getattr(exc,'response',None),'headers',{})
@@ -207,6 +290,14 @@ async def run_structured_turn(owner, sid, payload, sentence_callback=None):
                     runtime.unavailable(sid,message,uid,retry_after)
             else:
                 runtime.unavailable(sid,'The conversation provider is offline. Your words are saved. You can use the coach or retry after reconnecting.',uid)
+            must_say = speaker.get('_must_say') or []
+            if is_scene and emitted and must_say and not all(f'{int(value):,}' in ' '.join(emitted) or str(int(value)) in ' '.join(emitted) for value in must_say):
+                # A bargaining position has to be stated: the learner cannot respond to a hidden figure.
+                emit(speaker.get('_fallback', ''), authored=True)
+            if is_scene and not emitted and not provider_failed:
+                # Every generated sentence was rejected or the model timed out.
+                emit(runtime.fallback_for(sid, speaker), authored=True)
+                scripted = True
             if not emitted and filtered and not provider_failed:
                 emit(runtime.repetition_repair(sid,speaker))
             if not emitted and not provider_failed:
@@ -215,7 +306,7 @@ async def run_structured_turn(owner, sid, payload, sentence_callback=None):
             if emitted:
                 responses.append({'speaker': speaker['name'], 'speaker_role': speaker['role'], 'participant_id': speaker['id'],
                     'team': speaker['team'], 'text': ' '.join(emitted), 'utterance_id': uid, 'correlation_id': uid,
-                    'response_mode':'grounded' if local_reply else 'generated'})
+                    'response_mode':'scripted' if scripted else 'grounded' if local_reply else 'generated','move':speaker.get('_move')})
             if provider_failed and not local_reply:break
             runtime.response_available(sid)
             index += 1
@@ -230,7 +321,7 @@ async def run_structured_turn(owner, sid, payload, sentence_callback=None):
             if spoken and index < len(speakers):
                 # Prepare privately during playback; never publish a speculative
                 # response or count its predecessor as heard before the ACK.
-                if owner.llm:
+                if owner.llm and not speakers[index].get('_line'):
                     draft_instruction=runtime.prompt(sid,speakers[index],sources,anticipated={
                         'speaker_id':speaker['id'],'speaker':speaker['name'],'text':' '.join(emitted),'utterance_id':uid})
                     def draft():
@@ -262,7 +353,10 @@ async def run_structured_turn(owner, sid, payload, sentence_callback=None):
             except Exception:
                 result['speech_unavailable'] = True
         runtime.finish(sid, generation, result)
-        if not provider_failed and runtime.ready_for_review(sid):schedule_review(owner.training, owner.llm, sid)
+        if not provider_failed and runtime.ready_for_review(sid):
+            # Scene changes are natural review points: closure and steering stay in step.
+            after = runtime.read(sid)[1].get('scene') or {}
+            schedule_review(owner.training, owner.llm, sid, immediate=is_scene and after.get('finished', False))
         owner.metrics.record('roleplay', 'structured conversation', (time.perf_counter()-began)*1000, True, correlation_id=generation)
         return result
     except BaseException:

@@ -1,0 +1,100 @@
+{
+  "archetype": "meeting",
+  "level": "advanced",
+  "setting": "A fictional 20-minute team meeting, chaired by the learner, about a decision the learner has made.",
+  "presentation": {
+    "situation": "You manage a software team. You decided to move the weekly release from Friday to Tuesday, starting {{start}}. Alex and Maya have concerns. Chair the meeting: set the purpose, hear each person, and end with who does what by when.",
+    "opening": "Before we accept this move to Tuesday releases, the two of us have concerns. How do you want to run this?",
+    "opening_speaker": "p1",
+    "learner_role": "Team manager and meeting chair"
+  },
+  "brief": {
+    "you_are": "You are the team manager and you are chairing this 20-minute meeting.",
+    "situation": "You decided to move the weekly release from Friday to Tuesday, starting {{start}}, because {{reason}}. Alex (operations lead) and Maya (testing lead) have concerns. You may delay the start by up to two weeks and you may lend Maya one person from another team.",
+    "task": "Say what the meeting is for, make sure Alex and Maya each get heard one at a time, then finish by naming who will do what and by when.",
+    "done_looks_like": "Both concerns are out in the open, you have made a decision, and each action has an owner and a date."
+  },
+  "participants": [
+    {"id": "p0", "name": "You", "role": "Team manager and meeting chair", "kind": "learner", "team": "learner", "relationship": "Manager of Alex and Maya", "authority": "Final decision on the release plan", "goals": ["Chair the meeting and close with owners and dates"], "can_finalize": true, "voice_index": 0},
+    {
+      "id": "p1", "name": "Alex", "role": "Operations lead", "kind": "ai", "team": "participant", "relationship": "Reports to you; runs the on-call rota", "voice_index": 0,
+      "topics": ["rota", "on-call", "engineers", "notice", "operations", "weekend"],
+      "card": {
+        "want": "Enough notice to redo the on-call rota fairly before any change starts.",
+        "hidden_need": "Was not consulted and feels the team's personal plans were ignored.",
+        "attitude": "Direct, experienced and a little irritated, but reasonable once given a real date.",
+        "speech": "Plain, confident workplace English. Short sentences. Uses concrete details, not slogans.",
+        "tactics": ["Talk over Maya if nobody manages the discussion", "Ask 'so what have we actually decided?' if the chair drifts"],
+        "pressure": {"gentle": "Raises the concern once and listens.", "balanced": "Pushes back once on anything vague.", "challenging": "Questions why the decision was made without the team, firmly and without insults."}
+      }
+    },
+    {
+      "id": "p2", "name": "Maya", "role": "Testing lead", "kind": "ai", "team": "participant", "relationship": "Reports to you; leads release testing", "voice_index": 1,
+      "topics": ["testing", "test", "testers", "quality", "regression", "monday"],
+      "card": {
+        "want": "Enough testing capacity for a Monday regression run before a Tuesday release.",
+        "hidden_need": "Worried that she will be blamed if a rushed release fails.",
+        "attitude": "Careful and evidence-minded. Quieter than Alex, but firm about risk.",
+        "speech": "Clear, precise English. States numbers from what she knows and says when something is unknown.",
+        "tactics": ["Wait to be asked unless the beat brings her in", "Ask who is accountable if testing is cut short"],
+        "pressure": {"gentle": "States the risk once.", "balanced": "Asks how the capacity gap will be covered.", "challenging": "Will not agree to a date until the capacity gap has an owner."}
+      }
+    }
+  ],
+  "ledger": [
+    {"id": "f1", "text": "The decision is to move the weekly release from Friday to Tuesday, starting {{start}}."},
+    {"id": "f2", "text": "The reason is that {{reason}}."},
+    {"id": "f3", "text": "The meeting is booked for 20 minutes."},
+    {"id": "f4", "owner": "p1", "text": "{{rota}} engineers would have to change their on-call week because of the move."},
+    {"id": "f5", "owner": "p1", "text": "Alex needs two weeks' notice to redo the on-call rota fairly."},
+    {"id": "f6", "owner": "p2", "text": "A Tuesday release needs a full regression test on Monday, which takes one full day."},
+    {"id": "f7", "owner": "p2", "text": "Maya has {{testers}} testers and one of them is on leave until {{leave}}."},
+    {"id": "f8", "owner": "p2", "text": "The cost of any extra testing is not known."}
+  ],
+  "objectives": [
+    {"id": "o1", "description": "Set a clear purpose for the meeting", "evidence": "The learner states what the meeting is for or how it will run, in their own words.", "alternatives": ["We're here to hear your concerns and agree a plan for the move"]},
+    {"id": "o2", "description": "Manage competing voices", "evidence": "The learner actively directs the discussion so each person is heard: inviting someone, stopping an interruption, or summarising before moving on.", "alternatives": ["Maya, hold on, let me hear Alex first, then you"]},
+    {"id": "o3", "description": "Close with owners and actions", "evidence": "The learner states a decision and at least one named owner with an action and a time.", "alternatives": ["Alex will redo the rota by Friday; Maya gets one extra person from next week"]}
+  ],
+  "examples": ["The purpose of this meeting is ...", "Alex, let's hear you first, then Maya.", "To close: Alex will ... by ...; Maya will ... by ..."],
+  "prerequisites": ["Read the decision and your options in the briefing."],
+  "beats": [
+    {
+      "id": "open", "goal": "The chair must set the purpose. Until they do, Alex presses them for it.", "driver": "p1", "objectives": ["o1"],
+      "signals": ["\\b(?:purpose|agenda|we(?:'re| are) here|goal of|today we|first we|the point of|meeting is|i want to hear|let'?s start)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["Before anything else, what exactly do you want from this meeting?", "We have 20 minutes. What are we here to decide?"],
+      "orient": "You're the chair, and you decided to move the release from Friday to Tuesday. Maya and I have concerns. Tell us what this meeting is for and who should speak first.",
+      "fallback": ["We have 20 minutes. What do you want to get out of this?", "I just need to know what we're deciding today."]
+    },
+    {
+      "id": "voices", "goal": "Alex and Maya each have a real concern and compete for time. The chair must manage them.", "driver": "p1", "objectives": ["o2"], "min_turns": 3,
+      "signals": ["\\b(?:let me hear|one at a time|hold on|go ahead|go first|your turn|what do you think|alex,|maya,|let'?s hear|so you(?:'re| are)|if i understand)\\b"],
+      "stall_turns": 4,
+      "second_speaker": "p2",
+      "second_line": "Sorry to cut in, but the testing problem is just as serious, and nobody has asked me yet.",
+      "opportunity": ["{{rota}} engineers would have to change their on-call week. I need two weeks to redo the rota fairly.", "Can one of us finish a point? Who do you want to hear from?"],
+      "orient": "You're running this meeting, so you decide who talks. You can say: Alex, go first, and then Maya. We each have one concern for you to hear.",
+      "fallback": ["The on-call rota is my concern. I need notice to change it fairly.", "Whose concern do you want to deal with first?"]
+    },
+    {
+      "id": "decide", "goal": "Time is nearly up. The team needs a decision with owners and dates.", "driver": "p2", "objectives": ["o3"],
+      "signals": ["\\b(?:will (?:do|own|send|prepare|redo|update|run|have)|owner|by (?:today|tomorrow|next|monday|tuesday|wednesday|thursday|friday)|deadline|to close|to conclude|so we(?:'ve| have)? (?:decided|agreed))\\b"],
+      "stall_turns": 3,
+      "opportunity": ["We're nearly out of time. So what have we actually decided?", "Who is doing what, and by when?"],
+      "orient": "The meeting is almost over. As chair, say what you've decided, then give each of us one action and a date. You can delay the start by up to two weeks and lend me one person.",
+      "fallback": ["I need to know who is doing what, and by when.", "Please give us a decision before we finish."]
+    }
+  ],
+  "closing_line": "Good, that's clear. We'll get on with those actions.",
+  "forbidden_claims": ["\\bbudget of\\b"],
+  "expert_notes": {
+    "o1": {"good": "One sentence saying why everyone is here and what will come out of it, before the discussion starts.", "common_mistakes": ["Reacting to the first objection instead of framing the meeting", "Asking 'what are the concerns?' with no purpose"], "micro_lesson": "Chairs speak first about the purpose. It gives you the right to steer later.", "model": "We're here to hear your concerns about the move and leave with a plan that works.", "smaller_step": "Finish this sentence: The purpose of this meeting is ...", "subskills": ["agenda setting"]},
+    "o2": {"good": "Deciding who speaks, protecting the quieter person, and summarising one point before moving on.", "common_mistakes": ["Letting the louder person keep talking", "Answering every point yourself instead of hearing both"], "micro_lesson": "You own the floor. Name the next speaker and the order, and summarise before you switch.", "model": "Alex, finish your point. Maya, you're next. So far I've heard the rota needs two weeks' notice.", "smaller_step": "Name who should talk next, and who comes after them.", "subskills": ["facilitation"]},
+    "o3": {"good": "A clear decision, then each action with one owner and one date.", "common_mistakes": ["'Let's take this offline'", "Listing actions with no owner or date"], "micro_lesson": "An action is not finished until it has a name and a date.", "model": "We'll start two weeks later. Alex redoes the rota by next Friday; Maya gets one extra tester from Monday.", "smaller_step": "Give one person one action and one date.", "subskills": ["action planning"]}
+  },
+  "variants": [
+    {"start": "the first week of next month", "reason": "three of the last twelve Friday releases failed and left customers with no weekend support", "rota": "Four", "testers": "two", "leave": "the end of this month"},
+    {"start": "the 15th of next month", "reason": "two Friday releases caused weekend outages this quarter and support staff had to work overtime", "rota": "Six", "testers": "three", "leave": "the middle of next month"}
+  ]
+}

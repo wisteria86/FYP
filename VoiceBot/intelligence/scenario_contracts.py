@@ -1,10 +1,29 @@
 """Prepare bounded fictional cases before speaking, not during an exchange."""
 from domain.conversation import Participant, Objective, ScenarioDefinition
+from intelligence.case_library import compile_case
 
 NAMES = ['Alex', 'Maya', 'Sam', 'Robin', 'Jordan', 'Casey']
 
 
 def compile_definition(preview):
+    # A company case is built around the learner's own document, so the passage joins the facts.
+    excerpts = preview.get('knowledge_evidence') or []
+    extra = [{'id': f"doc{i}", 'text': f"The company document {item['name']} says: {item['text'][:700]}"} for i, item in enumerate(excerpts)]
+    authored = compile_case(preview['activity_id'], preview.get('variant', 0), preview.get('difficulty'), extra)
+    if authored:
+        definition, shown = authored
+        if preview.get('skill_id') != 'company-knowledge':
+            preview['situation'] = shown['situation']
+            preview['opening'] = shown['opening']
+        preview['learner_role'] = shown['learner_role']
+        preview['objectives'] = [o['description'] for o in definition['objectives']]
+        preview['success_criteria'] = preview['objectives']
+        preview['participant_specs'] = [{'id': p['id'], 'type': p['kind'], 'displayName': p['name'], 'role': p['role'], 'team': p['team']} for p in definition['participants']]
+        preview['brief'] = definition['brief']
+        # The opening speaker comes first among AI participants in the session record.
+        opener = shown.get('opening_speaker')
+        preview['participant_specs'].sort(key=lambda spec: 0 if spec['type'] == 'learner' else 1 if spec['id'] == opener else 2)
+        return definition
     specs = preview['participant_specs']
     people = []
     sequence = preview.get('sequence_number')
@@ -151,4 +170,6 @@ def learner_definition(definition):
     public['negotiation'] = {'public': case['public'], 'preparation_brief': case['buyer']} if case else None
     public['actions'] = definition.get('actions',[])
     public['unknown_quantities'] = definition.get('unknown_quantities',[])
+    public['brief'] = definition.get('brief')
+    public['archetype'] = definition.get('archetype')
     return public

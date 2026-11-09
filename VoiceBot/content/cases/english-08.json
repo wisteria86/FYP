@@ -1,0 +1,230 @@
+{
+  "archetype": "service",
+  "level": "beginner",
+  "setting": "A fictional street where a visitor asks a local for directions.",
+  "presentation": {
+    "situation": "You are lost and you need to find {{place}}. {{name}}, who lives nearby, offers to help. Ask the way, check one direction, and repeat the route.",
+    "opening": "Hi there. You look a little lost. Where are you trying to go?",
+    "opening_speaker": "p1",
+    "learner_role": "Visitor"
+  },
+  "brief": {
+    "you_are": "You are a visitor, and you are lost in town.",
+    "situation": "You are lost and you need to find {{place}}. {{name}}, who lives nearby, offers to help. Ask the way, check one direction, and repeat the route.",
+    "task": "Ask how to get to {{place}}, check one direction, and then say the route back.",
+    "done_looks_like": "{{name}} has heard you repeat the route correctly."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Visitor",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are a visitor, and you are lost in town.",
+      "goals": [
+        "Ask how to get to {{place}}, check one direction, and then say the route back."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Local resident",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Lives nearby",
+      "voice_index": 0,
+      "topics": [
+        "street",
+        "left",
+        "right",
+        "near",
+        "walk"
+      ],
+      "card": {
+        "want": "To help you find the way and then get home.",
+        "hidden_need": "",
+        "attitude": "Kind and unhurried.",
+        "speech": "Very simple everyday English. Short sentences. One easy question at a time.",
+        "tactics": [
+          "Give one direction at a time",
+          "Ask them to say the route back"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "You are looking for {{place}}."
+    },
+    {
+      "id": "f2",
+      "text": "The way is: {{route}}",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Ask for a destination",
+      "evidence": "The learner asks for directions to a place.",
+      "alternatives": [
+        "How do I get to the library?"
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Check one direction",
+      "evidence": "The learner checks a direction.",
+      "alternatives": [
+        "Do I turn left at the park?"
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Repeat the route to confirm",
+      "evidence": "The learner repeats the route to confirm it.",
+      "alternatives": [
+        "So I go straight, then turn left."
+      ]
+    }
+  ],
+  "examples": [
+    "How do I get to …?",
+    "Do I turn left?",
+    "So I go straight, then …"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Find out where the visitor wants to go.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:how (?:do|can) i get|where is|could you tell me)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Where do you want to go?",
+        "Do you need directions?"
+      ],
+      "orient": "You are lost, and I can help you. Ask me: How do I get to {{place}}?",
+      "fallback": [
+        "Do you need directions?",
+        "Where do you want to go?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Give the directions and check them.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:left|right|straight|next to|across)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Is that clear so far?",
+        "Do you want me to say that again?"
+      ],
+      "orient": "Ask me to check one thing. You can say: Do I turn left?",
+      "fallback": [
+        "Do you want me to say that again?",
+        "Is that clear so far?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Hear the route repeated.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:so i|first|then|after that)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Can you tell me the way back, so I know you have it?",
+        "So what will you do first?"
+      ],
+      "orient": "Now say the way back to me. Start with: So I go.",
+      "fallback": [
+        "So what will you do first?",
+        "Can you tell me the way back, so I know you have it?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "You've got it. Good luck, and enjoy your day!",
+  "expert_notes": {
+    "o1": {
+      "good": "A polite, clear question with the place name.",
+      "common_mistakes": [
+        "Saying only the place name"
+      ],
+      "micro_lesson": "Say: How do I get to, or: Where is.",
+      "model": "Excuse me, how do I get to {{place}}?",
+      "smaller_step": "Say: Where is, and the place.",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "Checking one direction before you walk away.",
+      "common_mistakes": [
+        "Saying yes when you did not understand"
+      ],
+      "micro_lesson": "If you are not sure, ask: Do I turn left?",
+      "model": "Sorry, do I turn left or right?",
+      "smaller_step": "Say: Do I turn left?",
+      "subskills": [
+        "comprehension"
+      ]
+    },
+    "o3": {
+      "good": "Saying the route back is the best check of all.",
+      "common_mistakes": [
+        "Saying only thank you"
+      ],
+      "micro_lesson": "Start with: So I go, then: then I turn.",
+      "model": "So I go straight, then I turn left beside the park.",
+      "smaller_step": "Say: So I go.",
+      "subskills": [
+        "grammar"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Maria",
+      "place": "the library",
+      "route": "two blocks straight ahead, then left beside the park. It takes ten minutes on foot."
+    },
+    {
+      "name": "Hamid",
+      "place": "the train station",
+      "route": "one block straight ahead, then right beside the pharmacy. It takes five minutes on foot."
+    }
+  ]
+}

@@ -1,0 +1,237 @@
+{
+  "archetype": "customer",
+  "level": "intermediate",
+  "setting": "A fictional support call about a billing problem.",
+  "presentation": {
+    "situation": "{{name}} is calling about {{problem}}. Your job in this call is to listen before you solve anything: acknowledge, ask clarifying questions, and summarise.",
+    "opening": "Hello. I'm really frustrated, because {{problem}}, and I've explained this before.",
+    "opening_speaker": "p1",
+    "learner_role": "Support specialist"
+  },
+  "brief": {
+    "you_are": "You are a support specialist on a call with an upset customer.",
+    "situation": "{{name}} is calling about {{problem}}. Your job in this call is to listen before you solve anything: acknowledge, ask clarifying questions, and summarise.",
+    "task": "Acknowledge what the customer says, ask clarifying questions to get the facts, and summarise before suggesting anything.",
+    "done_looks_like": "{{name}} agrees that your summary is right."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Support specialist",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are a support specialist on a call with an upset customer.",
+      "goals": [
+        "Acknowledge what the customer says, ask clarifying questions to get the facts, and summarise before suggesting anything."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Customer",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "A long-standing customer",
+      "voice_index": 0,
+      "topics": [
+        "bill",
+        "charge",
+        "account",
+        "called"
+      ],
+      "card": {
+        "want": "To be understood the first time, without repeating everything.",
+        "hidden_need": "{{need}}",
+        "attitude": "Frustrated, and quickly calmer when really listened to.",
+        "speech": "Natural spoken English. Gives details only when asked.",
+        "tactics": [
+          "Share details only when asked",
+          "Say 'that's not quite it' if a summary is wrong"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "The problem is that {{problem}}."
+    },
+    {
+      "id": "f2",
+      "text": "The details are: {{details}}",
+      "owner": "p1"
+    },
+    {
+      "id": "f3",
+      "text": "{{need}}",
+      "owner": "p1",
+      "available_from": "b1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Acknowledge what the customer said",
+      "evidence": "The learner acknowledges the customer specifically.",
+      "alternatives": [
+        "I hear you, and having to explain it again is frustrating."
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Ask clarifying questions",
+      "evidence": "The learner asks open questions that bring out the facts.",
+      "alternatives": [
+        "Could you tell me when you first noticed it?"
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Summarise before you solve",
+      "evidence": "The learner accurately summarises the issue back.",
+      "alternatives": [
+        "So you were charged twice in March, and nobody called back."
+      ]
+    }
+  ],
+  "examples": [
+    "Having to explain this again must be really frustrating.",
+    "Could you tell me when you first noticed it?",
+    "So you were charged twice in March, and nobody called you back. Is that right?"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Feel acknowledged.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:i hear|understand|frustrat|sounds|must be|sorry|appreciate)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "I am tired of explaining this.",
+        "Is anyone listening to me?"
+      ],
+      "orient": "You are listening to me, an upset customer. Don't solve anything yet. First, show you understand how I feel.",
+      "fallback": [
+        "Is anyone listening to me?",
+        "I am tired of explaining this.",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Give the facts when asked.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:could you|can you|when did|when was|which|what (?:did|was|happened)|how (?:many|much|long|often))\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "What else do you need to know?",
+        "I can tell you more, if you ask."
+      ],
+      "orient": "Ask me for the details. Start with: Could you tell me, or: When did.",
+      "fallback": [
+        "I can tell you more, if you ask.",
+        "What else do you need to know?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Hear the summary.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:so you|if i understand|to confirm|in other words|what you(?:'re| are) saying|let me (?:check|make sure))\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Do you understand it now?",
+        "Can you tell me what you heard?"
+      ],
+      "orient": "Now say back what I told you, so I know that you heard. Start with: So what you are saying is.",
+      "fallback": [
+        "Can you tell me what you heard?",
+        "Do you understand it now?",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "Yes. That's it exactly. Thank you for listening.",
+  "expert_notes": {
+    "o1": {
+      "good": "Naming the actual frustration.",
+      "common_mistakes": [
+        "Only saying: I understand"
+      ],
+      "micro_lesson": "Mention what they actually said.",
+      "model": "Having to explain this again must be really frustrating.",
+      "smaller_step": "Say what they are frustrated about.",
+      "subskills": [
+        "acknowledgement"
+      ]
+    },
+    "o2": {
+      "good": "Open questions bring out what you need.",
+      "common_mistakes": [
+        "Asking something already answered"
+      ],
+      "micro_lesson": "Start with: What, when, which or how.",
+      "model": "Could you tell me when you first noticed it?",
+      "smaller_step": "Ask one question beginning with: When.",
+      "subskills": [
+        "clarifying questions"
+      ]
+    },
+    "o3": {
+      "good": "A short, accurate summary, before you solve anything.",
+      "common_mistakes": [
+        "Moving to a solution with no summary"
+      ],
+      "micro_lesson": "Say: So, and repeat the key facts.",
+      "model": "So you were charged twice in March, and nobody called you back. Is that right?",
+      "smaller_step": "Say one fact back: So you.",
+      "subskills": [
+        "summarising"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Mr Aziz",
+      "problem": "I have been charged twice this month",
+      "details": "two charges of 45 appeared on the 3rd and the 5th of this month; you called once last week and were promised a callback",
+      "need": "Rent is due soon, and the double charge has left the account short."
+    },
+    {
+      "name": "Ms Clarke",
+      "problem": "my delivery tracking has not updated for a week",
+      "details": "the order was placed nine days ago; tracking last changed seven days ago",
+      "need": "The parcel is a gift for an elderly parent's birthday this weekend."
+    }
+  ]
+}

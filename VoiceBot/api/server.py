@@ -29,6 +29,7 @@ if str(ROOT) not in sys.path:
 
 from config import Config  # noqa: E402
 from api.application import create_application  # noqa: E402
+from pydantic import BaseModel, Field  # noqa: E402
 from api.routers.auth import build_auth_router  # noqa: E402
 from api.schemas import (  # noqa: E402
     ChatRequest,
@@ -49,6 +50,7 @@ from services.auth_service import AuthService  # noqa: E402
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")
 logger = logging.getLogger("hikari.api")
 training = TrainingService(Config.DATABASE_PATH)
+training.context.runtime.release_stale_floors()
 auth_service = AuthService(Config.DATABASE_PATH, Config.AUTH_SESSION_HOURS)
 metrics = MetricsCollector()
 _tts_model = _llm_model = _stt_model = None
@@ -330,7 +332,7 @@ def _load_models() -> None:
     started = time.perf_counter()
     try:
         from modules.llm_brain import LLMBrain
-        _llm_model = LLMBrain(Config.LLM_API_KEY, Config.LLM_MODEL_NAME, Config.LLM_BASE_URL)
+        _llm_model = LLMBrain(Config.LLM_API_KEY, Config.LLM_MODEL_NAME, Config.LLM_BASE_URL, Config.LLM_ROUTER_MODEL, Config.LLM_REVIEW_MODEL)
         metrics.set_model_load("llm", (time.perf_counter() - started) * 1000, True)
     except Exception as exc:
         metrics.set_model_load("llm", (time.perf_counter() - started) * 1000, False)
@@ -368,6 +370,8 @@ async def lifespan(_: FastAPI):
 
 app = create_application(lifespan=lifespan)
 app.include_router(build_auth_router(auth_service))
+from api.routers.organization import build_organization_router
+app.include_router(build_organization_router(lambda: training.context.organization, lambda request: _authorized_user_id(request)))
 from api.routers.conversation import build_conversation_router
 from integrations.conversation import ConversationAdapter
 app.include_router(build_conversation_router(lambda: training, _authorized_session, lambda: ConversationAdapter(_llm_model) if _llm_model else None))
@@ -458,12 +462,14 @@ def select_stt_engine(payload:STTEngineSelection,request:Request):
 
 
 @app.get("/api/tts/engines")
-def tts_engines():
+def tts_engines(http_request: Request):
+    _authorized_user_id(http_request)
     return _tts_state()
 
 
 @app.post("/api/tts/engine")
-def select_tts_engine(selection: TTSEngineSelection):
+def select_tts_engine(selection: TTSEngineSelection, http_request: Request):
+    _authorized_user_id(http_request)
     try:
         return _activate_tts_engine(selection.engine, voice=selection.voice)
     except Exception as exc:
@@ -474,20 +480,23 @@ def select_tts_engine(selection: TTSEngineSelection):
 
 
 @app.get("/api/monitor/snapshot")
-def monitor_snapshot():
+def monitor_snapshot(http_request: Request):
+    _authorized_user_id(http_request)
     components = {"llm": _llm_model is not None, "stt": _stt_model is not None,
                   "tts": _tts_model is not None, "database": True}
     return metrics.snapshot(components, _model_errors)
 
 
 @app.post("/api/monitor/reset")
-def monitor_reset():
+def monitor_reset(http_request: Request):
+    _authorized_user_id(http_request)
     metrics.reset()
     return {"reset": True}
 
 
 @app.post("/api/monitor/microphone")
-def monitor_microphone(event: MicrophoneMetric):
+def monitor_microphone(event: MicrophoneMetric, http_request: Request):
+    _authorized_user_id(http_request)
     data = event.model_dump(exclude_none=True)
     name = data.pop("event")
     duration_ms = data.pop("duration_ms", 0)
@@ -520,6 +529,38 @@ def user(user_id: str, request: Request):
 @app.get("/api/proficiency")
 def proficiency(request: Request, user_id: str | None = None):
     return training.skills(_authorized_user_id(request, user_id))
+
+
+class GoalCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=160)
+    skill_id: str | None = Field(default=None, max_length=80)
+    target_date: str | None = Field(default=None, pattern=r'^\d{4}-\d{2}-\d{2}$')
+
+
+@app.get("/api/goals")
+def list_goals(request: Request):
+    return training.context.progress.goals(_authorized_user_id(request))
+
+
+@app.post("/api/goals")
+def create_goal(payload: GoalCreate, request: Request):
+    try:
+        return training.context.progress.add_goal(_authorized_user_id(request), payload.title, payload.skill_id, payload.target_date)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.post("/api/goals/{goal_id}/close")
+def close_goal(goal_id: str, request: Request):
+    try:
+        return training.context.progress.close_goal(_authorized_user_id(request), goal_id)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@app.get("/api/learning-path")
+def learning_path(request: Request):
+    return training.context.learning_path.path(_authorized_user_id(request))
 
 
 @app.get("/api/recommendations")
@@ -692,7 +733,8 @@ async def voice_turn_stream(session_id: str, payload: RoleplayTurn, request: Req
 
 
 @app.post("/api/tts/stream")
-def stream_tts(request: TTSRequest):
+def stream_tts(request: TTSRequest, http_request: Request):
+    _authorized_user_id(http_request)
     model, sample_rate, engine = _tts_model, _tts_sample_rate, _engine_name
     if model is None:
         raise HTTPException(503, "The selected TTS engine is unavailable. The text response is still usable.")
@@ -738,12 +780,16 @@ async def roleplay_alias(session_id: str, payload: RoleplayTurn, request: Reques
 
 
 @app.post("/api/sessions/{session_id}/complete")
-async def complete_session(session_id: str, request: Request):
+async def complete_session(session_id: str, request: Request, end_attempt: bool = False):
     try:
         session = _authorized_session(request, session_id)
         language_evaluation = None
         if session.get("assessment"):
             return session["assessment"]
+        # A learner may end a case-pack attempt early and still get honest feedback.
+        if end_attempt and (session.get('runtime') or {}).get('scene') is not None:
+            from services.structured_orchestrator import finalize_scene
+            return await finalize_scene(training, _llm_model, session_id)
         progress=training.evaluate_progress(session_id)
         if progress['outcome']!='success':
             raise HTTPException(409, 'Keep practising: '+ '; '.join(progress['missing'][:3]) + '. You may leave without awarding mastery.')

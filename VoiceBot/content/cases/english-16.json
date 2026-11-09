@@ -1,0 +1,234 @@
+{
+  "archetype": "colleague",
+  "level": "intermediate",
+  "setting": "A fictional Monday morning in an office kitchen.",
+  "presentation": {
+    "situation": "{{name}} is making coffee on Monday morning. {{name}} {{weekend}}. Make natural small talk, ask follow-up questions, and move smoothly to work: you need {{ask}}.",
+    "opening": "Morning! Coffee? How was your weekend?",
+    "opening_speaker": "p1",
+    "learner_role": "Coworker"
+  },
+  "brief": {
+    "you_are": "You are chatting with a coworker before work starts.",
+    "situation": "{{name}} is making coffee on Monday morning. {{name}} {{weekend}}. Make natural small talk, ask follow-up questions, and move smoothly to work: you need {{ask}}.",
+    "task": "Open naturally, ask a follow-up question, and then move smoothly to the work topic.",
+    "done_looks_like": "The chat felt natural, you showed interest, and you got to your work question."
+  },
+  "participants": [
+    {
+      "id": "p0",
+      "name": "You",
+      "role": "Coworker",
+      "kind": "learner",
+      "team": "learner",
+      "relationship": "You are chatting with a coworker before work starts.",
+      "goals": [
+        "Open naturally, ask a follow-up question, and then move smoothly to the work topic."
+      ],
+      "voice_index": 0,
+      "can_finalize": false
+    },
+    {
+      "id": "p1",
+      "name": "{{name}}",
+      "role": "Coworker",
+      "kind": "ai",
+      "team": "opponent",
+      "relationship": "Works on your team",
+      "voice_index": 0,
+      "topics": [
+        "weekend",
+        "coffee",
+        "project",
+        "family"
+      ],
+      "card": {
+        "want": "A friendly start to the day, and to get to the desk on time.",
+        "hidden_need": "",
+        "attitude": "Chatty and relaxed.",
+        "speech": "Casual, natural workplace English with contractions.",
+        "tactics": [
+          "Share a little, and wait to be asked more",
+          "Answer a work question once it comes"
+        ],
+        "pressure": {
+          "gentle": "Patient. Gives the other person time.",
+          "balanced": "Pushes back once on anything vague.",
+          "challenging": "Keeps pressing for specifics, fairly and without insults."
+        }
+      }
+    }
+  ],
+  "ledger": [
+    {
+      "id": "f1",
+      "text": "{{name}} {{weekend}}.",
+      "owner": "p1"
+    },
+    {
+      "id": "f2",
+      "text": "You need {{ask}}."
+    },
+    {
+      "id": "f3",
+      "text": "{{name}} can help with that today.",
+      "owner": "p1"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "o1",
+      "description": "Open naturally",
+      "evidence": "The learner responds or opens naturally.",
+      "alternatives": [
+        "Morning! It was good, thanks. How was yours?"
+      ]
+    },
+    {
+      "id": "o2",
+      "description": "Use follow-up questions",
+      "evidence": "The learner asks a real follow-up question.",
+      "alternatives": [
+        "Oh nice, where did you go?"
+      ]
+    },
+    {
+      "id": "o3",
+      "description": "Move to work talk smoothly",
+      "evidence": "The learner makes a natural transition to work.",
+      "alternatives": [
+        "By the way, about the report, could you...?"
+      ]
+    }
+  ],
+  "examples": [
+    "How was your …?",
+    "That sounds …",
+    "By the way, about …"
+  ],
+  "prerequisites": [
+    "Read the briefing."
+  ],
+  "beats": [
+    {
+      "id": "b1",
+      "goal": "Open the chat.",
+      "driver": "p1",
+      "objectives": [
+        "o1"
+      ],
+      "signals": [
+        "\\b(?:how was|how is|did you|good morning|morning|how about you)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Did you do anything nice?",
+        "Good weekend, then?"
+      ],
+      "orient": "We're just chatting in the kitchen. Tell me something about your weekend, and ask about mine.",
+      "fallback": [
+        "Good weekend, then?",
+        "Did you do anything nice?",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b2",
+      "goal": "Be asked a follow-up.",
+      "driver": "p1",
+      "objectives": [
+        "o2"
+      ],
+      "signals": [
+        "\\b(?:where did|who did|what did|how did|did you|was it|what was)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Yeah, it was great, actually.",
+        "It was a really nice change."
+      ],
+      "orient": "I told you about my weekend. Ask me something more about it. You can say: Oh, where did you go?",
+      "fallback": [
+        "It was a really nice change.",
+        "Yeah, it was great, actually.",
+        "Please go on."
+      ]
+    },
+    {
+      "id": "b3",
+      "goal": "Move to work smoothly.",
+      "driver": "p1",
+      "objectives": [
+        "o3"
+      ],
+      "signals": [
+        "\\b(?:by the way|speaking of|about the|shall we discuss|project|work)\\b"
+      ],
+      "stall_turns": 2,
+      "min_turns": 1,
+      "opportunity": [
+        "Anyway, I should probably get to my desk.",
+        "Right, big week ahead. Anything I can do for you?"
+      ],
+      "orient": "Now move to your work question. Start with: By the way.",
+      "fallback": [
+        "Right, big week ahead. Anything I can do for you?",
+        "Anyway, I should probably get to my desk.",
+        "Please go on."
+      ]
+    }
+  ],
+  "closing_line": "No problem, I will sort that out. Have a good one!",
+  "expert_notes": {
+    "o1": {
+      "good": "Answering briefly, and returning the question.",
+      "common_mistakes": [
+        "A long answer, or just: Fine"
+      ],
+      "micro_lesson": "Answer in a few words, then ask: How was yours?",
+      "model": "Good, thanks. How was yours?",
+      "smaller_step": "Say: How was yours?",
+      "subskills": [
+        "vocabulary"
+      ]
+    },
+    "o2": {
+      "good": "A follow-up shows that you were listening.",
+      "common_mistakes": [
+        "Changing the subject straight away"
+      ],
+      "micro_lesson": "Pick one detail and ask about it.",
+      "model": "Oh nice, who did you go with?",
+      "smaller_step": "Ask me one question.",
+      "subskills": [
+        "comprehension"
+      ]
+    },
+    "o3": {
+      "good": "A small phrase makes the change of topic feel natural.",
+      "common_mistakes": [
+        "Changing topic with no signal"
+      ],
+      "micro_lesson": "Say: By the way, or: Speaking of work.",
+      "model": "By the way, could you send me that file today?",
+      "smaller_step": "Say: By the way.",
+      "subskills": [
+        "grammar"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "Jamal",
+      "weekend": "went camping with friends, and it rained the whole time",
+      "ask": "the latest sales figures"
+    },
+    {
+      "name": "Nora",
+      "weekend": "took her parents to the beach for the first time",
+      "ask": "a copy of the meeting notes"
+    }
+  ]
+}

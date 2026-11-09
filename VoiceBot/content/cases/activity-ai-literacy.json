@@ -1,0 +1,83 @@
+{
+  "archetype": "colleague",
+  "level": "intermediate",
+  "setting": "A fictional office conversation about publishing a document that a generative AI tool drafted.",
+  "presentation": {
+    "situation": "Your colleague {{name}} wants to send out {{doc}} that an AI tool drafted. It contains {{risk}}. Help {{name}} use AI responsibly: check the content, protect private information, and be open about how it was made.",
+    "opening": "I got the AI to draft {{doc}} in five minutes. It looks great, so I'm going to send it out now. Any reason not to?",
+    "opening_speaker": "p1",
+    "learner_role": "Colleague"
+  },
+  "brief": {
+    "you_are": "You are a colleague who understands the safe use of AI at work.",
+    "situation": "{{name}} wants to send out {{doc}} drafted by an AI tool. You can see that it contains {{risk}}, and nobody has checked it.",
+    "task": "Explain why it needs checking, deal with the private or unverified content, and agree how to be open about the use of AI.",
+    "done_looks_like": "{{name}} knows what to check, what to remove, and how to disclose AI use, and agrees to do that before sending."
+  },
+  "participants": [
+    {"id": "p0", "name": "You", "role": "Colleague", "kind": "learner", "team": "learner", "relationship": "Colleague who understands the safe use of AI", "goals": ["Prevent a careless release"], "voice_index": 0},
+    {
+      "id": "p1", "name": "{{name}}", "role": "Colleague", "kind": "ai", "team": "opponent", "relationship": "A colleague who is excited about AI and in a hurry", "voice_index": 0,
+      "topics": ["ai", "tool", "send", "check", "deadline", "draft"],
+      "card": {
+        "want": "To send this today and impress the manager with how fast it was done.",
+        "hidden_need": "Is not confident about checking figures and would welcome a simple way to do it.",
+        "attitude": "Enthusiastic and impatient, but reasonable when given a concrete risk.",
+        "speech": "Casual, confident workplace English.",
+        "tactics": ["Say 'the AI is usually right'", "Ask 'does anyone really need to know AI wrote it?'", "Accept a specific risk more readily than general warnings"],
+        "pressure": {"gentle": "Agrees quickly once a risk is explained.", "balanced": "Pushes back once on each point.", "challenging": "Argues that there is no time, and says everybody does this."}
+      }
+    }
+  ],
+  "ledger": [
+    {"id": "f1", "text": "{{name}} used a public generative AI tool to draft {{doc}}."},
+    {"id": "f2", "text": "The draft contains {{risk}}."},
+    {"id": "f3", "text": "Nobody has checked the draft against the source records."},
+    {"id": "f4", "owner": "p1", "text": "{{name}} wants to send it by the end of today, and nobody has required that deadline."},
+    {"id": "f5", "owner": "p1", "text": "{{name}} pasted the source material into the public AI tool to write the draft."}
+  ],
+  "objectives": [
+    {"id": "o1", "description": "Require verification of AI output", "evidence": "The learner explains that the content must be checked against a reliable source, and why.", "alternatives": ["AI can sound right and still be wrong, so let's check those figures against the source"]},
+    {"id": "o2", "description": "Protect private or sensitive information", "evidence": "The learner identifies the private information issue, and says what to remove or how to handle it.", "alternatives": ["Those personal details should come out, and shouldn't go into a public tool"]},
+    {"id": "o3", "description": "Be transparent about AI use", "evidence": "The learner recommends appropriate disclosure and human responsibility for the final content.", "alternatives": ["We should say AI helped draft it, and a person checked it"]}
+  ],
+  "examples": ["Let's verify that against the source first.", "That's personal information, so it should come out.", "We should say AI helped, and that a person checked it."],
+  "prerequisites": ["No preparation needed."],
+  "beats": [
+    {
+      "id": "verify", "goal": "Challenge the belief that AI output can go out unchecked.", "driver": "p1", "objectives": ["o1"],
+      "signals": ["\\b(?:check|verify|source|wrong|accurate|mistake|hallucinat|make things up|confirm|figures)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["The AI is usually right, though. Why would I need to check it?", "It looks fine to me. What could actually be wrong with it?"],
+      "orient": "I want to send this AI draft right now without checking it. You think that's risky. Tell me why it should be checked first.",
+      "fallback": ["Why would I need to check it?", "The AI is usually right. Isn't it?"]
+    },
+    {
+      "id": "privacy", "goal": "Bring out the private information problem.", "driver": "p1", "objectives": ["o2"],
+      "signals": ["\\b(?:private|personal|confidential|sensitive|remove|redact|privacy|consent|data|details)\\b"],
+      "stall_turns": 2,
+      "opportunity": ["I pasted everything into the tool to get this draft. That's fine, isn't it?", "What about the details in it? Is there a problem with those?"],
+      "orient": "Look at what's in the draft: {{risk}}. Tell me what's the problem with that, and what I should do about it.",
+      "fallback": ["Is there a problem with what's in the draft?", "I pasted it all into the tool. Is that okay?"]
+    },
+    {
+      "id": "disclose", "goal": "Settle whether to say AI was used, and who takes responsibility.", "driver": "p1", "objectives": ["o3"],
+      "signals": ["\\b(?:disclose|tell (?:them|people|the)|say (?:that )?ai|ai[- ]generated|transparent|open about|label|responsib|a person (?:checked|reviewed))\\b"],
+      "stall_turns": 2,
+      "opportunity": ["Does anyone really need to know the AI wrote it?", "If I fix it up, can't I just say I wrote it?"],
+      "orient": "Last thing: should we tell people that AI helped, and who is responsible for what it says? Tell me what you think we should do.",
+      "fallback": ["Does anyone really need to know that AI wrote it?", "Who's responsible if it's wrong?"]
+    }
+  ],
+  "closing_line": "Okay, fair enough. I'll check it, fix it, and say how we made it.",
+  "expert_notes": {
+    "o1": {"good": "Explaining that AI can sound confident and still be wrong, and naming what to check against.", "common_mistakes": ["Saying only 'be careful'", "Assuming a good-looking draft is correct"], "micro_lesson": "AI can sound certain and be wrong. Say what to check, and against which source.", "model": "AI can sound right and still be wrong, so let's check those figures against the source records.", "smaller_step": "Say one thing in the draft that should be checked.", "subskills": ["verification"]},
+    "o2": {"good": "Spotting the specific private information and saying what to do with it, including what goes into public tools.", "common_mistakes": ["Missing that pasting into the tool is itself a problem", "Only saying 'privacy is important'"], "micro_lesson": "Name the private detail, and say to remove it. Public AI tools are not a safe place for it.", "model": "Those personal details should come out, and they shouldn't go into a public tool again.", "smaller_step": "Name the private information in this draft.", "subskills": ["privacy"]},
+    "o3": {"good": "Being open that AI was used, and being clear that a person is responsible for the result.", "common_mistakes": ["Hiding AI use", "Blaming the tool for errors"], "micro_lesson": "Say AI helped, and make it clear that a person checked it and owns it.", "model": "We should say AI helped draft it, and that you checked it and are responsible for it.", "smaller_step": "Say whether people should be told AI helped.", "subskills": ["transparency"]}
+  },
+  "variants": [
+    {"name": "Zara", "doc": "a customer summary", "risk": "customers' personal phone numbers and two sales figures nobody has checked"},
+    {"name": "Hamza", "doc": "a staff performance review", "risk": "named employees' private details and a claim about their results nobody has checked"},
+    {"name": "Sophie", "doc": "a support reply to a customer", "risk": "a refund policy that the company does not have, and a customer's home address"}
+  ]
+}
