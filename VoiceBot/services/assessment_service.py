@@ -31,6 +31,8 @@ class AssessmentService(ApplicationService):
             return session["assessment"]
         if session['status'] != 'active':
             raise ValueError('Only an active session can be assessed')
+        if session.get('runtime'):
+            return self.assess_runtime(session)
         user_turns = [t for t in session["turns"] if t["role"] == "user"]
         text = " ".join(t["text"] for t in user_turns)
         words = _words(text)
@@ -125,6 +127,35 @@ class AssessmentService(ApplicationService):
     def _posture_averages(self,session_id):
         with self.connect() as db:
             return tuple(db.execute('SELECT AVG(slouching),AVG(head_position),AVG(shoulder_alignment),AVG(body_orientation) FROM posture WHERE session_id=?',(session_id,)).fetchone())
+
+    def assess_runtime(self, session):
+        runtime = session['runtime']
+        evaluation = (runtime.get('completed_evaluation') if runtime['completed'] else runtime.get('evaluation')) or runtime.get('last_evaluation') or {}
+        criteria = evaluation.get('criteria', [])
+        objectives = {o['id']: o['description'] for o in runtime['definition']['objectives']}
+        demonstrated = [c for c in criteria if c['met']]
+        strengths = [f"{objectives[c['objective_id']]}: {' / '.join(c['quotes'])} ({c['support']})" for c in demonstrated]
+        improvements = [f"Practise {objectives[c['objective_id']]} with your own details." for c in criteria if not c['met'] or c['support'] != 'independent']
+        if not criteria:
+            improvements = ['Evidence review is unavailable. This attempt is retained without a proficiency judgment.']
+        evidence = [f"{objectives[c['objective_id']]}: {' / '.join(c['quotes']) or 'Not demonstrated yet'}" for c in criteria]
+        evidence += [f"{name.replace('_', ' ')}: {value.get('status', 'unassessed')}. {value.get('reason', '')}" for name, value in evaluation.get('dimensions', {}).items() if isinstance(value, dict)]
+        improvements += [f"You said: {c['original']} A clearer option: {c['improved']}" for c in evaluation.get('corrections', [])]
+        evidence.append('Pronunciation, accent and vocal confidence are unassessed. Completion does not establish lasting mastery or a CEFR level.')
+        scores = {'task_achievement': round(100*len(demonstrated)/max(1,len(criteria)),1)} if criteria else {}
+        overall = scores.get('task_achievement', 0)
+        identifier = str(uuid.uuid4())
+        feedback = 'Lesson objectives demonstrated. Choose a fresh case later to check transfer.' if runtime['completed'] else 'Practice saved. Independent achievement has not yet been demonstrated.'
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            existing = db.execute('SELECT * FROM assessments WHERE session_id=?', (session['id'],)).fetchone()
+            if existing:
+                return self._assessment_dict(existing)
+            db.execute('INSERT INTO assessments VALUES (?,?,?,?,?,?,?,?,?)', (identifier,session['id'],overall,_json(scores),_json(strengths),_json(improvements),_json(evidence),feedback,_now()))
+            db.execute("UPDATE sessions SET status='completed',completed_at=? WHERE id=?", (_now(),session['id']))
+            if runtime['completed'] and scores:
+                self.context.adaptive.update_proficiency(db,session,scores,identifier)
+        return self.context.session.session(session['id'])['assessment']
 
     def _assessment_dict(self,row: sqlite3.Row) -> dict[str, Any]:
         result = dict(row)

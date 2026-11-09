@@ -49,10 +49,12 @@ class SessionService(ApplicationService):
                 (sid, user_id, skill_id, difficulty, title, situation, counterpart, _json(objectives), _now(), activity["id"]),
             )
             db.execute('UPDATE sessions SET scenario_snapshot_json=? WHERE id=?',(_json(runtime),sid))
+            if runtime.get('runtime_definition'):
+                self.context.runtime.initialize(db, sid, runtime['runtime_definition'], difficulty)
             db.execute(
-                """INSERT INTO turns(session_id,role,text,duration_seconds,created_at,speaker_name)
-                VALUES (?,?,?,?,?,?)""",
-                (sid, "assistant", opening_text, 0, _now(), counterpart),
+                """INSERT INTO turns(session_id,role,text,duration_seconds,created_at,speaker_name,participant_id)
+                VALUES (?,?,?,?,?,?,?)""",
+                (sid, "assistant", opening_text, 0, _now(), counterpart, opening_speaker.get('id')),
             )
             for index, person in enumerate(participant_specs):
                 display_name = person.get("displayName") or ("You" if person.get("type") == "learner" else person.get("role", "AI"))
@@ -61,7 +63,7 @@ class SessionService(ApplicationService):
                         id,session_id,participant_type,display_name,scenario_role,position,configuration_json
                     ) VALUES (?,?,?,?,?,?,?)""",
                     (
-                        str(uuid.uuid4()), sid, person.get("type", "ai"), display_name,
+                        sid + ':' + person['id'] if person.get('id') else str(uuid.uuid4()), sid, person.get("type", "ai"), display_name,
                         person.get("role", display_name), index, _json({"team": person.get("team", "participant")}),
                     ),
                 )
@@ -75,7 +77,7 @@ class SessionService(ApplicationService):
             result = dict(row)
             result["objectives"] = json.loads(result["objectives"])
             result["turns"] = [dict(r) for r in db.execute(
-                "SELECT role,text,duration_seconds,created_at,speaker_name,caption_text FROM turns WHERE session_id=? ORDER BY id",
+                "SELECT id,role,text,duration_seconds,created_at,speaker_name,caption_text,participant_id,utterance_id,original_text,recognition_json FROM turns WHERE session_id=? ORDER BY id",
                 (session_id,),
             )]
             activity = db.execute(
@@ -110,6 +112,13 @@ class SessionService(ApplicationService):
                     ],
                 ]
             result["participants"] = participants
+            definition, runtime_state = self.context.runtime.read(session_id, db)
+            if definition:
+                for participant, spec in zip(participants, definition['participants']):
+                    participant['participant_id'] = spec['id']
+                    participant['scenario_role'] = spec['role']
+                    participant['display_name'] = spec['name']
+                result['runtime'] = self.context.runtime.view(session_id)
             with_times=result['turns']
             created=datetime.fromisoformat(result['created_at'])
             for turn in with_times:turn['elapsed_seconds']=max(0,int((datetime.fromisoformat(turn['created_at'])-created).total_seconds()))
@@ -118,19 +127,23 @@ class SessionService(ApplicationService):
             return result
 
     def add_turn(self, session_id: str, role: str, text: str, duration_seconds: float = 0,
-                 speaker_name: str | None = None, caption_text: str | None = None) -> None:
+                 speaker_name: str | None = None, caption_text: str | None = None,
+                 participant_id: str | None = None, utterance_id: str | None = None, recognition: dict | None = None) -> None:
         if role not in {"user", "assistant"} or not text.strip():
             raise ValueError("Invalid turn")
         with self.connect() as db:
             if not db.execute("SELECT 1 FROM sessions WHERE id=? AND status='active'", (session_id,)).fetchone():
                 raise ValueError("Active session not found")
             db.execute(
-                """INSERT INTO turns(session_id,role,text,duration_seconds,created_at,speaker_name,caption_text)
-                VALUES (?,?,?,?,?,?,?)""",
-                (session_id, role, text.strip(), max(0, duration_seconds), _now(), speaker_name, caption_text),
+                """INSERT INTO turns(session_id,role,text,duration_seconds,created_at,speaker_name,caption_text,participant_id,utterance_id,recognition_json)
+                VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                (session_id, role, text.strip(), max(0, duration_seconds), _now(), speaker_name, caption_text, participant_id, utterance_id, _json(recognition or {})),
             )
 
     def response_speakers(self, session_id: str) -> list[dict[str, str]]:
+        routed = self.context.runtime.speakers(session_id)
+        if routed is not None:
+            return routed
         session = self.session(session_id)
         ai_people = [person for person in session["participants"] if person["participant_type"] == "ai"]
         mode = session.get("roleplay_mode", "one_to_one")
@@ -150,6 +163,9 @@ class SessionService(ApplicationService):
 
     def evaluate_progress(self, session_id: str) -> dict[str, Any]:
         """Return a deterministic live outcome. Failure means keep practising; success completes."""
+        runtime_progress = self.context.runtime.progress(session_id)
+        if runtime_progress is not None:
+            return runtime_progress
         session = self.session(session_id)
         user_turns = [turn["text"].strip() for turn in session["turns"] if turn["role"] == "user"]
         level = session.get("proficiency_level") or session["difficulty"]

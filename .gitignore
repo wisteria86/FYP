@@ -230,3 +230,7 @@ VoiceBot/data/runtime_settings.json
 *.pt
 *.pth
 
+
+# Local test evidence and generated documents
+VoiceBot/tmp/
+VoiceBot/output/

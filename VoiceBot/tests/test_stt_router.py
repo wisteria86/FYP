@@ -4,6 +4,17 @@ from modules.stt_router import create_stt,SpeechRecognitionRouter
 
 
 class STTRouterTests(unittest.TestCase):
+    def test_explicit_cuda_never_silently_uses_cpu(self):
+        factory=Mock()
+        with self.assertRaisesRegex(RuntimeError,'explicitly requested'):
+            create_stt(cuda_available=False,engine='nemotron',device='cuda',nemotron_factory=factory)
+        factory.assert_not_called()
+
+    def test_explicit_cuda_selects_cuda_provider(self):
+        with patch('modules.stt_nemotron.NemotronSTT') as factory:
+            create_stt(cuda_available=True,engine='nemotron',device='cuda',strict=True)
+        self.assertEqual(factory.call_args.args[1],'cuda')
+
     def test_decoder_selection_reuses_primary_and_rejects_invalid_methods(self):
         primary=Mock(decoding_method='greedy_search')
         router=SpeechRecognitionRouter(primary)

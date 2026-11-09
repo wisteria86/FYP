@@ -8,6 +8,8 @@ from intelligence.learning_rubrics import valid_scores
 
 class LearningAcceptanceTests(unittest.TestCase):
     def setUp(self):
+        from tests.legacy_fixture import legacy_snapshots
+        legacy_snapshots(self)
         self.temp=tempfile.TemporaryDirectory()
         self.training=TrainingService(Path(self.temp.name)/'learning.db')
 
@@ -103,7 +105,7 @@ class LearningAcceptanceTests(unittest.TestCase):
     def test_opening_identity_matches_context(self):
         preview=self.training.scenario_preview('demo','english-speaking','beginner','english-02')
         self.assertIn("I'm Maya",preview['opening'])
-        self.assertIn('Your partner is Maya',preview['situation'])
+        self.assertIn('Participant identity comes from the prepared roster',preview['situation'])
 
     def test_greeting_fallback_advances_without_treating_feeling_as_name(self):
         session=self.training.create_session('demo','english-speaking','beginner','english-01')

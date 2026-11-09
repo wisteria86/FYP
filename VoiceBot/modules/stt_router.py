@@ -18,6 +18,29 @@ class SpeechRecognitionRouter(ISTTModel):
         self._decoders={}
         self._decoder_errors={}
         self._decoder_lock=threading.Lock()
+        self._final_model=None
+        self._final_lock=threading.Lock()
+
+    def transcribe_final(self,audio_data,language='en',vocabulary=None,original_text='',decoding_method='greedy_search'):
+        """Keep Nemotron live; explicitly requested final pass re-decodes the audio."""
+        from services.recognition_quality import compare_transcripts
+        if not self.primary or language!='en':
+            return self.transcribe_detailed(audio_data,language,vocabulary)
+        # Serialize the extra model to bound GPU memory and avoid competing decodes.
+        with self._final_lock:
+            try:
+                if self._final_model is None:
+                    from modules.stt_whisper import WhisperSTT
+                    self._final_model=WhisperSTT(Config.WHISPER_MODEL_SIZE,Config.WHISPER_CPU_THREADS,
+                        1,self.primary.device,local_files_only=True)
+                result=self._final_model.transcribe_detailed(audio_data,language,vocabulary)
+                return compare_transcripts(original_text,result)
+            except Exception:
+                logger.warning('Local final recognition unavailable; transcript requires review',exc_info=True)
+                result=({'text':original_text,'confidence':None} if original_text else
+                        self.decoder_for(decoding_method).transcribe_detailed(audio_data,language,vocabulary))
+                return {**result,'original_text':original_text,'final_pass':'unavailable','needs_retry':True,
+                        'retry_reason':'The accuracy pass is unavailable. Check the live transcript before sending.'}
 
     def decoder_for(self,method):
         if method not in {'greedy_search','modified_beam_search'}:
@@ -80,15 +103,17 @@ class SpeechRecognitionRouter(ISTTModel):
                 'fallback_reason':self.fallback_reason}
 
     def close(self):
-        for model in (self.primary,self._fallback,*self._decoders.values()):
+        for model in (self.primary,self._fallback,self._final_model,*self._decoders.values()):
             if model and hasattr(model,'close'):model.close()
         self.primary=None;self._fallback=None
+        self._final_model=None
         self._decoders.clear()
 
 
 def create_stt(*,cuda_available=None,nemotron_factory=None,whisper_factory=None,engine=None,device=None,strict=False):
     engine=engine or Config.STT_ENGINE
     device=device or Config.STT_DEVICE
+    if device not in {'auto','cpu','cuda'}:raise ValueError('Unsupported recognition device')
     if cuda_available is None:
         try:
             import torch
@@ -96,6 +121,8 @@ def create_stt(*,cuda_available=None,nemotron_factory=None,whisper_factory=None,
             cuda_available=False
         else:
             cuda_available=torch.cuda.is_available()
+    if device=='cuda' and not cuda_available:
+        raise RuntimeError('CUDA was explicitly requested but no compatible NVIDIA GPU is available. Select CPU or Automatic.')
     resolved='cuda' if cuda_available and device!='cpu' else 'cpu'
     if engine in {'whisper_small_onnx','whisper_medium_onnx'}:
         from modules.stt_whisper_onnx import WhisperOnnxSTT

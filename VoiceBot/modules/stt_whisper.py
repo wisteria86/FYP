@@ -61,6 +61,7 @@ class WhisperSTT(ISTTModel):
         cpu_threads: int = 4,
         num_workers: int = 1,
         device: str = "auto",
+        local_files_only: bool = False,
     ) -> None:
         """
         Initializes the faster-whisper model.
@@ -90,6 +91,7 @@ class WhisperSTT(ISTTModel):
                 cpu_threads=max(1, cpu_threads),
                 num_workers=max(1, num_workers),
                 download_root=Config.WHISPER_CACHE_DIR,
+                local_files_only=local_files_only,
             )
             if resolved_device == "cuda":
                 # Initialize CUDA/cuDNN during startup, not the learner's first
@@ -137,7 +139,9 @@ class WhisperSTT(ISTTModel):
                     condition_on_previous_text=False,
                     vad_filter=vad_filter,
                     language=language,
-                    initial_prompt=initial_prompt,
+                    # Supply vocabulary, not a plausible answer to hallucinate.
+                    hotwords=initial_prompt,
+                    initial_prompt=None,
                     word_timestamps=False,
                 )
                 good_segments = [

@@ -11,6 +11,7 @@ from modules.stt_router import SpeechRecognitionRouter
 class SpeechStreamTests(unittest.TestCase):
     def setUp(self):
         self.primary=Mock()
+        self.primary.decoding_method='greedy_search'
         self.primary.accept_audio.return_value='Hello'
         self.primary.finish_stream.return_value={'text':'Hello neighbour.','final':True,'engine':'nemotron'}
         self.router=SpeechRecognitionRouter(self.primary,Mock())
@@ -27,6 +28,7 @@ class SpeechStreamTests(unittest.TestCase):
             self.assertEqual(socket.receive_json()['type'],'ready')
             socket.send_bytes(np.zeros(4096,dtype='<f4').tobytes())
             partial=socket.receive_json()
+            while partial.get('type')=='progress':partial=socket.receive_json()
             self.assertEqual(partial['text'],'Hello');self.assertFalse(partial['final'])
             socket.send_json({'type':'finish'})
             final=socket.receive_json()

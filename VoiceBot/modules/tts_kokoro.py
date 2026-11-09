@@ -16,6 +16,10 @@ from typing import Iterator
 from core.interfaces import ITTSModel
 from utils.logger import get_logger
 from utils.ui import CLI
+from modules.onnx_runtime import pin_sherpa_shared_provider
+# Pin the matching Sherpa bridge before Kokoro imports/creates a Python ORT
+# session, so a later CPU -> CUDA recognition switch remains possible.
+pin_sherpa_shared_provider()
 from kokoro_onnx import Kokoro
 
 logger = get_logger(__name__)
@@ -179,7 +183,12 @@ class KokoroTTS(ITTSModel):
         for chunk in self._text_chunks(text):
             yield from self._synthesize_chunk(chunk, speed)
 
-    def _synthesize_chunk(self, text: str, speed: float = 1.0) -> Iterator[bytes]:
+    def synthesize_participant(self, text: str, voice_index: int = 0):
+        voices = [self.voice, 'am_michael', 'af_bella', 'am_adam']
+        for chunk in self._text_chunks(text):
+            yield from self._synthesize_chunk(chunk, voice=voices[voice_index % len(voices)])
+
+    def _synthesize_chunk(self, text: str, speed: float = 1.0, voice: str | None = None) -> Iterator[bytes]:
         """
         Synthesizes text into streaming audio bytes using the ONNX model.
 
@@ -215,7 +224,7 @@ class KokoroTTS(ITTSModel):
                 self._timing_local.current = timing
                 try:
                     samples, sample_rate = self.kokoro.create(
-                        text_or_phonemes,voice=self.voice,speed=speed,
+                        text_or_phonemes,voice=voice or self.voice,speed=speed,
                         lang=self.lang,is_phonemes=is_phonemes
                     )
                 finally:

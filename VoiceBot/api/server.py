@@ -55,7 +55,7 @@ _tts_model = _llm_model = _stt_model = None
 _tts_sample_rate = 24000
 _settings_path = ROOT / "data" / "runtime_settings.json"
 _tts_switch_lock = threading.Lock()
-from services.speech_activity import SpeechActivity
+from services.speech_activity import SpeechActivity, SpeechBusyError
 _stt_activity=SpeechActivity()
 _settings_write_lock=threading.Lock()
 
@@ -368,6 +368,9 @@ async def lifespan(_: FastAPI):
 
 app = create_application(lifespan=lifespan)
 app.include_router(build_auth_router(auth_service))
+from api.routers.conversation import build_conversation_router
+from integrations.conversation import ConversationAdapter
+app.include_router(build_conversation_router(lambda: training, _authorized_session, lambda: ConversationAdapter(_llm_model) if _llm_model else None))
 from api.routers.administration import build_administration_router
 app.include_router(build_administration_router(training.context.administration, auth_service))
 
@@ -403,11 +406,12 @@ def config():
 
 
 def _stt_state():
+    from modules.onnx_runtime import cuda_capability
     saved=_saved_settings()
     runtime=_stt_model.runtime_info() if _stt_model and hasattr(_stt_model,'runtime_info') else None
     cache=Config.BASE_DIR/Config.WHISPER_ONNX_CACHE_DIR
     installed=lambda size:all((cache/size/f'{size}-{suffix}').is_file() for suffix in ('encoder.int8.onnx','decoder.int8.onnx','tokens.txt'))
-    return {'selected':saved.get('stt_engine','nemotron'),'device':saved.get('stt_device','auto'),
+    return {'selected':saved.get('stt_engine','nemotron'),'device':saved.get('stt_device','auto'),'cuda':cuda_capability(),
             'runtime':runtime,'busy':_stt_activity.users>0 or _stt_activity.switching,
             'engines':[
                 {'id':'whisper_small_onnx','name':'Whisper Small ONNX','installed':installed('small'),'description':'Multilingual INT8. Lower CPU cost; may be less accurate than medium.'},
@@ -427,6 +431,11 @@ def select_stt_engine(payload:STTEngineSelection,request:Request):
     global _stt_model
     _authorized_user_id(request)
     from modules.stt_router import create_stt
+    if payload.device=='cuda':
+        from modules.onnx_runtime import cuda_capability
+        capability=cuda_capability()
+        if not capability['available']:
+            raise HTTPException(503,capability['reason'])
     try:
         with _stt_activity.switch():
             candidate=create_stt(engine=payload.engine,device=payload.device,strict=True)
@@ -441,7 +450,7 @@ def select_stt_engine(payload:STTEngineSelection,request:Request):
                 except Exception:logger.warning('Previous recognition engine did not release cleanly',exc_info=True)
             del old;gc.collect()
         return _stt_state()
-    except RuntimeError as exc:
+    except SpeechBusyError as exc:
         raise HTTPException(409,str(exc)) from exc
     except Exception as exc:
         logger.exception('Recognition engine switch failed')
@@ -563,7 +572,11 @@ def generate_scenario(payload: SessionCreate, request: Request):
 def preview_scenario(payload: SessionCreate, request: Request):
     try:
         user_id = _authorized_user_id(request, payload.user_id)
-        return training.scenario_preview(user_id, payload.skill_id, payload.difficulty, payload.activity_id,payload.document_ids,payload.posture_enabled,payload.preview_id)
+        result = training.scenario_preview(user_id, payload.skill_id, payload.difficulty, payload.activity_id,payload.document_ids,payload.posture_enabled,payload.preview_id,payload.review_id)
+        from intelligence.scenario_contracts import learner_definition
+        if result.get('runtime_definition'):
+            result['runtime_definition'] = learner_definition(result['runtime_definition'])
+        return result
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -600,14 +613,14 @@ async def voice_turn_stream(session_id: str, payload: RoleplayTurn, request: Req
         return StreamingResponse(text_only(),media_type='application/x-ndjson')
     loop = asyncio.get_running_loop()
     queue = asyncio.Queue()
-    def sentence_ready(text, speaker):
+    def sentence_ready(text, speaker, metadata=None):
         # Do not speak persona leakage before the turn's validation runs.
-        if session.get("training_language") == "English" and any(phrase in text.lower() for phrase in (
+        if not session.get('runtime') and session.get("training_language") == "English" and any(phrase in text.lower() for phrase in (
             "what specific action", "propose we take next", "focus on the solution",
             "stakeholder impact", "action plan"
         )):
             return
-        loop.call_soon_threadsafe(queue.put_nowait, (text, speaker))
+        loop.call_soon_threadsafe(queue.put_nowait, (text, speaker, metadata or {}))
     async def generate():
         started = time.perf_counter()
         first_audio_ms = None
@@ -622,20 +635,28 @@ async def voice_turn_stream(session_id: str, payload: RoleplayTurn, request: Req
         try:
             while not task.done() or not queue.empty():
                 try:
-                    sentence, speaker = await asyncio.wait_for(queue.get(), timeout=.1)
+                    sentence, speaker, metadata = await asyncio.wait_for(queue.get(), timeout=.1)
                 except asyncio.TimeoutError:
                     continue
                 sentence_ready_ms = (time.perf_counter() - started) * 1000
                 if not audio_count:
                     logger.info('Voice turn first_sentence_ms=%.1f', sentence_ready_ms)
-                yield json.dumps({'type':'speech_text','speaker':speaker,'text':sentence})+'\n'
-                async for pcm in audio_chunks(synthesize, sentence):
+                if metadata:
+                    with training.connect() as db:
+                        utterance = db.execute('SELECT status FROM conversation_utterances WHERE id=?', (metadata['utterance_id'],)).fetchone()
+                    if not utterance or utterance['status'] == 'interrupted':
+                        continue
+                yield json.dumps({'type':'speech_text','speaker':speaker,'text':sentence, **metadata})+'\n'
+                utterance_synthesis = (lambda text, voice_index=metadata.get('voice_index', 0): model.synthesize_participant(text, voice_index)) if hasattr(model, 'synthesize_participant') else synthesize
+                async for pcm in audio_chunks(utterance_synthesis, sentence):
                     audio_count += 1
                     samples += len(pcm) // 4
                     if first_audio_ms is None:
                         first_audio_ms = (time.perf_counter() - started) * 1000
                         logger.info('Voice turn first_audio_ms=%.1f first_synthesis_ms=%.1f', first_audio_ms, first_audio_ms - sentence_ready_ms)
-                    yield json.dumps({"type": "audio", "speaker": speaker, "audio_b64": base64.b64encode(_pcm_to_wav(pcm, sample_rate)).decode("ascii"), "tts_timing": getattr(pcm, "tts_timing", None), "kokoro_timing": getattr(pcm, "timing", None), "timing": {"first_sentence_ms": round(sentence_ready_ms, 1), "first_audio_ms": round(first_audio_ms, 1), "first_synthesis_ms": round(first_audio_ms - sentence_ready_ms, 1)} if audio_count == 1 else None}) + "\n"
+                    yield json.dumps({"type": "audio", "speaker": speaker, **metadata, "audio_b64": base64.b64encode(_pcm_to_wav(pcm, sample_rate)).decode("ascii"), "tts_timing": getattr(pcm, "tts_timing", None), "kokoro_timing": getattr(pcm, "timing", None), "timing": {"first_sentence_ms": round(sentence_ready_ms, 1), "first_audio_ms": round(first_audio_ms, 1), "first_synthesis_ms": round(first_audio_ms - sentence_ready_ms, 1)} if audio_count == 1 else None}) + "\n"
+                if metadata:
+                    yield json.dumps({'type': 'segment_end', **metadata})+'\n'
             result = await task
             if not audio_count:
                 for response in result["responses"]:
@@ -652,7 +673,7 @@ async def voice_turn_stream(session_id: str, payload: RoleplayTurn, request: Req
                            engine=_engine_name, first_audio_ms=first_audio_ms,
                            audio_seconds=samples / sample_rate, chunks=audio_count,
                            overlaps_response=True)
-            if not audio_count:
+            if not audio_count and result['responses']:
                 raise RuntimeError("Voice engine returned no playable audio")
             yield json.dumps({"type": "result", "result": result}) + "\n"
         except Exception as exc:
@@ -759,9 +780,17 @@ def posture_alias(session_id: str, sample: PostureSample, request: Request):
 
 
 @app.post("/api/transcribe")
-async def transcribe(file: UploadFile = File(...), language: str | None = Form(None),
+async def transcribe(request: Request, file: UploadFile = File(...), language: str | None = Form(None),
                      context: str | None = Form(None), duration_ms: float = Form(0), partial: bool = Form(False),
-                     decoding_method: str | None = Form(None)):
+                     decoding_method: str | None = Form(None), final_pass: bool = Form(False),
+                     session_id: str | None = Form(None), original_text: str = Form('')):
+    vocabulary=None
+    if session_id:
+        _authorized_session(request,session_id)
+        from services.recognition_quality import session_vocabulary
+        definition,_=training.context.runtime.read(session_id)
+        vocabulary=session_vocabulary(definition or {})
+    if len(original_text)>6000:raise HTTPException(422,'Transcript is too long')
     if decoding_method is not None and decoding_method not in {'greedy_search','modified_beam_search'}:
         raise HTTPException(422,'Invalid decoding technique')
     if _stt_model is None:
@@ -777,11 +806,12 @@ async def transcribe(file: UploadFile = File(...), language: str | None = Form(N
         if hasattr(_stt_model, "transcribe_detailed"):
             def recognize():
                 with _stt_activity.use():
-                    if decoding_method and language_code in {'en','English'}:
-                        if not hasattr(_stt_model,'decoder_for'):
-                            raise RuntimeError('Select Nemotron to choose a decoding technique')
-                        return _stt_model.decoder_for(decoding_method).transcribe_detailed(data,language_code,context)
-                    return _stt_model.transcribe_detailed(data,language_code,context)
+                    if final_pass and not partial and hasattr(_stt_model,'transcribe_final'):
+                        return _stt_model.transcribe_final(data,language_code,vocabulary,original_text,decoding_method or 'greedy_search')
+                    if (decoding_method and language_code in {'en','English'} and
+                            hasattr(_stt_model,'decoder_for') and getattr(_stt_model,'primary',None) is not None):
+                        return _stt_model.decoder_for(decoding_method).transcribe_detailed(data,language_code,vocabulary)
+                    return _stt_model.transcribe_detailed(data,language_code,vocabulary)
             result = await asyncio.get_running_loop().run_in_executor(None,recognize)
         else:
             text = await asyncio.get_running_loop().run_in_executor(None, _stt_model.transcribe, data)
@@ -789,13 +819,13 @@ async def transcribe(file: UploadFile = File(...), language: str | None = Form(N
         processing_ms = (time.perf_counter() - started) * 1000
         metrics.record("transcription", "partial speech" if partial else "speech to text", processing_ms, True, upload_kb=round(len(data) / 1024, 1),partial=partial)
         text = result["text"].strip()
-        capture_duration_ms = max(0, float(duration_ms or 0))
-        suspicious_short = capture_duration_ms >= 1600 and len(re.findall(r"[\w'-]+", text, re.UNICODE)) <= 1
-        low_confidence = result.get("confidence") is not None and result["confidence"] < .18
+        # Recording duration includes silence; a deliberate "yes" is valid.
+        threshold=.5 if len(text.split())==1 else .35
+        low_confidence = result.get("confidence") is not None and result["confidence"] < threshold
         return {
             **result, "text": text, "latency_ms": round(processing_ms, 1), "partial":partial,
-            "needs_retry": bool(text and (suspicious_short or low_confidence)),
-            "retry_reason": "I only caught a very short or uncertain fragment." if text and (suspicious_short or low_confidence) else None,
+            "needs_retry": bool(result.get('needs_retry') or low_confidence),
+            "retry_reason": result.get('retry_reason') or ("I only caught an uncertain fragment." if low_confidence else None),
         }
     except Exception as exc:
         metrics.record("transcription", "speech to text", (time.perf_counter() - started) * 1000, False, error_type=type(exc).__name__)
@@ -889,14 +919,16 @@ def delete_document(document_id: str, request: Request, user_id: str | None = No
 
 
 @app.post("/api/chat")
-async def chat(request: ChatRequest):
-    """Compatibility endpoint retained for the earlier generic voice client."""
-    if _llm_model:
-        text = await asyncio.get_running_loop().run_in_executor(None, lambda: "".join(_llm_model.generate_response(request.text)))
+async def chat(payload: ChatRequest, request: Request):
+    """Compatibility adapter: retain the returned session_id for subsequent turns."""
+    user_id = _authorized_user_id(request)
+    sid = payload.session_id
+    if sid:
+        _authorized_session(request, sid)
     else:
-        text = "Start a training scenario from the Hikari dashboard so I can coach you in context."
-    audio = await asyncio.get_running_loop().run_in_executor(None, _synthesize, text)
-    return {"text": text, "audio_b64": audio, "engine": "chattts"}
+        sid = training.create_session(user_id,'english-speaking','beginner','english-01')['id']
+    result = await roleplay(sid, RoleplayTurn(**payload.model_dump(exclude={'session_id'})), request)
+    return {**result, 'session_id':sid}
 
 
 # Production-style local mode: the same process serves the compiled React app.

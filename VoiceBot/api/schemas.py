@@ -54,16 +54,22 @@ class SessionCreate(BaseModel):
     preview_id: Optional[str] = Field(default=None,max_length=80)
     document_ids: list[str] = Field(default_factory=list,max_length=20)
     posture_enabled: bool = False
+    review_id: Optional[str] = Field(default=None, max_length=100)
 
 
 class RoleplayTurn(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
     duration_seconds: float = Field(default=0, ge=0, le=600)
     synthesize_audio: bool = True
+    request_id: Optional[str] = Field(default=None, max_length=100)
+    expected_revision: Optional[int] = Field(default=None, ge=0)
+    addressed_participant_ids: list[str] = Field(default_factory=list, max_length=4)
+    recognition: dict = Field(default_factory=dict)
+    retry_last_turn: bool = False
 
 
-class ChatRequest(BaseModel):
-    text: str = Field(min_length=1, max_length=4000)
+class ChatRequest(RoleplayTurn):
+    session_id: Optional[str] = Field(default=None, max_length=100)
 
 
 class TTSRequest(BaseModel):
@@ -85,7 +91,7 @@ class PostureSample(BaseModel):
 
 class STTEngineSelection(BaseModel):
     engine: str = Field(pattern='^(whisper_small_onnx|whisper_medium_onnx|nemotron)$')
-    device: str = Field(default='auto',pattern='^(auto|cpu)$')
+    device: str = Field(default='auto',pattern='^(auto|cpu|cuda)$')
 
 
 class MicrophoneMetric(BaseModel):

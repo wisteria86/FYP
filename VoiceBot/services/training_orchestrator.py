@@ -62,6 +62,10 @@ class TrainingOrchestrator:
         self.metrics, self.sample_rate, self.engine = metrics, sample_rate, engine
 
     async def run_turn(self, session_id, payload, sentence_callback=None, response_callback=None):
+        runtime = getattr(getattr(self.training, 'context', None), 'runtime', None)
+        if runtime is not None and runtime.read(session_id)[0]:
+            from services.structured_orchestrator import run_structured_turn
+            return await run_structured_turn(self, session_id, payload, sentence_callback)
         pipeline_started = time.perf_counter()
         try:
             session = self.training.session(session_id)
@@ -136,7 +140,9 @@ class TrainingOrchestrator:
                 if turn_progress['outcome'] == 'success':
                     # Decide before streaming: a completed scene must not speak a
                     # fresh question and then abruptly disappear into results.
-                    reply = self.training.fallback_reply(session_id, speaker)
+                    reply = ('It was lovely meeting you. Goodbye, and see you around!'
+                             if session.get('training_language') == 'English' and session.get('sequence_number') == 1
+                             else 'Thank you. We have covered what we needed to resolve, so we can finish here.')
                     if sentence_callback:
                         sentence_callback(reply, speaker['name'])
                 elif self.llm:

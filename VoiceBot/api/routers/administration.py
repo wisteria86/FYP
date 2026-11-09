@@ -3,6 +3,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field, field_validator
 from config import Config
 from typing import Literal
+from domain.conversation import ScenarioDefinition
 
 
 class SubskillUpdate(BaseModel):
@@ -25,6 +26,7 @@ class ScenarioUpdate(BaseModel):
     success_criteria: list[str] = Field(min_length=1,max_length=20)
     opening_situation: str = Field(min_length=1,max_length=2000)
     active: bool = True
+    runtime_definition: ScenarioDefinition | None = None
 
     @field_validator('objectives','success_criteria')
     @classmethod

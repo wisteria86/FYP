@@ -14,6 +14,7 @@ from services.progress_service import ProgressService
 from services.adaptive_service import AdaptiveTrainingService
 from services.knowledge_service import KnowledgeService
 from services.administration_service import AdministrationService
+from services.conversation_runtime import ConversationRuntime
 from services.training_support import SKILLS, SCENARIOS
 
 
@@ -36,6 +37,7 @@ class TrainingService:
         self.context.adaptive = AdaptiveTrainingService(self.context)
         self.context.knowledge = KnowledgeService(self.context)
         self.context.administration = AdministrationService(self.context)
+        self.context.runtime = ConversationRuntime(self.context)
         self.context.catalog._initialize()
 
     def connect(self):

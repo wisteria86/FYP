@@ -3,11 +3,12 @@ from services.training_support import *
 from services.training_support import _now, _json, _words
 from services.service_context import ApplicationService
 from intelligence.scenario_generation import vary
+from intelligence.scenario_contracts import compile_definition
 
 
 class ScenarioService(ApplicationService):
     def scenario_preview(self, user_id: str, skill_id: str, difficulty: str, activity_id: str | None = None,
-                         document_ids: list[str] | None = None, posture_enabled: bool = False, preview_id: str | None = None) -> dict[str, Any]:
+                         document_ids: list[str] | None = None, posture_enabled: bool = False, preview_id: str | None = None, review_id: str | None = None) -> dict[str, Any]:
         """Return the learner briefing without creating an abandoned session."""
 
         with self.connect() as db:
@@ -88,12 +89,34 @@ class ScenarioService(ApplicationService):
         if previous and previous.get('document_ids',[])==ids:
             for key in ('situation','opening','variant','adaptation_reason'):
                 result[key]=previous[key]
+        result['runtime_definition'] = compile_definition(result)
+        authored = json.loads(activity['variables_json'] or '{}').get('runtimeDefinition')
+        if authored:
+            from domain.conversation import ScenarioDefinition
+            definition = ScenarioDefinition(**authored).model_dump()
+            result['runtime_definition'] = definition
+            result['situation'] = definition['setting']
+            result['participant_specs'] = [{'id':p['id'],'type':p['kind'],'displayName':p['name'],'role':p['role'],'team':p['team']} for p in definition['participants']]
+            result['opening'] = activity['opening_situation']
+        if review_id:
+            with self.connect() as db:
+                review = db.execute('SELECT * FROM learning_reviews WHERE id=? AND user_id=? AND activity_id=?', (review_id,user_id,activity['id'])).fetchone()
+            if not review:
+                raise ValueError('Review does not belong to this learner and lesson')
+            result['review_id'] = review_id
+            result['runtime_definition']['review'] = {'id': review_id, 'due_at': review['due_at'], 'source_session_id': review['source_session_id']}
+        if previous and previous.get('runtime_definition') and previous.get('document_ids', []) == ids:
+            for key in ('runtime_definition', 'participant_specs', 'opening', 'situation'):
+                result[key] = previous[key]
+        result['participants'] = [p.get('displayName') or p['role'] for p in result['participant_specs'] if p['type'] == 'ai']
         with self.connect() as db:
             db.execute('INSERT INTO scenario_previews VALUES (?,?,?,?,?,0)',(result['preview_id'],user_id,activity['id'],_json(result),_now()))
         return result
 
     def prompt(self, session_id: str, knowledge: list[dict[str, str]] | None = None,
                speaker: dict[str, str] | None = None) -> str:
+        if self.context.runtime.read(session_id)[0]:
+            return self.context.runtime.prompt(session_id, speaker or self.context.runtime.speakers(session_id)[0], knowledge)
         session = self.context.session.session(session_id)
         with self.connect() as db:
             settings = db.execute(

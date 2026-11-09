@@ -40,12 +40,8 @@ def vary(activity, attempt, focus, difficulty):
     language=activity.get('training_language')
     name=NAMES[index]
     if language:
-        # Preserve the lesson setting (a clinic must not become a cafe), and
-        # derive the identity from the opening rather than assigning two names.
-        opening=re.sub(r'\bAlex\b', name, activity['opening_situation'])
-        identity=re.search(r"\b(?:I'm|I am) ([A-Z][a-zA-Z'-]+)", opening)
-        name=identity.group(1) if identity else name
-        context=f"{activity['context']} Your partner is {name}. Keep this identity and the lesson setting throughout the conversation."
+        opening=activity['opening_situation']
+        context=f"{activity['context']} Keep the lesson setting throughout the conversation. Participant identity comes from the prepared roster."
         if activity.get('roleplay_mode')!='one_to_one':
             context=f"{activity['context']} Participants retain their assigned roles and the lesson setting throughout the conversation."
             opening=activity['opening_situation']

@@ -43,3 +43,23 @@ test('fresh installations avoid stacked suppression and malformed preferences ar
  assert.equal(loadSessionAudio(storage()).mode,'browser')
  for(const value of [null,[],42,'invalid'])assert.equal(normalizeSessionAudio(value).decodingMethod,'greedy_search')
 })
+
+test('old always-on final decoding migrates to fast recognition without changing microphone settings',()=>{
+ const local=storage({'hikari-session-audio-v1':JSON.stringify({accurateFinal:true,deviceId:'headset',mode:'rnnoise',gainDb:-9,inputMode:'auto'})})
+ const value=loadSessionAudio(local)
+ assert.equal(value.accurateFinal,false)
+ assert.equal(value.deviceId,'headset');assert.equal(value.mode,'rnnoise')
+ assert.equal(value.gainDb,-9);assert.equal(value.inputMode,'auto')
+ assert.equal(value.recognitionPolicyVersion,2)
+ saveSessionAudio(local,value)
+ assert.equal(loadSessionAudio(local).accurateFinal,false)
+})
+
+test('a new explicit accuracy choice survives saving and reloading',()=>{
+ const local=storage()
+ assert.equal(loadSessionAudio(local).accurateFinal,false)
+ saveSessionAudio(local,{...loadSessionAudio(local),accurateFinal:true})
+ assert.equal(loadSessionAudio(local).accurateFinal,true)
+ saveSessionAudio(local,{...loadSessionAudio(local),accurateFinal:false})
+ assert.equal(loadSessionAudio(local).accurateFinal,false)
+})

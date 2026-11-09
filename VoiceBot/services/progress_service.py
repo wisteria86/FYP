@@ -64,7 +64,12 @@ class ProgressService(ApplicationService):
             "recommendation": recommendation,
             "plan": plan or self.context.adaptive.plan(skills),
             "persistent_plan": persistent_plan,
+            "learning_reviews": self.learning_reviews(user_id),
         }
+
+    def learning_reviews(self, user_id):
+        with self.connect() as db:
+            return [dict(row) for row in db.execute('SELECT r.*,a.title,a.primary_skill_id FROM learning_reviews r JOIN training_activities a ON a.id=r.activity_id WHERE r.user_id=? ORDER BY r.due_at', (user_id,))]
 
     def history(self, user_id: str = "demo") -> list[dict[str, Any]]:
         with self.connect() as db:

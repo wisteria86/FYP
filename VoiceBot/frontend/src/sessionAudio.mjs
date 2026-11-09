@@ -7,12 +7,19 @@ export function normalizeSessionAudio(value={}){
     mode:sessionAudioModes.some(mode=>mode.id===value.mode)?value.mode:'rnnoise',
     gainEnabled:value.gainEnabled===true,
     gainDb:Number.isFinite(value.gainDb)?Math.max(-24,Math.min(6,value.gainDb)):-6,
-    liveRecognition:value.liveRecognition!==false}
+    liveRecognition:value.liveRecognition!==false,
+    recognitionPolicyVersion:2,
+    accurateFinal:value.accurateFinal===true}
 }
 export function loadSessionAudio(storage){
   try{
     const saved=storage.getItem(sessionAudioKey)
-    if(saved)return normalizeSessionAudio(JSON.parse(saved)||{})
+    if(saved){
+      const parsed=JSON.parse(saved)||{}
+      // The previous release enabled a blocking second decode by default.
+      // Migrate that policy once; preserve an explicit choice made afterwards.
+      return normalizeSessionAudio(parsed.recognitionPolicyVersion===2?parsed:{...parsed,accurateFinal:false})
+    }
     return normalizeSessionAudio({deviceId:storage.getItem('hikari-mic-id')||'',mode:storage.getItem('hikari-noise-reduction')==='true'?'combined':'browser'})
   }catch{return normalizeSessionAudio()}
 }

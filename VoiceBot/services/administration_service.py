@@ -42,6 +42,12 @@ class AdministrationService(ApplicationService):
                 opening_situation,participants_json,rubric_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
                 ('template-'+identifier,identifier,data['learner_role'],data['context'],json.dumps(data['objectives']),json.dumps(data['success_criteria']),data['opening_situation'],json.dumps(people),json.dumps({'skillId':data['skill_id']}),now,now))
             db.execute('UPDATE training_activities SET posture_mode=?,knowledge_mode=? WHERE id=?',(data.get('posture_mode','off'),data.get('knowledge_mode','off'),identifier))
+            if data.get('runtime_definition'):
+                from domain.conversation import ScenarioDefinition
+                definition = ScenarioDefinition(**data['runtime_definition']).model_dump()
+                if definition['activity_id'] != identifier:
+                    raise DomainError('scenario_mismatch','The definition must belong to this activity.',status_code=422)
+                db.execute('UPDATE scenario_templates SET variables_json=? WHERE activity_id=?', (json.dumps({'runtimeDefinition':definition}),identifier))
         return {'id':identifier,**data}
 
     def save_lesson_settings(self,user,identifier,data):
@@ -79,6 +85,15 @@ class AdministrationService(ApplicationService):
                 opening_situation=?,active=?,version=version+1,updated_at=? WHERE id=?''',
                 (data['context'],json.dumps(data['objectives']),json.dumps(data['success_criteria']),
                  data['opening_situation'],int(data['active']),_now(),identifier))
+            if data.get('runtime_definition'):
+                from domain.conversation import ScenarioDefinition
+                definition = ScenarioDefinition(**data['runtime_definition']).model_dump()
+                row = db.execute('SELECT activity_id,variables_json FROM scenario_templates WHERE id=?', (identifier,)).fetchone()
+                if definition['activity_id'] != row['activity_id']:
+                    raise DomainError('scenario_mismatch','The definition must belong to this activity.',status_code=422)
+                variables = json.loads(row['variables_json'] or '{}')
+                variables['runtimeDefinition'] = definition
+                db.execute('UPDATE scenario_templates SET variables_json=? WHERE id=?', (json.dumps(variables),identifier))
         return {'id': identifier, **data}
 
     def configuration(self, user):

@@ -7,6 +7,8 @@ from core.training_service import TrainingService
 
 class TrainingServiceTests(unittest.TestCase):
     def setUp(self):
+        from tests.legacy_fixture import legacy_snapshots
+        legacy_snapshots(self)
         self.temp = tempfile.TemporaryDirectory()
         self.service = TrainingService(Path(self.temp.name) / "test.db")
 

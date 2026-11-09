@@ -1,6 +1,17 @@
 """Normalize model output before it can reach display or speech providers."""
 import re
 
+URDU_GLOSSARY = ('For Urdu subtitles, preserve business meaning: negotiation = مذاکرات, '
+    'supplier = فراہم کنندہ, buyer = خریدار, training seats = تربیتی نشستیں, '
+    'support = معاونت. Never translate negotiating as joking (مذاق). '
+    'Keep names, prices, currency, quantities, timing and acceptance/conditional language accurate.')
+
+
+def valid_caption(source, caption):
+    if not isinstance(caption,str) or not caption.strip():return False
+    if re.search(r'negotiat',source,re.I) and 'مذاق' in caption:return False
+    return True
+
 
 def public_reply(text):
     value = (text or '').strip()

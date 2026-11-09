@@ -1,0 +1,51 @@
+/* Compact controls follow the existing cream/burgundy lesson design. */
+.conversation-coach{color:var(--h-ink);min-width:0}
+.runtime-toolbar{display:flex;align-items:center;gap:8px;min-height:48px;padding:6px 0 12px}
+.runtime-toolbar label{display:flex;align-items:center;gap:10px;margin-right:auto;font-size:13px;color:#735e64;min-width:0}
+.conversation-coach button,.conversation-coach select{border:1px solid var(--h-line);border-radius:9px;background:#fffdfa;color:var(--burgundy);font:inherit;font-size:13px;padding:8px 12px;cursor:pointer}
+.runtime-toolbar select{max-width:280px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.conversation-coach button:disabled{opacity:.55;cursor:default}
+.conversation-coach button:focus-visible,.conversation-coach select:focus-visible,.coach-drawer input:focus-visible,.coach-drawer textarea:focus-visible{outline:2px solid var(--burgundy);outline-offset:3px}
+.coach-unread{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--burgundy);margin-left:8px;vertical-align:middle}
+.runtime-notice{display:flex;align-items:center;gap:12px;justify-content:space-between;background:#fff5e5;border:1px solid #e5c99b;padding:9px 13px;margin-bottom:10px;border-radius:9px;font-size:13px;color:#7c5120}
+.runtime-notice button{flex:none}
+.lesson-closure{background:#eaf7ed;border:1px solid #9dceaa;color:#1e7040;padding:12px 16px;border-radius:10px;margin-bottom:12px}
+.lesson-closure p{margin:5px 0 10px}.lesson-closure button+button{margin-left:8px}
+.coach-overlay{position:fixed;inset:0;background:#21151765;z-index:100;display:flex;justify-content:flex-end}
+.coach-drawer{height:100dvh;width:min(440px,100%);background:var(--cream,#fff8f0);box-shadow:-12px 0 40px #35152124;display:flex;flex-direction:column;outline:none}
+.coach-drawer>header{display:flex;align-items:center;justify-content:space-between;padding:24px;border-bottom:1px solid var(--h-line)}
+.coach-drawer>header small{font-size:10px;letter-spacing:.12em;color:#8f5964}.coach-drawer h2{margin:5px 0 0;color:var(--burgundy)}
+.coach-drawer>header button{font-size:25px;line-height:1;padding:6px 10px}
+.coach-details{padding:20px 24px;min-height:0;overflow:auto;overscroll-behavior:contain;font-size:14px;line-height:1.6}
+.coach-details>p:first-of-type{color:#735e64;font-size:13px}.coach-details details{padding:15px 0;border-top:1px solid var(--h-line);margin-top:15px}
+.coach-details summary{cursor:pointer;color:var(--burgundy);font-weight:600}.coach-details label{display:flex;flex-direction:column;gap:5px;margin:12px 0;color:#61444b}
+.coach-preferences{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.coach-details input,.coach-details textarea,.coach-details select{width:100%;min-width:0;padding:9px 10px;border:1px solid var(--h-line);border-radius:8px;background:#fffdfa;color:var(--h-ink);font:inherit}
+.coach-details textarea{min-height:85px;resize:vertical}.coach-details button{margin:4px 6px 4px 0}.coach-details h3{font-size:16px}
+.coach-message{background:#f7e9e4;border-left:3px solid var(--burgundy);padding:14px;border-radius:6px;color:#713542}.coach-message p{margin:7px 0 0}
+.coach-details article{padding:12px;border:1px solid var(--h-line);border-radius:9px;margin-top:12px;background:#fffdfa}
+.preparation-brief{padding:14px;background:#f3e8db;border-radius:9px}.preparation-brief dt{font-size:12px;color:#735e64}.preparation-brief dd{margin:2px 0 12px}.preparation-brief dd:last-child{margin-bottom:0}
+/* Allocate the viewport once. Support content lives in the drawer, never above the call. */
+.session-window.has-runtime{display:flex;flex-direction:column;height:100dvh;min-height:640px;overflow:hidden}
+.session-window.has-runtime>.session-header{height:auto;min-height:88px;flex:none;gap:20px;padding-bottom:12px}
+.session-window.has-runtime>.session-header>div:first-child{min-width:0}.session-window.has-runtime .session-header p{max-width:65ch;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.session-window.has-runtime>.conversation-coach{flex:none}
+.session-window.has-runtime>.session-body{flex:1;min-height:0;height:auto}
+.session-window.has-runtime .session-call-area{grid-template-rows:minmax(0,1fr) auto;min-height:0}
+.session-window.has-runtime .meeting-controls{gap:clamp(4px,1vw,18px);padding:12px 0;min-height:88px}
+.session-window.has-runtime .meeting-controls button{width:clamp(52px,5vw,72px);flex-shrink:0;font-size:11px}
+.session-window.has-runtime .meeting-controls button>span{width:46px;height:46px}
+.session-window.has-runtime .session-progress{position:static;grid-column:1/-1;align-self:start;justify-self:start;margin:0 0 8px;max-width:100%;flex-wrap:wrap;border-radius:9px;font-size:11px}
+.session-window.has-runtime .session-call-area:has(>.session-progress){grid-template-rows:auto minmax(0,1fr) auto}
+.session-window.has-runtime .session-transcript{min-height:0}.session-window.has-runtime .session-transcript article>section{min-width:0;overflow-wrap:anywhere}
+.session-window.has-runtime .session-chat{min-height:0}.session-window.has-runtime .messages{min-height:0;overflow:auto}
+@media(max-width:900px){
+ .session-window.has-runtime{height:auto;min-height:100dvh;overflow:visible;padding:14px}
+ .session-window.has-runtime>.session-header{flex-wrap:wrap;gap:10px;min-height:0}.session-window.has-runtime .session-header-actions{flex-wrap:wrap;gap:12px}
+ .session-window.has-runtime .runtime-toolbar{flex-wrap:wrap;padding-top:14px}.runtime-toolbar label{width:100%;margin:0}.runtime-toolbar select{max-width:none;flex:1}
+ .session-window.has-runtime>.session-body{display:flex;flex-direction:column;gap:14px}
+ .session-window.has-runtime .session-call-area{height:620px;min-height:500px}.session-window.has-runtime .meeting-controls{flex-wrap:wrap;gap:8px;padding-top:12px}.session-window.has-runtime .meeting-controls button{width:60px}
+ .session-window.has-runtime .session-transcript{height:420px;min-height:300px}.session-window.has-runtime .session-progress span{overflow-wrap:anywhere}
+ .runtime-notice{align-items:flex-start;flex-wrap:wrap}.coach-details{padding:18px}.coach-drawer>header{padding:18px}
+}
+@media(max-width:380px){.coach-preferences{grid-template-columns:1fr}.runtime-toolbar button{font-size:12px;padding:8px}.session-window.has-runtime .self-pip{width:88px;height:72px}}

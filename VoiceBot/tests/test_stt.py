@@ -44,7 +44,8 @@ class WhisperSTTTests(unittest.TestCase):
         self.assertEqual(result["detected_language"], "en")
         self.assertGreater(result["confidence"], .7)
         self.assertEqual(stt.model.options["language"], "en")
-        self.assertEqual(stt.model.options["initial_prompt"], "First Greetings")
+        self.assertIsNone(stt.model.options["initial_prompt"])
+        self.assertEqual(stt.model.options["hotwords"], "First Greetings")
         self.assertEqual(stt.model.options["task"], "transcribe")
         self.assertEqual(stt.model.options["temperature"], 0.0)
 

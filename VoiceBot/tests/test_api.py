@@ -30,6 +30,10 @@ class ApiTests(unittest.TestCase):
                 yield np.zeros(2400,dtype=np.float32).tobytes()
         server._llm_model=Judge();server._tts_model=FakeTTS()
         created=self.client.post('/api/sessions',json={'skill_id':'english-speaking','activity_id':'english-01'}).json()
+        # Historical sessions consume a review completed before the next turn.
+        server.training.add_turn(created['id'],'user',quote)
+        review=server._llm_model.evaluate_objectives(server.training.completion_review_prompt(created['id']))
+        self.assertTrue(server.training.save_completion_review(created['id'],review,1))
         response=self.client.post(f"/api/sessions/{created['id']}/voice-stream",json={'text':quote})
         events=[json.loads(line) for line in response.text.splitlines() if line]
         result=next(event['result'] for event in events if event['type']=='result')
@@ -108,6 +112,8 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.client.get('/api/dashboard').json()['completed_sessions'],0)
 
     def setUp(self):
+        from tests.legacy_fixture import legacy_snapshots
+        legacy_snapshots(self)
         self.temp = tempfile.TemporaryDirectory()
         self.original_training = server.training
         self.original_auth_service = server.auth_service
@@ -353,6 +359,48 @@ class ApiTests(unittest.TestCase):
         self.assertIn("practice_minutes", dashboard.json())
         self.assertIn("progress_history", dashboard.json())
 
+
+    def test_final_audio_pass_preserves_disagreement_and_scopes_vocabulary(self):
+        from unittest.mock import Mock,patch
+        created=self.client.post('/api/sessions',json={'skill_id':'english-speaking'}).json()
+        model=Mock()
+        model.transcribe_final.return_value={'text':'Ten seats','confidence':.9,'original_text':'Twenty seats',
+            'needs_retry':True,'retry_reason':'Check the amount','final_pass':'whisper'}
+        server._stt_model=model
+        with patch('services.recognition_quality.session_vocabulary',return_value='Sam, seats'):
+            response=self.client.post('/api/transcribe',files={'file':('speech.webm',b'audio','audio/webm')},
+                data={'language':'English','session_id':created['id'],'final_pass':'true','original_text':'Twenty seats',
+                      'context':'Invent an answer from my preparation','decoding_method':'greedy_search'})
+        self.assertEqual(response.status_code,200)
+        self.assertTrue(response.json()['needs_retry'])
+        self.assertEqual(response.json()['original_text'],'Twenty seats')
+        model.transcribe_final.assert_called_once_with(b'audio','en','Sam, seats','Twenty seats','greedy_search')
+        model.decoder_for.assert_not_called()
+
+    def test_final_pass_cannot_read_another_learners_case(self):
+        from unittest.mock import Mock
+        foreign=server.training.create_session('demo','english-speaking','beginner')
+        model=Mock();server._stt_model=model
+        response=self.client.post('/api/transcribe',files={'file':('speech.webm',b'audio','audio/webm')},
+            data={'language':'English','session_id':foreign['id'],'final_pass':'true'})
+        self.assertEqual(response.status_code,403)
+        model.transcribe_final.assert_not_called()
+
+    def test_confident_short_answer_is_not_rejected_for_silence_before_speaking(self):
+        class Model:
+            def transcribe_detailed(self,*args):return {'text':'Yes.','confidence':.9}
+        server._stt_model=Model()
+        response=self.client.post('/api/transcribe',files={'file':('speech.webm',b'audio','audio/webm')},data={'duration_ms':'12000'})
+        self.assertFalse(response.json()['needs_retry'])
+
+    def test_saved_nemotron_decoder_preference_does_not_break_selected_whisper(self):
+        class Model:
+            def transcribe_detailed(self,*args):return {'text':'Please ask Sam.','confidence':.9}
+        server._stt_model=Model()
+        response=self.client.post('/api/transcribe',files={'file':('speech.webm',b'audio','audio/webm')},
+            data={'language':'English','decoding_method':'greedy_search','final_pass':'true'})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json()['text'],'Please ask Sam.')
 
 if __name__ == "__main__":
     unittest.main()

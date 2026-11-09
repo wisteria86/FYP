@@ -33,6 +33,26 @@ class STTSettingsTests(unittest.TestCase):
         self.assertEqual(len(state['engines']),3)
         self.assertIn('whisper_small_onnx',[item['id'] for item in state['engines']])
 
+    def test_explicit_cuda_is_available_and_persisted(self):
+        candidate=Mock(runtime_info=lambda:{'engine':'nemotron','device':'cuda'})
+        with patch('modules.onnx_runtime.cuda_capability',return_value={'available':True,'device_name':'Test GPU','reason':None}), \
+             patch('modules.stt_router.create_stt',return_value=candidate) as factory:
+            response=self.client.post('/api/stt/engine',json={'engine':'nemotron','device':'cuda'})
+        self.assertEqual(response.status_code,200)
+        self.assertTrue(response.json()['cuda']['available'])
+        self.assertEqual(server._saved_settings()['stt_device'],'cuda')
+        factory.assert_called_once_with(engine='nemotron',device='cuda',strict=True)
+
+    def test_unavailable_cuda_cannot_replace_current_engine(self):
+        original=server._stt_model
+        with patch('modules.onnx_runtime.cuda_capability',return_value={'available':False,'reason':'No NVIDIA GPU'}), \
+             patch('modules.stt_router.create_stt') as factory:
+            response=self.client.post('/api/stt/engine',json={'engine':'nemotron','device':'cuda'})
+        self.assertEqual(response.status_code,503)
+        self.assertIs(server._stt_model,original)
+        factory.assert_not_called()
+        self.assertNotIn('stt_device',server._saved_settings())
+
     def test_successful_switch_persists_without_erasing_tts(self):
         candidate=Mock(runtime_info=lambda:{'engine':'whisper_small_onnx','device':'cpu'})
         with patch('modules.stt_router.create_stt',return_value=candidate):
@@ -57,6 +77,15 @@ class STTSettingsTests(unittest.TestCase):
         with server._stt_activity.use(),patch('modules.stt_router.create_stt') as factory:
             response=self.client.post('/api/stt/engine',json={'engine':'nemotron','device':'cpu'})
         self.assertEqual(response.status_code,409);factory.assert_not_called()
+
+    def test_cuda_runtime_failure_is_not_reported_as_busy_conflict(self):
+        original=server._stt_model
+        with patch('modules.stt_router.create_stt',side_effect=RuntimeError('CUDA DLL initialization failed: Error 1114')):
+            response=self.client.post('/api/stt/engine',json={'engine':'nemotron','device':'auto'})
+        self.assertEqual(response.status_code,503)
+        self.assertIs(server._stt_model,original)
+        self.assertNotIn('stt_engine',server._saved_settings())
+        self.assertFalse(server._stt_activity.switching)
 
     def test_selection_requires_authentication(self):
         self.client.cookies.clear()

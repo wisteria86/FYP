@@ -1,7 +1,12 @@
+import {finalRecognitionForm,recognitionProvenance,reviewedRecognition} from './recognitionDecision.mjs'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
 import './Monitor.css'
 import Administration from './Administration'
+import ConversationCoach from './ConversationCoach'
+import SavedLessons from './SavedLessons'
+import {PlaybackGeneration} from './conversationPlayback.mjs'
+import {startBargeIn} from './bargeIn.mjs'
 import VoiceInputTest from './VoiceInputTest'
 import SessionAudioSettings from './SessionAudioSettings'
 import {loadSessionAudio,saveSessionAudio,sessionAudioMode} from './sessionAudio.mjs'
@@ -137,16 +142,17 @@ function StatCard({ icon, label, value, detail }) {
   return <article className="h-stat"><span><Icon name={icon}/></span><div><small>{label}</small><strong>{value}</strong>{detail&&<em>{detail}</em>}</div></article>
 }
 
-function HomePage({ data, onStart, setView }) {
+function HomePage({ data, onStart, setView, savedLessons }) {
   if(!data)return <Loading/>
   return <main className="page hikari-page"><header className="h-page-head"><div><h1>Good morning!</h1><p>Keep practicing and build the skills you need for a stronger tomorrow.</p></div><button className="h-primary" onClick={()=>setView('training')}>▶ Start Training</button></header>
+    {savedLessons}
     <section className="h-stats">
-      <StatCard icon="monitor" label="Overall Proficiency" value={`${Math.round(data.overall)}%`}/>
+      <StatCard icon="monitor" label="Practice evidence" value={data.completed_sessions?`${Math.round(data.overall)}%`:'Not assessed'} detail="Task evidence, not a certified language level"/>
       <StatCard icon="history" label="Completed Sessions" value={data.completed_sessions} detail={data.completed_sessions?'+ progress saved':'Start your baseline'}/>
       <StatCard icon="sparkles" label="Skills in Progress" value={data.skills_in_progress}/>
       <StatCard icon="history" label="Current Streak" value={`${data.current_streak} days`} detail={data.current_streak?'Great consistency!':'Complete a session today'}/>
     </section>
-    <section className="h-home-grid"><article className="h-card h-skills"><div className="h-card-title"><h2>Your Skills</h2><button onClick={()=>setView('progress')}>View All ›</button></div>{data.skills.slice(0,5).map(skill=><div className="h-skill-row" key={skill.id}><span>{skill.name.slice(0,1)}</span><strong>{skill.name}</strong><div><i style={{width:`${skill.score}%`}}/></div><b>{Math.round(skill.score)}%</b></div>)}</article>
+    <section className="h-home-grid"><article className="h-card h-skills"><div className="h-card-title"><h2>Your Skills</h2><button onClick={()=>setView('progress')}>View All ›</button></div>{data.skills.slice(0,5).map(skill=><div className="h-skill-row" key={skill.id}><span>{skill.name.slice(0,1)}</span><strong>{skill.name}</strong><div><i style={{width:`${skill.sessions?skill.score:0}%`}}/></div><b>{skill.sessions?`${Math.round(skill.score)}%`:'—'}</b></div>)}</article>
       <article className="h-card h-recommended"><h2>Recommended Next Activity</h2><div className="h-feature"><span className="feature-icon">♟</span><h3>{data.recommendation.skill}</h3><p>{data.recommendation.reason}</p><div className="h-tags"><span>{data.recommendation.skill}</span><span>{data.recommendation.difficulty}</span></div><button className="h-primary" onClick={()=>onStart(data.recommendation.skill_id,data.recommendation.difficulty,data.recommendation.activity_id)}>▶ Start Activity</button></div></article>
       <article className="h-card"><div className="h-card-title"><h2>Recent Sessions</h2><button onClick={()=>setView('progress')}>View All ›</button></div>{data.recent_sessions.length?data.recent_sessions.slice(0,3).map(item=><div className="h-session-row" key={item.id}><span>✓</span><div><strong>{item.title}</strong><small>{new Date(item.completed_at).toLocaleDateString()}</small></div><b>{Math.round(item.overall)}%</b></div>):<div className="h-empty">Complete a training activity to see results here.</div>}</article>
       <article className="h-card"><div className="h-card-title"><h2>Your Training Plan</h2><button onClick={()=>setView('plan')}>View Plan</button></div>{data.plan.map((item,index)=><button className="h-plan-row" key={item.skill_id} onClick={()=>onStart(item.skill_id,item.difficulty==='adaptive'?'intermediate':(item.difficulty||'beginner'),item.activity_id)}><span>{index+1}</span><div><strong>{item.activity}</strong><small>Focus on {item.focus}</small></div><i>{'○'}</i></button>)}</article>
@@ -176,13 +182,13 @@ function ProgressChart({ points }) {
 
 function ProgressPage({ data }) {
   if(!data)return <Loading/>
-  return <main className="page hikari-page"><header className="h-page-head"><div><h1>Progress</h1><p>Track your learning journey and see how you’re improving over time.</p></div></header><section className="h-stats"><StatCard icon="monitor" label="Overall Progress" value={`${Math.round(data.overall)}%`}/><StatCard icon="history" label="Completed Sessions" value={data.completed_sessions}/><StatCard icon="sparkles" label="Total Practice Time" value={prettyHours(data.practice_minutes)}/><StatCard icon="history" label="Current Streak" value={`${data.current_streak} days`}/></section><section className="h-progress-grid"><article className="h-card"><h2>Weekly Improvement</h2><p>Performance from your stored assessments.</p><ProgressChart points={data.progress_history}/></article><article className="h-card"><h2>Skill Proficiency</h2>{data.skills.slice(0,6).map(skill=><div className="h-skill-row" key={skill.id}><strong>{skill.name}</strong><div><i style={{width:`${skill.score}%`}}/></div><b>{Math.round(skill.score)}%</b></div>)}</article><article className="h-card"><h2>Recent Completed Sessions</h2>{data.recent_sessions.length?data.recent_sessions.map(item=><div className="h-session-row" key={item.id}><span>✓</span><div><strong>{item.title}</strong><small>{new Date(item.completed_at).toLocaleDateString()}</small></div><b>{Math.round(item.overall)}%</b></div>):<div className="h-empty">No completed sessions yet.</div>}</article><article className="h-card"><h2>Strengths & Focus Areas</h2><div className="h-focus good"><strong>Your Strengths</strong><div className="h-tags">{data.strengths.map(item=><span key={item.id}>{item.name}</span>)}</div></div><div className="h-focus"><strong>Focus Areas</strong><div className="h-tags">{data.focus_areas.map(item=><span key={item.id}>{item.name}</span>)}</div></div></article></section></main>
+  return <main className="page hikari-page"><header className="h-page-head"><div><h1>Progress</h1><p>Track your learning journey and see how you’re improving over time.</p></div></header><section className="h-stats"><StatCard icon="monitor" label="Practice evidence" value={data.completed_sessions?`${Math.round(data.overall)}%`:'Not assessed'}/><StatCard icon="history" label="Completed Sessions" value={data.completed_sessions}/><StatCard icon="sparkles" label="Total Practice Time" value={prettyHours(data.practice_minutes)}/><StatCard icon="history" label="Current Streak" value={`${data.current_streak} days`}/></section><section className="h-progress-grid"><article className="h-card"><h2>Weekly Improvement</h2><p>Performance from your stored assessments.</p><ProgressChart points={data.progress_history}/></article><article className="h-card"><h2>Recorded practice evidence</h2>{data.skills.slice(0,6).map(skill=><div className="h-skill-row" key={skill.id}><strong>{skill.name}</strong><div><i style={{width:`${skill.sessions?skill.score:0}%`}}/></div><b>{skill.sessions?`${Math.round(skill.score)}%`:'—'}</b></div>)}</article><article className="h-card"><h2>Recent Completed Sessions</h2>{data.recent_sessions.length?data.recent_sessions.map(item=><div className="h-session-row" key={item.id}><span>✓</span><div><strong>{item.title}</strong><small>{new Date(item.completed_at).toLocaleDateString()}</small></div><b>{Math.round(item.overall)}%</b></div>):<div className="h-empty">No completed sessions yet.</div>}</article><article className="h-card"><h2>Strengths & Focus Areas</h2><div className="h-focus good"><strong>Your Strengths</strong><div className="h-tags">{data.strengths.map(item=><span key={item.id}>{item.name}</span>)}</div></div><div className="h-focus"><strong>Focus Areas</strong><div className="h-tags">{data.focus_areas.map(item=><span key={item.id}>{item.name}</span>)}</div></div></article></section></main>
 }
 
 function PlanPage({ data, onStart }) {
   if(!data)return <Loading/>
   const completed=(data.persistent_plan?.activities||[]).filter(item=>item.status==='completed').length
-  return <main className="page hikari-page"><header className="h-page-head"><div><h1>Training Plan</h1><p>A personalized plan to help you build the skills you need for a stronger tomorrow.</p></div></header><section className="h-plan-summary"><article className="h-card"><small>Current Goal</small><h2>Improve {data.focus_areas[0]?.name||'Professional Communication'}</h2><p>Build confidence through focused practice and measurable feedback.</p></article><article className="h-card"><small>Plan Progress</small><h2>{Math.round(completed/Math.max(completed+data.plan.length,1)*100)}%</h2><div className="h-bar"><i style={{width:`${completed/Math.max(completed+data.plan.length,1)*100}%`}}/></div><p>{completed} / {completed+data.plan.length} activities completed</p></article></section><section className="h-progress-grid"><article className="h-card h-roadmap"><h2>Your Recommended Roadmap</h2>{data.plan.map((item,index)=><button key={item.skill_id} onClick={()=>onStart(item.skill_id,item.difficulty==='adaptive'?'intermediate':(item.difficulty||'beginner'),item.activity_id)}><span>{index+1}</span><div><strong>{item.activity}</strong><small>Develop {item.focus}</small></div><b>Week {index*2+1}–{index*2+2}</b></button>)}</article><article className="h-card"><h2>Upcoming Activities</h2>{data.plan.map((item,index)=><div className="h-session-row" key={item.skill_id}><span>›</span><div><strong>{item.activity}</strong><small>{item.focus} · 15 min</small></div>{index===0&&<button className="h-small" onClick={()=>onStart(item.skill_id,item.difficulty==='adaptive'?'intermediate':(item.difficulty||'beginner'),item.activity_id)}>▶ Start</button>}</div>)}</article></section></main>
+  return <main className="page hikari-page"><header className="h-page-head"><div><h1>Training Plan</h1><p>A personalized plan to help you build the skills you need for a stronger tomorrow.</p></div></header><section className="h-plan-summary"><article className="h-card"><small>Current Goal</small><h2>Improve {data.focus_areas[0]?.name||'Professional Communication'}</h2><p>Build confidence through focused practice and measurable feedback.</p></article><article className="h-card"><small>Plan Progress</small><h2>{Math.round(completed/Math.max(completed+data.plan.length,1)*100)}%</h2><div className="h-bar"><i style={{width:`${completed/Math.max(completed+data.plan.length,1)*100}%`}}/></div><p>{completed} / {completed+data.plan.length} activities completed</p></article></section><section className="h-progress-grid"><article className="h-card h-roadmap"><h2>Your Recommended Roadmap</h2>{data.plan.map((item,index)=><button key={item.skill_id} onClick={()=>onStart(item.skill_id,item.difficulty==='adaptive'?'intermediate':(item.difficulty||'beginner'),item.activity_id)}><span>{index+1}</span><div><strong>{item.activity}</strong><small>Develop {item.focus}</small></div><b>Week {index*2+1}–{index*2+2}</b></button>)}</article><article className="h-card"><h2>Transfer and delayed review</h2>{(data.learning_reviews||[]).map(r=><div className="h-session-row" key={r.id}><div><strong>{r.title}</strong><small>{r.interval_days}-day review · {new Date(r.due_at).toLocaleDateString()} · {r.status}</small></div><button onClick={()=>onStart(r.primary_skill_id,'beginner',r.activity_id,{review_id:r.id})}>Try a fresh case</button></div>)}<h2>Upcoming Activities</h2>{data.plan.map((item,index)=><div className="h-session-row" key={item.skill_id}><span>›</span><div><strong>{item.activity}</strong><small>{item.focus} · 15 min</small></div>{index===0&&<button className="h-small" onClick={()=>onStart(item.skill_id,item.difficulty==='adaptive'?'intermediate':(item.difficulty||'beginner'),item.activity_id)}>▶ Start</button>}</div>)}</article></section></main>
 }
 
 function ResourcesPage({ resources, docs, reload }) {
@@ -235,6 +241,8 @@ function SourceEvidence({sources=[]}) {
 }
 
 function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSettings, userSettings }) {
+  const [runtime,setRuntime]=useState(session.runtime||null),[addressed,setAddressed]=useState('')
+  const playbackGeneration=useRef(new PlaybackGeneration()),bargeCallbacks=useRef({}),bargeMonitor=useRef(null)
   const [mode, setMode] = useState('voice')
   const [callActive, setCallActive] = useState(false)
   const [muted, setMuted] = useState(false)
@@ -244,6 +252,7 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
   const [recording, setRecording] = useState(false)
   const [capturePaused,setCapturePaused]=useState(false)
   const [voiceDraft,setVoiceDraft]=useState(null)
+  const [recognitionReview,setRecognitionReview]=useState(null)
   const voiceDraftRef=useRef(null),reviewSending=useRef(false)
   const [micState, setMicState] = useState('idle')
   const [micLevel, setMicLevel] = useState(0)
@@ -346,6 +355,46 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
     const timer=setInterval(analyse,5000)
     return ()=>{disposed=true;clearInterval(timer);worker.terminate()}
   }, [camera, session.id,session.posture_enabled])
+  const refreshRuntime=async()=>{
+    const next=await api(`/sessions/${session.id}`)
+    setRuntime(next.runtime||null);setSessionProgress(next.runtime?.progress||null)
+    if(!sending.current)setSession(next)
+    return next.runtime
+  }
+  const runtimeAction=async(action,data={})=>{
+    if(['correct','skip'].includes(action)){stopCall();sending.current=false;setBusy(false)}
+    const result=await api(`/sessions/${session.id}/actions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,data,request_id:crypto.randomUUID()})})
+    setRuntime(result.runtime);setSessionProgress(result.runtime?.progress||null)
+    if(action==='correct')await refreshRuntime()
+    return result
+  }
+  const interrupt=async(resume=true)=>{
+    playbackGeneration.current.cancel()
+    voiceRequest.current?.abort()
+    for(const source of playbackSources.current){try{source.stop()}catch{}}
+    playbackSources.current.clear();playbackTail.current=0
+    setVoiceState('ready');setActiveSpeaker(null)
+    if(runtime)await runtimeAction('interrupt')
+    sending.current=false;setBusy(false)
+    if(resume&&callActiveRef.current&&!mutedRef.current)beginListening.current?.()
+  }
+  bargeCallbacks.current={isPlaying:()=>callActiveRef.current&&!mutedRef.current&&['speaking','streaming'].includes(voiceState),
+    onInterrupt:()=>interrupt(false),onUtterance:async(blob,duration)=>{
+      try{setMicState('transcribing');const form=new FormData();form.append('file',blob,'interruption.webm');form.append('language','English');form.append('duration_ms',String(duration*1000));const out=await api('/transcribe',{method:'POST',body:form});if(out.text&&!out.needs_retry)await send(out.text,duration,{source:'speech',unreliable:false});else setError('Please repeat or type your interruption; recognition was uncertain.')}catch(e){setError(e.message)}
+    }}
+  useEffect(()=>{
+    if(!session.runtime)return
+    const events=new EventSource(`${API}/sessions/${session.id}/events`)
+    events.onmessage=event=>{const item=JSON.parse(event.data);if(['evaluation','coach','pause','resume','correct','offer','accept','withdraw','consistency_repair','provider_status'].includes(item.kind))refreshRuntime().catch(()=>{})}
+    return()=>events.close()
+  },[session.id])
+  useEffect(()=>{
+    if(!callActive||!session.runtime)return
+    let disposed=false
+    startBargeIn({constraints:microphoneConstraints(selectedMic,{noiseSuppression:true}),isPlaying:()=>bargeCallbacks.current.isPlaying(),onInterrupt:()=>bargeCallbacks.current.onInterrupt(),onUtterance:(...args)=>bargeCallbacks.current.onUtterance(...args),onUnavailable:message=>setError(message)})
+      .then(monitor=>{if(disposed)monitor.stop();else bargeMonitor.current=monitor}).catch(()=>setError('Automatic interruption is unavailable. Use the Interrupt button.'))
+    return()=>{disposed=true;bargeMonitor.current?.stop();bargeMonitor.current=null}
+  },[callActive,session.id])
   const ensureAudioReady = async () => {
     const AudioContext=window.AudioContext||window.webkitAudioContext
     if(!AudioContext)throw new Error('This browser does not support streamed audio playback.')
@@ -354,12 +403,14 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
     return playbackContext.current
   }
   const playChunk = async b64 => {
+    const generation=playbackGeneration.current.capture()
     const receivedAt=performance.now()
     const context=await ensureAudioReady()
     const readyAt=performance.now()
     const bytes=Uint8Array.from(atob(b64),character=>character.charCodeAt(0))
     const decodeStarted=performance.now()
     const buffer=await context.decodeAudioData(bytes.buffer.slice(0))
+    if(!playbackGeneration.current.current(generation))return
     const decodedAt=performance.now()
     const source=context.createBufferSource();source.buffer=buffer;source.connect(context.destination)
     playbackSources.current.add(source)
@@ -384,10 +435,12 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
     if(remaining)await new Promise(resolve=>setTimeout(resolve,remaining+80))
   }
   const replay = async audioChunks => {
-    try{playbackTail.current=0;setVoiceState('replaying');for(const chunk of audioChunks)await playChunk(chunk);await waitForPlayback();setVoiceState('ready')}
+    const generation=playbackGeneration.current.capture()
+    try{playbackTail.current=0;setVoiceState('replaying');for(const chunk of audioChunks){if(!playbackGeneration.current.current(generation))return;await playChunk(chunk)}await waitForPlayback();if(playbackGeneration.current.current(generation))setVoiceState('ready')}
     catch(e){setVoiceState('blocked');setError(`Audio playback failed: ${e.message}. Allow sound for localhost, then use Play response.`)}
   }
   const streamVoice = async (reply,correlationId,resumeListening=true,speakerName=null) => {
+    const generation=playbackGeneration.current.capture()
     const controller=new AbortController();voiceRequest.current=controller
     playbackTail.current=0
     setActiveSpeaker(speakerName||session.counterpart)
@@ -401,6 +454,7 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
       const lines=pending.split('\n');pending=lines.pop()||''
       for(const line of lines){
         if(!line.trim())continue
+        if(!playbackGeneration.current.current(generation))return
         const event=JSON.parse(line)
         if(event.tts_timing)console.info('[Hikari TTS latency]',event.tts_timing)
         if(event.type==='error')throw new Error(event.message)
@@ -415,6 +469,7 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
     }
     if(!received)throw new Error('Voice engine returned no playable audio.')
     await waitForPlayback()
+    if(!playbackGeneration.current.current(generation))return
     setVoiceState('ready')
     if(resumeListening)setActiveSpeaker(null)
     if(automaticTurnEnd&&resumeListening&&callActiveRef.current&&modeRef.current==='voice'&&!mutedRef.current){
@@ -422,18 +477,22 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
     }
   }
   const reportMic = payload => api('/monitor/microphone',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).catch(()=>{})
-  const send = async (value = text, duration = 0) => {
-    if (!value.trim() || sending.current) return
+  const send = async (value = text, duration = 0, recognition = {}, retryLastTurn = false) => {
+    if (!value.trim() || sending.current || runtime?.paused) return
+    if(recognitionReview&&!recognition.source&&!retryLastTurn)recognition=reviewedRecognition(recognitionReview)
+    setRecognitionReview(null)
     sending.current=true
+    const generation=playbackGeneration.current.capture()
+    const requestId=crypto.randomUUID()
     voiceRequest.current=new AbortController()
     ensureAudioReady().catch(()=>{})
     setBusy(true); setError(''); setText('')
-    setSession(s => ({...s, turns:[...s.turns,{role:'user',text:value,created_at:new Date().toISOString()}]}))
+    if(!retryLastTurn)setSession(s => ({...s, turns:[...s.turns,{role:'user',text:value,created_at:new Date().toISOString()}]}))
     try {
       let result, streamed=false
       const receivedAudio={}
       if(modeRef.current==='voice'){
-        const response=await fetch(`${API}/sessions/${session.id}/voice-stream`,{method:'POST',signal:voiceRequest.current.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text:value,duration_seconds:duration,synthesize_audio:false})})
+        const response=await fetch(`${API}/sessions/${session.id}/voice-stream`,{method:'POST',signal:voiceRequest.current.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text:value,duration_seconds:duration,synthesize_audio:false,request_id:requestId,addressed_participant_ids:addressed?[addressed]:[],recognition,retry_last_turn:retryLastTurn})})
         if(!response.ok)throw new Error('Voice response could not start.')
         const reader=response.body.getReader(), decoder=new TextDecoder();let pending=''
         playbackTail.current=0;setVoiceState('generating')
@@ -442,35 +501,40 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
           const lines=pending.split('\n');pending=lines.pop()||''
           for(const line of lines){
             if(!line.trim())continue
+            if(!playbackGeneration.current.current(generation))return
             const event=JSON.parse(line)
         if(event.tts_timing)console.info('[Hikari TTS latency]',event.tts_timing)
             if(event.type==='error')throw new Error(event.message)
             if(event.type==='speech_error'){setError(event.message);streamed=true}
             if(event.type==='speech_text')setSession(s=>{
-              const existing=s.turns.find(turn=>turn.provisional&&turn.speaker_name===event.speaker)
-              return {...s,turns:existing?s.turns.map(turn=>turn===existing?{...turn,text:`${turn.text} ${event.text}`}:turn):[...s.turns,{role:'assistant',speaker_name:event.speaker,text:event.text,provisional:true,created_at:new Date().toISOString()}]}
+              const existing=s.turns.find(turn=>turn.provisional&&(event.utterance_id?turn.utterance_id===event.utterance_id:turn.speaker_name===event.speaker))
+              return {...s,turns:existing?s.turns.map(turn=>turn===existing?{...turn,text:`${turn.text} ${event.text}`}:turn):[...s.turns,{role:'assistant',speaker_name:event.speaker,participant_id:event.participant_id,utterance_id:event.utterance_id,text:event.text,provisional:true,created_at:new Date().toISOString()}]}
             })
             if(event.timing)console.info('[Hikari backend latency]',event.timing)
             if(event.kokoro_timing)console.info('[Hikari Kokoro latency]',event.kokoro_timing)
-            if(event.type==='audio'){(receivedAudio[event.speaker]??=[]).push(event.audio_b64);setActiveSpeaker(event.speaker);setVoiceState('speaking');await playChunk(event.audio_b64);streamed=true}
+            if(event.type==='audio'){(receivedAudio[event.utterance_id||event.speaker]??=[]).push(event.audio_b64);setActiveSpeaker(event.speaker);setVoiceState('speaking');await playChunk(event.audio_b64);streamed=true}
+            if(event.type==='segment_end'){const delay=Math.max(0,(playbackTail.current-(playbackContext.current?.currentTime||0))*1000)+80;playbackGeneration.current.after(delay,()=>api(`/sessions/${session.id}/playback`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({utterance_id:event.utterance_id,segment:event.segment})}).catch(()=>{}))}
             if(event.type==='result')result=event.result
           }
           if(done)break
         }
         if(!result)throw new Error('The voice response ended unexpectedly.')
-      }else result=await api(`/sessions/${session.id}/turn`, {method:'POST',signal:voiceRequest.current.signal, headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:value,duration_seconds:duration,synthesize_audio:false})})
+      }else result=await api(`/sessions/${session.id}/turn`, {method:'POST',signal:voiceRequest.current.signal, headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:value,duration_seconds:duration,synthesize_audio:false,request_id:requestId,addressed_participant_ids:addressed?[addressed]:[],recognition,retry_last_turn:retryLastTurn})})
+      if(!playbackGeneration.current.current(generation))return
+      if(result.runtime)setRuntime(result.runtime)
       setSessionProgress(result.session_progress||null)
-    const responses=result.responses?.length?result.responses:[{text:result.text,correlation_id:result.correlation_id,speaker:session.counterpart}]
-      setSession(s => ({...s, turns:[...s.turns.filter(turn=>!turn.provisional),...responses.map(reply=>({role:'assistant',text:reply.text,speaker_name:reply.speaker,caption_text:reply.caption_text,sources:result.sources,correlationId:reply.correlation_id,audioChunks:receivedAudio[reply.speaker]||[],created_at:reply.created_at||new Date().toISOString()}))]}))
+    const responses=(result.responses||[{text:result.text,correlation_id:result.correlation_id,speaker:session.counterpart}]).filter(reply=>reply.text?.trim())
+      if(!responses.length){setVoiceState('ready');setActiveSpeaker(null)}
+      setSession(s => ({...s, turns:[...s.turns.filter(turn=>!turn.provisional),...responses.map(reply=>({role:'assistant',text:reply.text,speaker_name:reply.speaker,participant_id:reply.participant_id,utterance_id:reply.utterance_id,caption_text:reply.caption_text,sources:result.sources,correlationId:reply.correlation_id,audioChunks:receivedAudio[reply.utterance_id||reply.speaker]||[],created_at:reply.created_at||new Date().toISOString()}))]}))
       for(let index=0;modeRef.current==='voice'&&!streamed&&index<responses.length;index+=1){
         const reply=responses[index]
         await streamVoice(reply.text,reply.correlation_id,index===responses.length-1,reply.speaker)
       }
       if(streamed){
-        await waitForPlayback();setVoiceState('ready');setActiveSpeaker(null)
+        await waitForPlayback();if(!playbackGeneration.current.current(generation))return;setVoiceState('ready');setActiveSpeaker(null)
         if(automaticTurnEnd&&result.session_progress?.outcome!=='success'&&callActiveRef.current&&!mutedRef.current)setTimeout(()=>{if(callActiveRef.current&&!mutedRef.current&&modeRef.current==='voice')beginListening.current?.()},180)
       }
-      if(result.session_progress?.outcome==='success'){
+      if(!session.runtime&&result.session_progress?.outcome==='success'){
         stopCall()
         await onComplete()
       }
@@ -478,12 +542,13 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
       if(e.name==='AbortError')return
       setVoiceState('failed');setError(`${e.message} The conversation is still active.`)
       if(automaticTurnEnd&&callActiveRef.current&&modeRef.current==='voice'&&!mutedRef.current)setTimeout(()=>{if(callActiveRef.current&&!mutedRef.current&&modeRef.current==='voice')beginListening.current?.()},500)
-    } finally { sending.current=false;setBusy(false) }
+    } finally { if(playbackGeneration.current.current(generation)){sending.current=false;setBusy(false);if(session.runtime)refreshRuntime().catch(()=>{})} }
   }
   const toggleMic = async () => {
     if(micStarting.current||['recording','paused'].includes(recorder.current?.state)||voiceDraftRef.current)return true
     if(!callActiveRef.current||mutedRef.current||modeRef.current!=='voice')return false
     micStarting.current=true
+    setRecognitionReview(null)
     try {
       await ensureAudioReady()
       if (!navigator.mediaDevices?.getUserMedia) throw new Error('Microphone capture requires localhost or HTTPS.')
@@ -603,7 +668,8 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
         reportMic({event:'stopped',device,state:'transcribing',duration_ms:captureMs,peak_percent:peakLevel.current})
         try {
           const form=new FormData();form.append('file',new Blob(chunks.current,{type:r.mimeType||'audio/webm'}),'speech.webm');form.append('language',session.training_language||'English');form.append('context',`${session.title}. ${session.situation}`);form.append('duration_ms',String(captureMs));form.append('decoding_method',sessionAudio.decodingMethod)
-          const reusable=liveResult?.text?liveResult:await incremental.finish(lastSpeech.current)
+          const previous=liveResult?.text?liveResult:await incremental.finish(lastSpeech.current)
+          const reusable=finalRecognitionForm(form,sessionAudio,session.id,previous)
           if(incremental.controller.signal.aborted){setBusy(false);return}
           const signal=AbortSignal.any&&AbortSignal.timeout?AbortSignal.any([incremental.controller.signal,AbortSignal.timeout(45000)]):incremental.controller.signal
           const out=reusable||await api('/transcribe',{method:'POST',body:form,signal})
@@ -612,16 +678,17 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
           console.info('[Hikari transcript decision]',{text_chars:out.text?.trim().length??0,needs_retry:!!out.needs_retry,engine:out.engine||'unknown',input_audio:out.input_audio??null})
           if(!out.text?.trim())throw new Error('Nemotron returned an empty transcript. No message was sent. Check the selected microphone, then choose Retry microphone.')
           if(out.needs_retry){
-            setText(out.text);setMicState('retry');setBusy(false);setError(`I heard “${out.text}”, but it was too short or uncertain. Please say the full sentence again.`);reportMic({event:'error',device,state:'retry',duration_ms:out.latency_ms||0,peak_percent:peakLevel.current,transcript:out.text,error:out.retry_reason});return
+            setRecognitionReview(out)
+            setText(out.text);setMicState('retry');setBusy(false);setError(out.retry_reason||'Check the transcript, edit any mistakes, then send it or record again.');reportMic({event:'error',device,state:'retry',duration_ms:out.latency_ms||0,peak_percent:peakLevel.current,transcript:out.text,error:out.retry_reason});return
           }
           setText(out.text);setMicState('transcribed');reportMic({event:'transcribed',device,state:'complete',duration_ms:out.latency_ms||0,peak_percent:peakLevel.current,transcript:out.text})
           if(latencyTrial.current){
-            console.info('[Hikari transcription latency]',{backend_finalize_or_decode_ms:out.latency_ms,transcription_path:liveResult?.text?'live':reusable?'incremental':'recorded'})
+            console.info('[Hikari transcription latency]',{backend_finalize_or_decode_ms:out.latency_ms,transcription_path:out.final_pass==='whisper'?'verified':liveResult?.text?'live':reusable?'incremental':'recorded'})
             latencyTrial.current.engine=health?.engine||'unknown'
-            latencyTrial.current.transcriptionPath=liveResult?.text?'live':reusable?'incremental':'recorded'
+            latencyTrial.current.transcriptionPath=out.final_pass==='whisper'?'verified':liveResult?.text?'live':reusable?'incremental':'recorded'
             latencyTrial.current.responseStart=performance.now()
           }
-          await send(out.text,captureMs/1000)
+          await send(out.text,captureMs/1000,recognitionProvenance(out))
         } catch(e){
           if(incremental.controller.signal.aborted){setBusy(false);return}
           setMicState('error');setError(e.message);reportMic({event:'error',device,state:'error',duration_ms:captureMs,peak_percent:peakLevel.current,error:e.message});setBusy(false);console.error('[Hikari recognition failed]',e)
@@ -680,6 +747,7 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
   // interruption detector cannot distinguish the learner from speaker echo,
   // and can abort the bot's own audio immediately on laptops.
   const stopCall = () => {
+    playbackGeneration.current.cancel();bargeMonitor.current?.stop();bargeMonitor.current=null
     if(voiceDraftRef.current)URL.revokeObjectURL(voiceDraftRef.current.url)
     voiceDraftRef.current=null;setVoiceDraft(null);setCapturePaused(false)
     streamingCapture.current?.cancel();streamingCapture.current=null
@@ -698,6 +766,7 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
       setError('Speech recognition is offline. Restart Hikari without --skip-models, then refresh this page.')
       return
     }
+    if(runtime?.paused){setError('Resume the lesson before joining the call.');return}
     callActiveRef.current = true; modeRef.current = 'voice'; mutedRef.current = false; setCallActive(true); setMuted(false); setError('')
     try {
       await ensureAudioReady()
@@ -764,11 +833,13 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
       const form=new FormData();form.append('file',draft.blob,'speech.webm');form.append('decoding_method',sessionAudio.decodingMethod)
       form.append('language',session.training_language||'English');form.append('duration_ms',String(draft.durationMs))
       form.append('context',`${session.title}. ${session.situation}`)
-      const out=draft.liveResult?.text?.trim()?draft.liveResult:await api('/transcribe',{method:'POST',body:form,signal:controller.signal})
+      const reusable=finalRecognitionForm(form,sessionAudio,session.id,draft.liveResult)
+      const out=reusable||await api('/transcribe',{method:'POST',body:form,signal:controller.signal})
       if(!callActiveRef.current||voiceDraftRef.current!==draft||controller.signal.aborted)return
       if(!out.text?.trim()){URL.revokeObjectURL(draft.url);voiceDraftRef.current=null;setVoiceDraft(null);throw new Error('No words recognized. Press Record voice to try another turn.')}
       URL.revokeObjectURL(draft.url);voiceDraftRef.current=null;setVoiceDraft(null)
-      setMicState('transcribed');await send(out.text,draft.durationMs/1000)
+      if(out.needs_retry){setRecognitionReview(out);setText(out.text);setMicState('retry');setError(out.retry_reason||'Check the transcript, edit any mistakes, then send it or record again.');return}
+      setMicState('transcribed');await send(out.text,draft.durationMs/1000,recognitionProvenance(out))
     }catch(error){if(error.name!=='AbortError'){setMicState('error');setError(error.message)}else if(callActiveRef.current){setMicState('error');setError('Recognition was interrupted or timed out. Your recording is still available.')}}
     finally{clearTimeout(timer);reviewSending.current=false;setBusy(false)}
   }
@@ -792,14 +863,18 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
   const leaveSession=async()=>{try{stopCall();await onCancel()}catch(error){setError(error.message)}}
   const participantTile=(person,index,isLearner=false)=><div key={person.id||`${person.display_name}-${index}`} className={`participant-tile ${!isLearner&&person.display_name===activeSpeaker&&(voiceState==='speaking'||voiceState==='streaming')?'active-speaker':''}`}>
     {isLearner&&camera?<video ref={video} autoPlay muted playsInline/>:<div className={`participant-avatar ${!isLearner&&index===0&&callActive?'pulse':''}`}><span>●</span></div>}
-    <strong>{person.display_name}{!isLearner&&index===0?` (${person.scenario_role||session.counterpart})`:''}</strong>
+    <strong>{person.display_name}{!isLearner?` (${person.scenario_role||session.counterpart})`:''}</strong>
     <span className="tile-mic">{isLearner&&!muted&&recording?'▮▮▮':'⌁'}</span>
   </div>
-  return <main className="session-window">
+  return <main className={`session-window ${runtime?'has-runtime':''}`}>
+
+
     <header className="session-header"><div><h1>{session.title}</h1><p>{session.description||session.situation}</p></div><div className="session-header-actions"><div className="session-clock"><span/> <strong>{formatTime(elapsed)}</strong><small>{callActive?'In Session':'Ready'}</small></div><i/><button className="h-small" onClick={finishSession} disabled={busy||sessionProgress?.outcome!=='success'}>Finish lesson</button><button className="session-end-top" onClick={leaveSession}>☎ &nbsp; End Session</button></div></header>
+    <ConversationCoach runtime={runtime} turns={session.turns} addressed={addressed} onAddress={setAddressed} onAction={runtimeAction} busy={busy} onRetry={()=>send(runtime.latest_input,0,{},true)} onDebrief={finishSession} onPause={async()=>{if(runtime.paused){await runtimeAction('resume')}else{await interrupt(false);stopCall();await runtimeAction('pause')}}} onDelete={async()=>{stopCall();await api(`/sessions/${session.id}/conversation-data`,{method:'DELETE'});await onCancel(true)}}/>
     <div className="session-body">
       <section className="session-call-area">
         {error&&<div className="session-error" role="alert">{error}{lastCapture.current&&['error','retry'].includes(micState)&&<button onClick={downloadCapture}>Save microphone recording</button>}{callActive&&!recording&&!busy&&['error','retry'].includes(micState)&&<button onClick={()=>{setError('');beginListening.current?.()}} disabled={muted}>Retry microphone</button>}</div>}
+        {recognitionReview&&mode==='voice'&&<section className="recognition-review" aria-label="Review recognized words"><strong>Check your words before sending</strong>{recognitionReview.original_text&&recognitionReview.original_text!==recognitionReview.text&&<details><summary>Live recognizer heard</summary><p>{recognitionReview.original_text}</p></details>}<div className="composer"><textarea aria-label="Recognized words" value={text} onChange={event=>setText(event.target.value)}/><button className="send" aria-label="Send checked transcript" disabled={busy||!text.trim()} onClick={()=>send()}><Icon name="send"/></button></div></section>}
         {sessionProgress&&<div className={`session-progress ${sessionProgress.outcome}`}><strong>{sessionProgress.outcome==='success'?'Objectives achieved':'Keep learning'}</strong><span>{sessionProgress.criteria?.filter(item=>item.met).length || 0}/{sessionProgress.criteria?.length || 0} objectives{sessionProgress.missing?.length?` · Next: ${sessionProgress.missing[0]}`:''}{sessionProgress.evaluation_mode?` · ${sessionProgress.evaluation_mode}`:''}</span></div>}
         {mode==='voice'?<div className={`participant-stage ${multipleAI?'participant-grid':'single-participant'}`}>
           {multipleAI?<>{aiParticipants.map((person,index)=>participantTile(person,index))}{participantTile(participants.find(person=>person.participant_type==='learner')||{display_name:'You'},aiParticipants.length,true)}</>:<>
@@ -832,7 +907,7 @@ function Roleplay({ session, setSession, onComplete, onCancel, health, onOpenSet
           {!callActive&&<div className="join-overlay"><h2>Ready to begin?</h2><p>{health?.components?.stt===false?'Speech recognition is offline. Start Hikari normally before joining.':automaticTurnEnd?'Your microphone starts automatically. Pause after speaking to send your turn.':'Use Record voice below, then press Stop & send when you are finished.'}</p><button onClick={startCall} disabled={health?.components?.stt===false}>{health?.components?.stt===false?'Speech Recognition Offline':'Join Voice Session'}</button></div>}
           {captions&&latestReply&&<div className="live-caption"><strong>{latestReply.speaker_name||aiParticipants[0]?.display_name||session.counterpart}</strong><p>{latestReply.caption_text||latestReply.text}</p>{latestReply.caption_text&&<small>{userSettings?.native_language} captions · spoken English</small>}</div>}
         </div>:<div className="session-chat"><div className="messages">{session.turns.map((turn,index)=><div className={`turn ${turn.role}`} key={index}><small>{turn.role==='user'?'You':turn.speaker_name||session.counterpart}</small><p>{turn.text}</p><SourceEvidence sources={turn.sources}/>{captions&&turn.caption_text&&<small className="translated-caption">{turn.caption_text}</small>}</div>)}{busy&&<div className="turn assistant typing"><i/><i/><i/></div>}<div ref={chatEnd}/></div><div className="composer"><textarea value={text} onChange={event=>setText(event.target.value)} placeholder="Type your response…" onKeyDown={event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}}}/><button className="send" onClick={()=>send()} disabled={busy||!text.trim()}><Icon name="send"/></button></div></div>}
-        {session.posture_enabled&&<section className="posture-live"><strong>Posture indicators</strong><span>{camera?postureReason:"Camera is off; posture is not assessed."}</span>{posture&&Object.entries(posture).filter(([,v])=>typeof v==="number").map(([k,v])=><small key={k}>{k.replaceAll("_"," ")}: {Math.round(v)} · </small>)}</section>}<div className="meeting-controls">{mode==='voice'&&<button className={`voice-record-button ${recording?'selected is-recording':''}`} disabled={!callActive||muted||busy||micStarting.current||['speaking','streaming','generating'].includes(voiceState)} aria-pressed={recording} onClick={toggleVoiceRecording}><span>{recording?'■':'●'}</span>{recording?'Stop & send':voiceDraft?'Retry send':'Record voice'}</button>}<button onClick={onOpenSettings}><span>⚙</span>Settings</button><button className={muted?'selected':''} onClick={toggleMute}><span>♩</span>{muted?'Unmute':'Mute'}</button><button className={camera?'selected':''} onClick={toggleCamera}><span>▣</span>Camera</button><button className="hangup" onClick={leaveSession}><span>☎</span>End Session</button><button className={captions?'selected':''} onClick={()=>setCaptions(value=>!value)}><span>▤</span>Captions</button><button onClick={()=>changeMode(mode==='voice'?'chat':'voice')}><span>•••</span>{mode==='voice'?'More':'Voice Call'}</button></div>
+        {session.posture_enabled&&<section className="posture-live"><strong>Posture indicators</strong><span>{camera?postureReason:"Camera is off; posture is not assessed."}</span>{posture&&Object.entries(posture).filter(([,v])=>typeof v==="number").map(([k,v])=><small key={k}>{k.replaceAll("_"," ")}: {Math.round(v)} · </small>)}</section>}<div className="meeting-controls">{session.runtime&&mode==='voice'&&<button disabled={!callActive} onClick={()=>interrupt()}><span>✋</span>Interrupt</button>}{mode==='voice'&&<button className={`voice-record-button ${recording?'selected is-recording':''}`} disabled={!callActive||muted||busy||micStarting.current||['speaking','streaming','generating'].includes(voiceState)} aria-pressed={recording} onClick={toggleVoiceRecording}><span>{recording?'■':'●'}</span>{recording?'Stop & send':voiceDraft?'Retry send':'Record voice'}</button>}<button onClick={onOpenSettings}><span>⚙</span>Settings</button><button className={muted?'selected':''} onClick={toggleMute}><span>♩</span>{muted?'Unmute':'Mute'}</button><button className={camera?'selected':''} onClick={toggleCamera}><span>▣</span>Camera</button><button className="hangup" onClick={leaveSession}><span>☎</span>End Session</button><button className={captions?'selected':''} onClick={()=>setCaptions(value=>!value)}><span>▤</span>Captions</button><button onClick={()=>changeMode(mode==='voice'?'chat':'voice')}><span>•••</span>{mode==='voice'?'More':'Voice Call'}</button></div>
       </section>
       <aside className="session-transcript"><h2>Conversation</h2><div>{session.turns.map((turn,index)=><article className={turn.role} key={index}><div className="transcript-avatar">●</div><section><header><strong>{turn.role==='user'?'You':turn.speaker_name||session.counterpart}</strong><span>· {formatTime(Math.max(0,Math.floor((turn.elapsed_seconds??((Date.parse(turn.created_at)-Date.parse(session.created_at))/1000))||0)))}</span></header><p>{turn.text}</p><SourceEvidence sources={turn.sources}/>{captions&&turn.caption_text&&<small className="translated-caption">{turn.caption_text}</small>}</section></article>)}{busy&&<article><div className="transcript-avatar">●</div><section className="transcript-typing"><i/><i/><i/></section></article>}</div></aside>
     </div>
@@ -1111,10 +1186,11 @@ function Settings({ onChanged, embedded=false }){
         <div className="section-title"><div><p className="eyebrow">SPEECH RECOGNITION</p><h2>Microphone recognition engine</h2><p>Pause the microphone before switching. This changes recognition, not the AI voice.</p></div></div>
         <div className="voice-picker-row">
           <label>Recognition model<select value={recognitionEngine} disabled={busy} onChange={event=>setRecognitionEngine(event.target.value)}>{recognition?.engines.map(engine=><option key={engine.id} value={engine.id} disabled={!engine.installed}>{engine.name}{engine.installed?'':' — not installed'}</option>)}</select></label>
-          <label>Execution device<select value={recognitionDevice} disabled={busy} onChange={event=>setRecognitionDevice(event.target.value)}><option value="auto">Automatic (GPU when available)</option><option value="cpu">CPU only</option></select></label>
-          <button className="primary-outline-btn" disabled={busy||!recognition?.engines.find(engine=>engine.id===recognitionEngine)?.installed} onClick={applyRecognition}>Apply recognition mode</button>
+          <label>Execution device<select value={recognitionDevice} disabled={busy} onChange={event=>setRecognitionDevice(event.target.value)}><option value="auto">Automatic (GPU when available)</option><option value="cpu">CPU only</option><option value="cuda" disabled={!recognition?.cuda?.available}>{recognitionEngine==='nemotron'?'Nemotron CUDA — GPU only':'CUDA — GPU only'}{recognition?.cuda?.available?'':' — unavailable'}</option></select></label>
+          <button className="primary-outline-btn" disabled={busy||!recognition?.engines.find(engine=>engine.id===recognitionEngine)?.installed||(recognitionDevice==='cuda'&&!recognition?.cuda?.available)} onClick={applyRecognition}>Apply recognition mode</button>
         </div>
         <p>{recognition?.engines.find(engine=>engine.id===recognitionEngine)?.description}</p>
+        <p>{recognition?.cuda?.available?`CUDA available: ${recognition.cuda.device_name}. GPU-only mode must load on CUDA; it will not silently switch to CPU.`:recognition?.cuda?.reason} CUDA accelerates recognition; the same model and decoder do not inherently become more accurate. Model loading is verified when you apply the mode.</p>
         <p>For English on CPU, try Nemotron with “CPU only”: it keeps live recognition and uses the same model weights. Whisper Small is the lower-cost multilingual option; Medium favors capacity over speed.</p>
         <small>Running: {recognition?.runtime?.model||'Not loaded'} · {recognition?.runtime?.device||'—'} · {recognition?.runtime?.compute_type||'—'}. CPU speed depends on the machine; equal GPU speed is not guaranteed.</small>
       </section>
@@ -1445,12 +1521,17 @@ export default function App(){
   const logout=async()=>{await api('/auth/logout',{method:'POST'}).catch(()=>{});setAccount(null);setDashboard(null);setSession(null);setPreparation(null);setAssessment(null);setView('home')}
   const start=async(skillId,difficulty='intermediate',activityId=null,options={})=>{try{setError('');const preview=await api('/scenarios/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({skill_id:skillId,difficulty,activity_id:activityId,...options})});setPreparation(preview)}catch(e){setError(e.message)}}
   const beginSession=async()=>{try{setStarting(true);setError('');const s=await api('/sessions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({skill_id:preparation.skill_id,difficulty:preparation.difficulty,activity_id:preparation.activity_id,preview_id:preparation.preview_id})});setSession(s);setPreparation(null);setAssessment(null)}catch(e){setError(e.message)}finally{setStarting(false)}}
+  const resumeSession=async id=>{
+    const saved=await api(`/sessions/${id}`)
+    if(saved.runtime?.paused)await api(`/sessions/${id}/actions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'resume',request_id:crypto.randomUUID()})})
+    setSession(await api(`/sessions/${id}`));setAssessment(null);setError('')
+  }
   const complete=async()=>{try{const a=await api(`/sessions/${session.id}/complete`,{method:'POST'});setAssessment(a);await load()}catch(e){setError(e.message);throw e}}
   if(account===undefined)return <Loading/>
   if(!account)return <AuthScreen onAuthenticated={authenticated}/>
   if(privacyAccount!==account.id&&localStorage.getItem(`hikari-privacy-v1-${account.id}`)!=='accepted')return <main className="auth-page"><section className="auth-panel"><div className="auth-card"><h2>Before you start training</h2><p>Your transcript, AI responses, assessments and progress are saved in your local Hikari database. Organization documents are shared only within that organization.</p><p>The configured AI provider may receive your conversation and relevant excerpts from uploaded documents. Do not share passwords or confidential data without your organization’s permission. Microphone and camera access are optional browser permissions; pose analysis runs locally.</p><p>Scores are prototype estimates, not certified language proficiency or medical posture advice.</p><button className="h-primary" onClick={()=>{localStorage.setItem(`hikari-privacy-v1-${account.id}`,'accepted');setPrivacyAccount(account.id)}}>I understand — continue</button><button className="h-small" onClick={logout}>Sign out</button></div></section></main>
   if(session&&assessment)return <Assessment session={session} assessment={assessment} onDone={()=>{setSession(null);setAssessment(null);setView('home')}}/>
-  if(session)return <><Roleplay session={session} setSession={setSession} onComplete={complete} onCancel={async()=>{await api(`/sessions/${session.id}/cancel`,{method:'POST'});setSession(null);setAssessment(null);await load()}} health={health} userSettings={userSettings} onOpenSettings={()=>setSettingsModal(true)}/><SettingsModal isOpen={settingsModal} onClose={()=>setSettingsModal(false)} onChanged={load}/></>
+  if(session)return <><Roleplay session={session} setSession={setSession} onComplete={complete} onCancel={async(deleted=false)=>{if(!deleted&&session.runtime)await api(`/sessions/${session.id}/actions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'pause',request_id:crypto.randomUUID()})});else if(!deleted)await api(`/sessions/${session.id}/cancel`,{method:'POST'});setSession(null);setAssessment(null);await load()}} health={health} userSettings={userSettings} onOpenSettings={()=>setSettingsModal(true)}/><SettingsModal isOpen={settingsModal} onClose={()=>setSettingsModal(false)} onChanged={load}/></>
   if(preparation)return <><ScenarioPreparation briefing={preparation} documents={docs} onConfigure={options=>start(preparation.skill_id,preparation.difficulty,preparation.activity_id,{preview_id:preparation.preview_id,document_ids:preparation.document_ids,posture_enabled:preparation.posture_enabled,...options})} onBegin={beginSession} onCancel={()=>setPreparation(null)} busy={starting}/>{error&&<div className="global-error" role="alert">{error}</div>}</>
-  return <div className="app-shell"><Sidebar view={view} setView={setView} health={health} user={dashboard?.user||account} onLogout={logout}/><div className="content">{error&&<div className="global-error">{error}</div>}{view==='home'&&<HomePage data={dashboard} onStart={start} setView={setView}/>} {view==='training'&&<TrainingPage activities={activities} onStart={start}/>} {view==='progress'&&<ProgressPage data={dashboard}/>} {view==='plan'&&<PlanPage data={dashboard} onStart={start}/>} {view==='resources'&&<ResourcesPage resources={resources} docs={docs} reload={load}/>} {view==='monitor'&&<Monitor/>} {view==='settings'&&<SettingsHub dashboard={dashboard} health={health} setView={setView} onChanged={load}/>}{view==='settings'&&account.is_admin&&<Administration request={api}/>}</div><SettingsModal isOpen={settingsModal} onClose={()=>setSettingsModal(false)} onChanged={load}/></div>
+  return <div className="app-shell"><Sidebar view={view} setView={setView} health={health} user={dashboard?.user||account} onLogout={logout}/><div className="content">{error&&<div className="global-error">{error}</div>}{view==='home'&&<HomePage data={dashboard} onStart={start} setView={setView} savedLessons={<SavedLessons lessons={history} skills={skills} onResume={resumeSession}/>}/>} {view==='training'&&<TrainingPage activities={activities} onStart={start}/>} {view==='progress'&&<ProgressPage data={dashboard}/>} {view==='plan'&&<PlanPage data={dashboard} onStart={start}/>} {view==='resources'&&<ResourcesPage resources={resources} docs={docs} reload={load}/>} {view==='monitor'&&<Monitor/>} {view==='settings'&&<SettingsHub dashboard={dashboard} health={health} setView={setView} onChanged={load}/>}{view==='settings'&&account.is_admin&&<Administration request={api}/>}</div><SettingsModal isOpen={settingsModal} onClose={()=>setSettingsModal(false)} onChanged={load}/></div>
 }
