@@ -172,4 +172,7 @@ def learner_definition(definition):
     public['unknown_quantities'] = definition.get('unknown_quantities',[])
     public['brief'] = definition.get('brief')
     public['archetype'] = definition.get('archetype')
+    # The scene's steps for the live track: ids and objective ids only. Beat goals, signals and
+    # authored lines are written from the characters' side and stay private.
+    public['beats'] = [{'id': beat['id'], 'objectives': list(beat.get('objectives', []))} for beat in definition.get('beats', [])]
     return public

@@ -25,9 +25,11 @@ export default function TeamPanel({request}){
     {error&&<p role="alert">{error}</p>}
     {team&&<section className="team-summary"><h3>Team progress</h3>
       <p>These scores describe practice in Hikari. They are not a measure of job performance and should not be used for hiring or appraisal decisions.</p>
-      <div className="team-table" role="table" aria-label="Team progress"><div className="team-head" role="row"><span>Name</span><span>Role</span><span>Sessions</span><span>Average</span><span>Practise next</span></div>
-        {team.members.map(m=><div className="team-line" role="row" key={`${m.name}-${m.role}`}><span>{m.name}</span><span>{m.role}</span><span>{m.completed_sessions}</span><span>{m.average==null?'—':`${Math.round(m.average)}%`}</span><span>{m.practice_next||'—'}</span></div>)}
-      </div>
+      <div className="hk-table-wrap"><table className="hk-table">
+        <caption className="sr-only">Team progress</caption>
+        <thead><tr><th scope="col">Name</th><th scope="col">Role</th><th scope="col" className="num">Sessions</th><th scope="col" className="num">Average</th><th scope="col">Practise next</th></tr></thead>
+        <tbody>{team.members.map(m=><tr key={`${m.name}-${m.role}`}><td><strong>{m.name}</strong></td><td>{m.role}</td><td className="num">{m.completed_sessions}</td><td className="num">{m.average==null?'—':`${Math.round(m.average)}%`}</td><td>{m.practice_next||'—'}</td></tr>)}</tbody>
+      </table></div>
       {team.cohort.length>0&&<><h3>Where the team could use support</h3><ul>{team.cohort.slice(0,5).map(item=><li key={item.skill}>{item.skill}: {Math.round(item.average)}% across {item.learners} {item.learners===1?'learner':'learners'}</li>)}</ul></>}
     </section>}
   </article>

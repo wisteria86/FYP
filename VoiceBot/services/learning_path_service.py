@@ -32,11 +32,17 @@ def _passed(row):
 class LearningPathService(ApplicationService):
     def _evidence(self, db, user_id):
         evidence = {}
-        for row in db.execute("""SELECT s.activity_id,x.overall,x.scores,x.strengths,s.completed_at FROM sessions s JOIN assessments x ON x.session_id=s.id
+        for row in db.execute("""SELECT s.activity_id,x.overall,x.scores,x.strengths,s.completed_at,s.branch_of,
+                COALESCE(json_extract(r.state_json,'$.rewinds'),0) AS rewinds
+                FROM sessions s JOIN assessments x ON x.session_id=s.id LEFT JOIN conversation_runtime r ON r.session_id=s.id
                 WHERE s.user_id=? AND s.status='completed' ORDER BY s.completed_at""", (user_id,)):
-            item = evidence.setdefault(row['activity_id'], {'attempts': 0, 'passed': False, 'best': 0, 'quote': None})
+            item = evidence.setdefault(row['activity_id'], {'attempts': 0, 'passed': False, 'best': 0, 'quote': None, 'retried': 0})
             item['attempts'] += 1
             item['best'] = max(item['best'], row['overall'] or 0)
+            # Taking turns back, or replaying a moment, is good practice but not independent evidence.
+            if row['rewinds'] or row['branch_of']:
+                item['retried'] += 1
+                continue
             if _passed(row):
                 item['passed'] = True
                 strengths = json.loads(row['strengths'] or '[]')

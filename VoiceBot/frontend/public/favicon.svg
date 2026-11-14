@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6a001a"/>
+      <stop offset=".5" stop-color="#800020"/>
+      <stop offset="1" stop-color="#a8133a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".38" r=".6">
+      <stop offset="0" stop-color="#ffd9c8" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#ffd9c8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#g)"/>
+  <rect width="64" height="64" rx="16" fill="url(#glow)"/>
+  <!-- 光 (light), drawn as strokes so it renders the same everywhere -->
+  <g fill="none" stroke="#fff5ea" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 12v14"/>
+    <path d="M20 16l4.5 7"/>
+    <path d="M44 16l-4.5 7"/>
+    <path d="M14 30h36"/>
+    <path d="M26 30c0 9-3.5 15.5-11 21"/>
+    <path d="M38 30v15.5c0 3.5 1.6 5 5 5h4.5c2.6 0 3.6-1.4 4-5.5"/>
+  </g>
+</svg>

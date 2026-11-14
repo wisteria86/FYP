@@ -188,6 +188,26 @@ def _coach_due(scene):
     return scene['confusion'] >= 3
 
 
+# What the learner may see of a character's reaction: a coarse mood only.
+# Built from the character's own move, never from limits, floors or private facts.
+REACTIONS = ('pleased', 'encouraging', 'curious', 'considering', 'doubtful', 'firm', 'puzzled', 'neutral')
+_BARGAIN_REACTION = {'confirm_terms': 'pleased', 'accept': 'pleased', 'counter': 'considering', 'hold': 'doubtful',
+                     'final_position': 'firm', 'impasse': 'firm', 'clarify': 'puzzled'}
+_MOVE_REACTION = {'rephrase_simple': 'encouraging', 'orient': 'encouraging', 'push_back': 'doubtful', 'probe': 'curious',
+                  'clarify': 'curious', 'create_opportunity': 'curious', 'redirect': 'puzzled', 'wind_down': 'pleased',
+                  'advance_beat': 'pleased'}
+
+
+def reaction_for(direction, read=None):
+    """A public, coarse mood for one character's reply."""
+    bargain = direction.get('_bargain')
+    if bargain in _BARGAIN_REACTION:
+        return _BARGAIN_REACTION[bargain]
+    if read == 'off_topic':
+        return 'puzzled'
+    return _MOVE_REACTION.get(direction.get('_move'), 'neutral')
+
+
 def direct(definition, state, reading, history):
     """Advance the scene for one learner turn and return who speaks and how."""
     scene = state['scene']

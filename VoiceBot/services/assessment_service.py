@@ -254,6 +254,55 @@ class AssessmentService(ApplicationService):
                 self.context.adaptive.update_proficiency(db, session, recorded, identifier, overall=overall, weight=.35 if runtime['completed'] else .15)
         return self.context.session.session(session['id'])['assessment']
 
+    def game_tape(self, session_id):
+        """Turn by turn: what the learner said, how the scene answered, and what the evidence shows.
+
+        Built only from the assessed conversation, the review's quoted evidence and authored expert notes.
+        Private limits and the characters' instructions are never included.
+        """
+        session = self.context.session.session(session_id)
+        definition, state = self.context.runtime.read(session_id)
+        if not state:
+            return None
+        evaluation = (state.get('completed_evaluation') if state.get('completed') else state.get('evaluation')) or state.get('last_evaluation') or {}
+        objectives = {o['id']: o['description'] for o in definition['objectives']}
+        notes = definition.get('expert_notes') or {}
+        shown = {}
+        for criterion in evaluation.get('criteria', []) + list((state.get('met_evidence') or {}).values()):
+            if criterion.get('met'):
+                for turn_id in criterion.get('turn_ids', []):
+                    shown.setdefault(turn_id, set()).add(criterion['objective_id'])
+        corrections = [c for c in evaluation.get('corrections', []) if isinstance(c, dict) and c.get('original') and c.get('improved')]
+        with self.connect() as db:
+            replayable = {row[0] for row in db.execute('SELECT turn_id FROM turn_snapshots WHERE session_id=?', (session_id,))}
+            withdrawn = db.execute('SELECT COUNT(*) FROM withdrawn_turns WHERE session_id=? AND role=?', (session_id, 'user')).fetchone()[0]
+        reaction_text = {'pleased': 'was pleased', 'encouraging': 'encouraged you', 'curious': 'wanted to know more', 'considering': 'thought it over',
+                         'doubtful': 'pushed back', 'firm': 'held firm', 'puzzled': 'was puzzled', 'neutral': 'carried on'}
+        tape = []
+        for turn in session['turns']:
+            item = {'id': turn['id'], 'role': turn['role'], 'speaker': 'You' if turn['role'] == 'user' else (turn.get('speaker_name') or session.get('counterpart')),
+                    'text': turn['text'], 'at': turn.get('elapsed_seconds', 0), 'marks': []}
+            if turn['role'] == 'user':
+                for objective in sorted(shown.get(turn['id'], ())):
+                    item['marks'].append({'kind': 'strong', 'text': f'Showed: {objectives.get(objective, objective)}'})
+                lowered = ' '.join(turn['text'].casefold().split())
+                for correction in corrections:
+                    if ' '.join(correction['original'].casefold().split()) in lowered:
+                        item['marks'].append({'kind': 'correction', 'text': f"Clearer: “{correction['improved']}”", 'original': correction['original']})
+                reply = (state.get('turn_notes') or {}).get(str(turn['id']))
+                if reply:
+                    item['reaction'] = reply['reaction']
+                    item['reaction_by'] = reply.get('speaker')
+                    item['reaction_text'] = reaction_text[reply['reaction']]
+                    if reply['reaction'] in {'doubtful', 'firm', 'puzzled'}:
+                        item['marks'].append({'kind': 'missed', 'text': f"{reply.get('speaker') or 'They'} {reaction_text[reply['reaction']]} here. Worth another try."})
+                item['replayable'] = turn['id'] in replayable
+            tape.append(item)
+        missing = [o for o in definition['objectives'] if not any(o['id'] in ids for ids in shown.values())]
+        return {'turns': tape, 'rewinds': int(state.get('rewinds') or 0), 'withdrawn_turns': withdrawn, 'branch': state.get('branch'),
+                'expert': [{'objective': o['description'], 'model': notes.get(o['id'], {}).get('model'), 'lesson': notes.get(o['id'], {}).get('micro_lesson')}
+                           for o in missing if notes.get(o['id'], {}).get('model')]}
+
     @staticmethod
     def _negotiation_review(definition, runtime):
         """Point out what the offer record shows. Reservation limits are never revealed."""

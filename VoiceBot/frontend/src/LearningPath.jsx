@@ -1,5 +1,6 @@
 import {useCallback,useEffect,useState} from 'react'
 import './LearningPath.css'
+import { PageSkeleton } from './ui/feedback'
 
 function Lesson({lesson,onStart,current}){
   const [open,setOpen]=useState(false)
@@ -22,7 +23,7 @@ export default function LearningPath({request,onStart}){
   const load=useCallback(async()=>{try{setPath(await request('/learning-path'))}catch(e){setError(e.message)}},[request])
   useEffect(()=>{load()},[load])
   if(error)return <main className="page hikari-page"><p role="alert">{error}</p></main>
-  if(!path)return <main className="page hikari-page"><p>Loading your path…</p></main>
+  if(!path)return <PageSkeleton label="Loading your path"/>
   return <main className="page hikari-page learning-path"><header className="h-page-head"><div><h1>Learning Path</h1><p>Move through units at your own pace. Each unit ends with a checkpoint that opens the next one.</p></div></header>
     <section className="path-summary">
       <article className="h-card"><strong>{path.counts.independent_today}</strong><span>shown today</span></article>

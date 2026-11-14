@@ -18,7 +18,7 @@ class MigrationTests(unittest.TestCase):
 
     def test_new_database_reaches_platform_schema(self):
         TrainingService(self.path)
-        self.assertEqual(current_version(self.path), 10)
+        self.assertEqual(current_version(self.path), 11)
         with closing(sqlite3.connect(self.path)) as db:
             tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             self.assertTrue({
@@ -34,7 +34,7 @@ class MigrationTests(unittest.TestCase):
         TrainingService(self.path)
         self.assertEqual(run_migrations(self.path), [])
         with closing(sqlite3.connect(self.path)) as db:
-            self.assertEqual(db.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0], 10)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0], 11)
 
 
 if __name__ == "__main__":

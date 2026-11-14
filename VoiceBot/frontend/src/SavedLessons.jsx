@@ -1,5 +1,6 @@
 import {useState} from 'react'
 import './SavedLessons.css'
+import { Icon } from './ui/Icon'
 
 export default function SavedLessons({lessons,skills,onResume}) {
   const [expanded,setExpanded]=useState(false),[opening,setOpening]=useState(null),[error,setError]=useState('')
@@ -19,11 +20,11 @@ export default function SavedLessons({lessons,skills,onResume}) {
         return <article className="saved-learning-row" key={lesson.id}>
           <span className="saved-learning-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M7 4h10a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-6l-5 3v-3a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z"/><path d="M7 9h10M7 13h6"/></svg></span>
           <div className="saved-learning-info"><h3>{lesson.title}</h3><div><span>{skill}</span><span className="saved-learning-level">{lesson.difficulty}</span>{lesson.engine_version!==3&&<span className="saved-learning-older" title="This lesson was saved on the older conversation engine. Start it again from Training for any upgraded lesson.">Older version</span>}{!Number.isNaN(date.getTime())&&<time dateTime={lesson.created_at} title={date.toLocaleString()}>Started {date.toLocaleDateString(undefined,{month:'short',day:'numeric'})} · {date.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}</time>}</div></div>
-          <button className="saved-learning-resume" disabled={!!opening} onClick={()=>resume(lesson.id)} aria-label={`Resume ${lesson.title}`}>{opening===lesson.id?'Opening…':'Resume'}<span aria-hidden="true">↗</span></button>
+          <button className="saved-learning-resume" disabled={!!opening} onClick={()=>resume(lesson.id)} aria-label={`Resume ${lesson.title}`}>{opening===lesson.id?'Opening…':'Resume'}<Icon name="arrowUpRight"/></button>
         </article>
       })}
     </div>
-    {active.length>3&&<footer><span>{expanded?active.length:3} of {active.length} saved lessons</span><button aria-expanded={expanded} aria-controls="saved-learning-list" onClick={()=>setExpanded(value=>!value)}>{expanded?'Show fewer':'View all saved lessons'} <span aria-hidden="true">{expanded?'−':'+'}</span></button></footer>}
+    {active.length>3&&<footer><span>{expanded?active.length:3} of {active.length} saved lessons</span><button aria-expanded={expanded} aria-controls="saved-learning-list" onClick={()=>setExpanded(value=>!value)}>{expanded?'Show fewer':'View all saved lessons'} <Icon name={expanded?'minus':'plus'}/></button></footer>}
     {error&&<p className="saved-learning-error" role="alert">{error}</p>}
   </section>
 }

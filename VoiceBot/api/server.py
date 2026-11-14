@@ -1005,14 +1005,14 @@ def cancel_session(session_id: str, request: Request):
 from api.routers.speech_stream import install_speech_stream
 install_speech_stream(app,lambda:_stt_model,_authorized_session,metrics,activity=_stt_activity)
 
+from api.spa import FrontendFiles, index_response
+
 FRONTEND_DIST = ROOT / "frontend" / "dist"
 if FRONTEND_DIST.exists():
     @app.get("/", include_in_schema=False)
     @app.get("/index.html", include_in_schema=False)
     def index_route():
-        return FileResponse(
-            FRONTEND_DIST / "index.html",
-            headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"}
-        )
+        return index_response(FRONTEND_DIST)
 
-    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
+    # Page addresses such as /progress or /session/<id> also get index.html, so refresh and links work.
+    app.mount("/", FrontendFiles(FRONTEND_DIST), name="frontend")

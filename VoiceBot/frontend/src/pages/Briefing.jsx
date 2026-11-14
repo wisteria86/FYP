@@ -1,0 +1,20 @@
+import { Icon } from '../ui/Icon'
+import { Portrait } from '../call/Portrait'
+
+
+export function ScenarioPreparation({ briefing, onBegin, onCancel, busy, documents=[], onConfigure, challenge, onChallenge }) {
+  const isGroup=briefing.scenario_type==='multi_ai_roleplay'
+  const learning=briefing.learning_design
+  return <main className="prep-page">
+    <header className="prep-header"><button onClick={onCancel}><Icon name="arrowLeft"/> Back to training</button><div><span aria-hidden="true">光</span><strong>Hikari Training</strong></div></header>
+    <section className="prep-hero"><p className="eyebrow">SCENARIO PREPARATION</p><h1>{briefing.title}</h1><p>{briefing.description}</p><div className="prep-badges"><span>{briefing.difficulty}</span><span>{briefing.estimated_minutes} minutes</span><span>{isGroup?'Multiple AI Roleplay':'1-to-1 AI Roleplay'}</span></div><p>{briefing.adaptation_reason}</p></section>
+    <section className="prep-grid"><article><small>YOUR ROLE</small><h2>{briefing.learner_role}</h2><p>{briefing.brief?.situation||briefing.situation}</p>{briefing.brief&&<><p><strong>Your task:</strong> {briefing.brief.task}</p><p><strong>You're done when:</strong> {briefing.brief.done_looks_like}</p></>}</article>
+      <article><small>PARTICIPANTS</small><h2>{briefing.participants.length} AI {briefing.participants.length===1?'participant':'participants'}</h2><div className="prep-people">{briefing.participants.map(person=><span key={person}><Portrait name={person} decorative size={30}/>{person}</span>)}</div></article>
+      <article className="prep-objectives"><small>YOUR OBJECTIVES</small><h2>What to practise</h2><ol>{briefing.objectives.map(item=><li key={item}>{item}</li>)}</ol>{briefing.previous_feedback?.map(item=><p key={item}>{item}</p>)}</article>
+      <article><small>{learning?'LANGUAGE TOOLKIT':'TARGET SKILL'}</small><h2>{learning?.focus||briefing.target_skill}</h2>{learning?<><p>{learning.grammar}</p><div className="h-tags">{learning.vocabulary.map(item=><span key={item}>{item}</span>)}</div><div className="prep-models">{learning.examples.map(item=><p key={item}>“{item}”</p>)}</div></>:<div className="h-tags">{briefing.subskills.map(item=><span key={item}>{item}</span>)}</div>}<p className="prep-note">Practise the objectives with your own information. If a target is missing, the lesson continues with guidance.</p></article>
+      <article><h2>Lesson capabilities</h2><label className="prep-challenge">How hard should the other person push?<select value={challenge} onChange={event=>onChallenge(event.target.value)}><option value="">Let Hikari choose from your last attempt</option><option value="gentle">Gentle</option><option value="balanced">Balanced</option><option value="challenging">Challenging</option></select></label>{briefing.posture_mode==='optional'?<label><input type="checkbox" checked={briefing.posture_enabled} disabled={busy} onChange={event=>onConfigure({posture_enabled:event.target.checked})}/> Optional posture assessment (camera consent required)</label>:<p>Posture assessment is not used for this lesson. Camera video alone does not affect your score.</p>}
+        {briefing.knowledge_mode!=='off'&&<><h3>Company knowledge {briefing.knowledge_mode==='required'?'— required':'— optional'}</h3><p>Select the documents this attempt may use. Excerpts may be sent to your configured AI provider.</p>{documents.filter(item=>item.status==='ready').map(doc=><label className="lesson-document" key={doc.id}><input type="checkbox" checked={briefing.document_ids?.includes(doc.id)} disabled={busy} onChange={event=>onConfigure({document_ids:event.target.checked?[...(briefing.document_ids||[]),doc.id]:(briefing.document_ids||[]).filter(id=>id!==doc.id)})}/>{doc.name}</label>)}{!documents.length&&<p>Upload authorized documents from Resources before using company-knowledge training.</p>}</>}
+      </article></section>
+    <footer className="prep-actions"><button onClick={onCancel}>Choose another lesson</button><button className="h-primary" onClick={onBegin} disabled={busy}>{busy?'Preparing session…':<>Join training session <Icon name="arrowRight"/></>}</button></footer>
+  </main>
+}

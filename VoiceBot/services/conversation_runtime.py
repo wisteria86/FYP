@@ -126,6 +126,8 @@ class ConversationRuntime(ApplicationService):
                 db.execute('INSERT INTO conversation_requests VALUES (?,?,?,NULL)',(sid,request_id,'running'))
                 self.emit(db,sid,state,'retry_response',{'turn_id':previous_turn['id']})
                 return request_id,None
+            # What the scene looked like before this turn, so "Take that back" can return here.
+            before = json.dumps(state)
             state['generation'] = request_id
             state['floor'] = 'thinking'
             state['addressed'] = addressed
@@ -156,11 +158,51 @@ class ConversationRuntime(ApplicationService):
             else:
                 chosen=choose_speakers(definition,state,self._speaker_history(db,sid))
                 state['conversation_focus']=chosen[0]['id'] if chosen else None
+            db.execute('INSERT OR REPLACE INTO turn_snapshots(session_id,turn_id,state_json,created_at) VALUES (?,?,?,?)', (sid, cursor.lastrowid, before, now()))
             if state['evidence_revision'] in state['support_turns']:
                 state.setdefault('supported_turn_ids', []).append(cursor.lastrowid)
             self.emit(db, sid, state, 'learner_turn', {'text': payload.text, 'recognition': getattr(payload, 'recognition', None)},
                 next(p['id'] for p in definition['participants'] if p['kind'] == 'learner'))
         return request_id, None
+
+    def rewind(self, sid, turn_id=None):
+        """Take back the learner's turn (the latest by default) and everything after it.
+
+        The scene returns to how it was just before that turn. The taken-back turns move to
+        withdrawn_turns, so they stay on record but are not part of the conversation that is assessed.
+        """
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            definition, state = self.read(sid, db)
+            if state is None:
+                return None
+            if db.execute('SELECT status FROM sessions WHERE id=?', (sid,)).fetchone()['status'] != 'active':
+                raise DomainError('session_closed', 'This lesson has ended.', status_code=409)
+            if state.get('generation'):
+                raise DomainError('floor_busy', 'Let the reply finish, or interrupt it, before taking your turn back.', status_code=409)
+            if turn_id is None:
+                row = db.execute("SELECT id FROM turns WHERE session_id=? AND role='user' ORDER BY id DESC LIMIT 1", (sid,)).fetchone()
+            else:
+                row = db.execute("SELECT id FROM turns WHERE session_id=? AND role='user' AND id=?", (sid, turn_id)).fetchone()
+            snapshot = row and db.execute('SELECT state_json FROM turn_snapshots WHERE session_id=? AND turn_id=?', (sid, row['id'])).fetchone()
+            if not snapshot:
+                raise DomainError('nothing_to_rewind', 'There is no turn of yours to take back yet.', status_code=409)
+            target = row['id']
+            rewinds = int(state.get('rewinds') or 0) + 1
+            taken = [dict(r) for r in db.execute('SELECT * FROM turns WHERE session_id=? AND id>=? ORDER BY id', (sid, target))]
+            stamp = now()
+            for item in taken:
+                db.execute('INSERT INTO withdrawn_turns(session_id,original_turn_id,role,text,participant_id,speaker_name,created_at,rewind,withdrawn_at) VALUES (?,?,?,?,?,?,?,?,?)',
+                    (sid, item['id'], item['role'], item['text'], item.get('participant_id'), item.get('speaker_name'), item['created_at'], rewinds, stamp))
+            db.execute('DELETE FROM turns WHERE session_id=? AND id>=?', (sid, target))
+            db.execute("UPDATE conversation_utterances SET status='withdrawn' WHERE session_id=? AND turn_id>=?", (sid, target))
+            db.execute('DELETE FROM turn_snapshots WHERE session_id=? AND turn_id>=?', (sid, target))
+            restored = json.loads(snapshot['state_json'])
+            # The revision keeps counting up so every client sees the change; preferences stay as the learner set them.
+            restored.update(revision=state['revision'], rewinds=rewinds, preferences=state.get('preferences', restored.get('preferences')),
+                            paused=False, generation=None, floor='learner', failed_turn_id=None, reactions={})
+            self.emit(db, sid, restored, 'rewound', {'turn_id': target, 'rewinds': rewinds, 'text': taken[0]['text'] if taken else ''})
+            return restored
 
     def release_stale_floors(self):
         """At startup nothing can still be generating, so a held floor is left over from a stop."""
@@ -229,6 +271,14 @@ class ConversationRuntime(ApplicationService):
                     line = "Before we confirm anything, those terms don't work as they stand. Could you look at the package again?"
                     directions[0].update(_line=line, _authored=True, _bargain='clarify')
                     state['directions'] = directions
+            # Each speaking character's visible mood; only labels from scene_director.REACTIONS.
+            state['reactions'] = {item['id']: scene_director.reaction_for(item, state['scene'].get('read')) for item in directions if item.get('id')}
+            # For the game-tape debrief: how the scene answered this learner turn (move names and labels only).
+            learner_turn = db.execute("SELECT id FROM turns WHERE session_id=? AND role='user' ORDER BY id DESC LIMIT 1", (sid,)).fetchone()
+            if learner_turn and directions:
+                state.setdefault('turn_notes', {})[str(learner_turn['id'])] = {
+                    'reaction': state['reactions'].get(directions[0].get('id'), 'neutral'), 'move': directions[0].get('_move'),
+                    'read': state['scene'].get('read'), 'beat': state['scene']['beat'], 'speaker': directions[0].get('name')}
             if any(item.get('_call_coach') for item in directions):
                 self._coach(definition, state, inline=True)
             self.emit(db, sid, state, 'scene', {'move': directions[0]['_move'], 'beat': state['scene']['beat'], 'coach': state['coach'][-1:] if any(item.get('_call_coach') for item in directions) else []})

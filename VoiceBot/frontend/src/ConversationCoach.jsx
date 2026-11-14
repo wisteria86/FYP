@@ -1,7 +1,11 @@
 import {useEffect,useRef,useState} from 'react'
 import './ConversationCoach.css'
+import { Icon } from './ui/Icon'
+import { useFeedback } from './ui/feedback'
+import { SceneTrack } from './call/SceneTrack'
 
 export default function ConversationCoach({runtime,turns,onAction,onAddress,addressed,onDebrief,onEndAttempt,onPause,onDelete,onRetry,busy}){
+  const {confirm}=useFeedback()
   const [open,setOpen]=useState(false),[error,setError]=useState(''),[correction,setCorrection]=useState(''),[turnId,setTurnId]=useState('')
   const [reflection,setReflection]=useState(runtime?.reflection||'')
   const [clock,setClock]=useState(Date.now())
@@ -41,13 +45,13 @@ export default function ConversationCoach({runtime,turns,onAction,onAddress,addr
       <button onClick={onPause}>{runtime.paused?'Resume lesson':'Pause lesson'}</button>
       {runtime.scene&&!runtime.completed&&<button disabled={busy} onClick={onEndAttempt}>Finish and get feedback</button>}
     </div>
-    {runtime.definition.brief&&<details className="task-brief"><summary>Your task</summary><p><strong>{runtime.definition.brief.you_are}</strong> {runtime.definition.brief.situation}</p><p>{runtime.definition.brief.task}</p><p><strong>You're done when:</strong> {runtime.definition.brief.done_looks_like}</p></details>}
+    <SceneTrack runtime={runtime}/>
     {last?.inline&&<div className="coach-inline" role="status" lang={runtime.preferences.coach_language==='Urdu'?'ur':'en'} dir={runtime.preferences.coach_language==='Urdu'?'rtl':'ltr'}><strong>Coach</strong><span>{last.text}</span></div>}
     {runtime.provider_status?.available===false&&<div className="runtime-notice" role="status"><span>{runtime.provider_status.reason}</span>{runtime.failed_turn_id&&<button disabled={busy||retrySeconds>0} onClick={onRetry}>{busy?'Retrying…':retrySeconds>0?`Retry in ${retrySeconds}s`:'Retry response'}</button>}</div>}
     {runtime.completed&&!runtime.extra_practice&&<div className="lesson-closure" role="status"><strong>You demonstrated the lesson objectives.</strong><p>Finish the exchange at your pace. This records today’s achievement, not permanent mastery.</p><button onClick={onDebrief}>View debrief</button><button onClick={()=>perform('extra_practice')}>Keep practising</button></div>}
     {open&&<div className="coach-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)setOpen(false)}}>
       <section id="lesson-support-drawer" className="coach-drawer" role="dialog" aria-modal="true" aria-labelledby="coach-heading" ref={dialog} tabIndex={-1}>
-      <header><div><small>PRIVATE LEARNING SUPPORT</small><h2 id="coach-heading">Your coach</h2></div><button aria-label="Close lesson support" onClick={()=>setOpen(false)}>×</button></header>
+      <header><div><small>PRIVATE LEARNING SUPPORT</small><h2 id="coach-heading">Your coach</h2></div><button aria-label="Close lesson support" onClick={()=>setOpen(false)}><Icon name="close"/></button></header>
       <div className="coach-details">
       {last&&<div className="coach-message" lang={runtime.preferences.coach_language==='Urdu'?'ur':'en'} dir={runtime.preferences.coach_language==='Urdu'?'rtl':'ltr'}><strong>{last.target}</strong><p>{last.text}</p></div>}
       {runtime.repairs?.length>0&&<details><summary>Scenario corrections</summary>{runtime.repairs.slice(-2).map((r,i)=><p key={i}>Earlier: “{r.quote}”<br/>Established fact: {r.binding_fact}</p>)}</details>}
@@ -61,7 +65,7 @@ export default function ConversationCoach({runtime,turns,onAction,onAddress,addr
         {runtime.offers.map(o=><article key={o.id}><strong>{o.status} · {o.seller_response.replaceAll('_',' ')}</strong><p>USD {o.terms.price} · {o.terms.seats} seats · {o.terms.delivery_days} days · {o.terms.support_months} months support</p><p>{o.reason}</p>{o.status==='proposed'&&<><button disabled={o.seller_response!=='acceptable_pending_confirmation'} onClick={()=>perform('accept',{offer_id:o.id})}>Confirm agreement</button><button onClick={()=>perform('withdraw',{offer_id:o.id})}>Withdraw</button></>}</article>)}
       </details>}
       <label>Optional reflection: what would you change next time?<textarea value={reflection} onChange={e=>setReflection(e.target.value)}/></label><button onClick={()=>perform('reflect',{text:reflection})}>Save reflection</button><button onClick={()=>perform('skip')}>Skip for now</button>
-      <details><summary>Data and privacy</summary><p>Transcripts, corrections and evidence are stored locally and relevant context goes to the configured AI provider. Raw microphone recordings are not saved by this runtime. Camera use is optional.</p><button onClick={onDelete}>Delete this conversation’s text and evidence</button></details>
+      <details><summary>Data and privacy</summary><p>Transcripts, corrections and evidence are stored locally and relevant context goes to the configured AI provider. Raw microphone recordings are not saved by this runtime. Camera use is optional.</p><button className="hk-danger-link" onClick={async()=>{if(await confirm({title:'Delete this conversation?',message:'Its transcript and evidence will be removed for good, and this lesson will close. This cannot be undone.',confirmLabel:'Delete conversation',danger:true}))onDelete()}}><Icon name="trash"/> Delete this conversation’s text and evidence</button></details>
       {error&&<p role="alert">{error}</p>}
       </div></section></div>}
   </section>

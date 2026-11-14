@@ -69,6 +69,48 @@ class SessionService(ApplicationService):
                 )
         return self.session(sid)
 
+    def branch_session(self, user_id: str, source_id: str, turn_id: int) -> dict[str, Any]:
+        """Start a new practice attempt from just before one of the learner's turns in an earlier lesson.
+
+        The new lesson copies the conversation up to that moment and the scene state saved then.
+        It counts as practice with a retry, never as an independent first attempt.
+        """
+        from domain.errors import DomainError
+        sid = str(uuid.uuid4())
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            source = db.execute('SELECT * FROM sessions WHERE id=? AND user_id=?', (source_id, user_id)).fetchone()
+            if not source:
+                raise ValueError('Session not found')
+            snapshot = db.execute('SELECT state_json FROM turn_snapshots WHERE session_id=? AND turn_id=?', (source_id, turn_id)).fetchone()
+            runtime = db.execute('SELECT definition_json FROM conversation_runtime WHERE session_id=?', (source_id,)).fetchone()
+            if not snapshot or not runtime:
+                raise DomainError('moment_unavailable', 'That moment can no longer be replayed.', status_code=409)
+            columns = [row['name'] for row in db.execute('PRAGMA table_info(sessions)')]
+            copied = [c for c in columns if c not in {'id', 'status', 'created_at', 'completed_at', 'branch_of', 'branch_turn_id'}]
+            db.execute(f"INSERT INTO sessions(id,status,created_at,completed_at,branch_of,branch_turn_id,{','.join(copied)}) "
+                       f"SELECT ?,'active',?,NULL,id,?,{','.join(copied)} FROM sessions WHERE id=?", (sid, _now(), turn_id, source_id))
+            state = json.loads(snapshot['state_json'])
+            state.update(revision=0, generation=None, floor='learner', paused=False, failed_turn_id=None, reactions={},
+                         rewinds=int(state.get('rewinds') or 0) + 1, branch={'from': source_id, 'turn_id': turn_id})
+            db.execute('INSERT INTO conversation_runtime VALUES (?,?,?)', (sid, runtime['definition_json'], json.dumps(state)))
+            turn_columns = [row['name'] for row in db.execute('PRAGMA table_info(turns)') if row['name'] not in {'id', 'session_id', 'text', 'utterance_id'}]
+            mapping = {}
+            for row in db.execute('SELECT t.*,COALESCE(u.delivered_text,t.text) AS heard FROM turns t LEFT JOIN conversation_utterances u ON u.id=t.utterance_id '
+                                  'WHERE t.session_id=? AND t.id<? ORDER BY t.id', (source_id, turn_id)).fetchall():
+                cursor = db.execute(f"INSERT INTO turns(session_id,text,{','.join(turn_columns)}) VALUES (?,?,{','.join('?' * len(turn_columns))})",
+                                    (sid, row['heard'] or row['text'], *[row[c] for c in turn_columns]))
+                mapping[row['id']] = cursor.lastrowid
+            for row in db.execute('SELECT turn_id,state_json,created_at FROM turn_snapshots WHERE session_id=? AND turn_id<?', (source_id, turn_id)).fetchall():
+                if row['turn_id'] in mapping:
+                    db.execute('INSERT INTO turn_snapshots VALUES (?,?,?,?)', (sid, mapping[row['turn_id']], row['state_json'], row['created_at']))
+            for row in db.execute('SELECT * FROM training_session_participants WHERE session_id=?', (source_id,)).fetchall():
+                item = dict(row)
+                item['id'] = item['id'].replace(source_id, sid, 1) if item['id'].startswith(source_id) else str(uuid.uuid4())
+                item['session_id'] = sid
+                db.execute(f"INSERT INTO training_session_participants({','.join(item)}) VALUES ({','.join('?' * len(item))})", tuple(item.values()))
+        return self.session(sid)
+
     def session(self, session_id: str) -> dict[str, Any]:
         with self.connect() as db:
             row = db.execute("SELECT * FROM sessions WHERE id=?", (session_id,)).fetchone()
