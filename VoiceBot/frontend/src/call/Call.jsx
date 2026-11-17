@@ -16,6 +16,7 @@ import { monitorMicrophone } from '../micMonitor.mjs'
 import { SourceEvidence } from '../call/SourceEvidence'
 import { API, Icon, api } from '../ui/core'
 import { Portrait } from './Portrait'
+import { levels as lifeLevels } from './portraitLife.mjs'
 import { Backdrop } from './Backdrop'
 import { useFeedback } from '../ui/feedback'
 
@@ -196,13 +197,13 @@ export function Roleplay({ session, setSession, onComplete, onCancel, health, on
   useEffect(()=>{
     const root=sceneRef.current,analyser=voiceAnalyser.current
     if(!root)return
-    if(!analyser||!['speaking','streaming'].includes(voiceState)){root.classList.remove('voice-driven');root.style.setProperty('--voice-level','0');return}
+    if(!analyser||!['speaking','streaming'].includes(voiceState)){root.classList.remove('voice-driven');root.style.setProperty('--voice-level','0');lifeLevels.voice=0;lifeLevels.driven=false;return}
     root.classList.add('voice-driven')
     const samples=new Uint8Array(analyser.fftSize);let frame
     const tick=()=>{analyser.getByteTimeDomainData(samples);let sum=0;for(const value of samples){const centred=(value-128)/128;sum+=centred*centred}
-      root.style.setProperty('--voice-level',Math.min(1,Math.sqrt(sum/samples.length)*4.2).toFixed(3));frame=requestAnimationFrame(tick)}
-    frame=requestAnimationFrame(tick)
-    return()=>{cancelAnimationFrame(frame);root.style.setProperty('--voice-level','0')}
+      const level=Math.min(1,Math.sqrt(sum/samples.length)*4.2);lifeLevels.voice=level;root.style.setProperty('--voice-level',level.toFixed(3));frame=requestAnimationFrame(tick)}
+    lifeLevels.driven=true;frame=requestAnimationFrame(tick)
+    return()=>{cancelAnimationFrame(frame);root.style.setProperty('--voice-level','0');lifeLevels.voice=0;lifeLevels.driven=false}
   },[voiceState])
   const ensureAudioReady = async () => {
     const AudioContext=window.AudioContext||window.webkitAudioContext
@@ -460,7 +461,7 @@ export function Roleplay({ session, setSession, onComplete, onCancel, health, on
         if(live?.timing)console.info('[Hikari transcription stages]',live.timing)
         console.info('[Hikari recognition outcome]',{live_final_received:!!liveResult,input_audio:liveResult?.input_audio??null,captured_audio_ms:liveResult?.captured_audio_ms??null,text_chars:liveResult?.text?.trim().length??0,needs_retry:liveResult?.needs_retry??null,capture_ms:Math.round(captureMs),recorded_bytes:chunks.current.reduce((total,chunk)=>total+chunk.size,0)})
         if(!callActiveRef.current||mutedRef.current){stream.getTracks().forEach(t=>t.stop());micStream.current=null}
-        setRecording(false);setMicLevel(0)
+        setRecording(false);setMicLevel(0);lifeLevels.heard=0
         if(discardCapture.current){incremental.cancel();discardCapture.current=false;setMicState('idle');setBusy(false);return}
         const resumeCapture=()=>setTimeout(()=>{
           if(callActiveRef.current&&!mutedRef.current&&modeRef.current==='voice')beginListening.current?.()
@@ -526,7 +527,7 @@ export function Roleplay({ session, setSession, onComplete, onCancel, health, on
       }
       const analyse=rms=>{
         if(r.state!=='recording')return
-        const level=Math.min(100,rms*500);peakLevel.current=Math.max(peakLevel.current,level);setMicLevel(level)
+        const level=Math.min(100,rms*500);peakLevel.current=Math.max(peakLevel.current,level);setMicLevel(level);lifeLevels.heard=level/100
         const now=performance.now(),elapsed=r.captureClock.elapsed(now)
         if(now-lastLevelReport.current>500){lastLevelReport.current=now;reportMic({event:'level',device,state:speechSeen.current?'speech detected':'listening',duration_ms:elapsed,level_percent:level,peak_percent:peakLevel.current})}
         if(vad.error){stopReason='vad_error';discardCapture.current=true;setError(`Speech detection failed: ${vad.error}. Rejoin the call.`);r.stop();return}
@@ -673,9 +674,14 @@ export function Roleplay({ session, setSession, onComplete, onCancel, health, on
   const speakingNow=['speaking','streaming'].includes(voiceState)
   const definitionPeople=runtime?.definition?.participants||[]
   const reactionOf=person=>{const id=(definitionPeople.find(item=>item.name===person.display_name)||{}).id;return(id&&runtime?.reactions?.[id])||'neutral'}
+  // Characters look at whoever is talking: another character's tile in the grid, or the learner (the camera).
+  const lookOf=index=>{if(!multipleAI||!speakingNow)return undefined
+    const speaker=aiParticipants.findIndex(person=>person.display_name===activeSpeaker)
+    if(speaker<0||speaker===index)return undefined
+    return{x:Math.sign(speaker%2-index%2),y:Math.sign(Math.floor(speaker/2)-Math.floor(index/2))}}
   const stateOf=(person,index)=>speakingNow&&(person.display_name===activeSpeaker||(!activeSpeaker&&index===0))?'speaking':busy?'thinking':recording?'listening':'idle'
   const participantTile=(person,index,isLearner=false)=><div key={person.id||`${person.display_name}-${index}`} className={`participant-tile ${!isLearner&&person.display_name===activeSpeaker&&(voiceState==='speaking'||voiceState==='streaming')?'active-speaker':''}`}>
-    {isLearner&&camera?<video ref={video} autoPlay muted playsInline/>:isLearner?<div className="participant-avatar learner-avatar"><Icon name="user"/></div>:<div className="participant-avatar"><Portrait name={person.display_name} role={person.scenario_role||session.counterpart} state={stateOf(person,index)} reaction={reactionOf(person)} size={150}/></div>}
+    {isLearner&&camera?<video ref={video} autoPlay muted playsInline/>:isLearner?<div className="participant-avatar learner-avatar"><Icon name="user"/></div>:<div className="participant-avatar"><Portrait name={person.display_name} role={person.scenario_role||session.counterpart} state={stateOf(person,index)} reaction={reactionOf(person)} size={150} alive look={lookOf(index)}/></div>}
     <strong>{person.display_name}{!isLearner?` (${person.scenario_role||session.counterpart})`:''}</strong>
     <span className="tile-mic">{isLearner&&!muted&&recording?<Icon name="mic" label="Microphone on"/>:<Icon name="micOff" label="Microphone off"/>}</span>
   </div>
@@ -691,7 +697,7 @@ export function Roleplay({ session, setSession, onComplete, onCancel, health, on
         {sessionProgress&&<div className={`session-progress ${sessionProgress.outcome}`}><strong>{sessionProgress.outcome==='success'?'Objectives achieved':'Keep learning'}</strong><span>{sessionProgress.criteria?.filter(item=>item.met).length || 0}/{sessionProgress.criteria?.length || 0} objectives{sessionProgress.missing?.length?` · Next: ${sessionProgress.missing[0]}`:''}{sessionProgress.evaluation_mode?` · ${sessionProgress.evaluation_mode}`:''}</span></div>}
         {mode==='voice'?<div ref={sceneRef} className={`participant-stage ${multipleAI?'participant-grid':'single-participant'}`}><Backdrop archetype={runtime?.definition?.archetype}/>
           {multipleAI?<>{aiParticipants.map((person,index)=>participantTile(person,index))}{participantTile(participants.find(person=>person.participant_type==='learner')||{display_name:'You'},aiParticipants.length,true)}</>:<>
-            <div className={`hero-participant ${voiceState==='speaking'||voiceState==='streaming'?'speaking':''}`}><div className="hero-rings"><Portrait name={aiParticipants[0]?.display_name||session.counterpart} role={aiParticipants[0]?.scenario_role||session.counterpart} state={stateOf(aiParticipants[0]||{display_name:session.counterpart},0)} reaction={reactionOf(aiParticipants[0]||{display_name:session.counterpart})} size={196}/></div><b>{callStatus}</b><small>{aiParticipants[0]?.display_name||session.counterpart}</small></div>
+            <div className={`hero-participant ${voiceState==='speaking'||voiceState==='streaming'?'speaking':''}`}><div className="hero-rings"><Portrait name={aiParticipants[0]?.display_name||session.counterpart} role={aiParticipants[0]?.scenario_role||session.counterpart} state={stateOf(aiParticipants[0]||{display_name:session.counterpart},0)} reaction={reactionOf(aiParticipants[0]||{display_name:session.counterpart})} size={196} alive/></div><b>{callStatus}</b><small>{aiParticipants[0]?.display_name||session.counterpart}</small></div>
             <div className="self-pip">{camera?<video ref={video} autoPlay muted playsInline/>:<div className="pip-avatar"><Icon name="user"/></div>}<strong>You</strong><span>{muted?<Icon name="micOff" label="Muted"/>:<Icon name="mic" label="Microphone on"/>}</span></div>
             <div className="ai-role-label"><Icon name="sparkles"/> AI roleplay</div>
           </>}

@@ -30,7 +30,15 @@
 /* When the real voice drives the mouth, follow its loudness instead of the generic movement. */
 .voice-driven .portrait[data-state=speaking] .pt-open{animation:none;transform:scaleY(calc(.12 + var(--voice-level,0) * 1.15))}
 
-@keyframes pt-blink{0%,93%,100%{transform:scaleY(1)}95.5%{transform:scaleY(.08)}}
+/* A living portrait: the life engine sets the gaze, blink, head drift, nod, brow flick and mouth shape each frame.
+   These use the separate translate, rotate and scale properties so they add to the reaction pose without fighting it. */
+.portrait.alive .pt-tilt{translate:calc(var(--hx,0)*1px) calc(var(--hy,0)*1px);rotate:calc(var(--turn,0)*1deg)}
+.portrait.alive .pt-eyes{animation:none;scale:1 calc(1 - var(--blink,0)*.92)}
+.portrait.alive .pt-look{transform:none;transition:none;translate:calc(var(--gx,0)*1px) calc(var(--gy,0)*1px)}
+.portrait.alive .pt-brows{translate:0 calc(var(--brow,0)*-1px)}
+.portrait.alive[data-state=speaking] .pt-open,.voice-driven .portrait.alive[data-state=speaking] .pt-open{animation:none;transform:none;scale:calc(.7 + var(--mw,.5)*.6) calc(.08 + var(--mo,0)*.82)}
+
+0%,93%,100%{transform:scaleY(1)}95.5%{transform:scaleY(.08)}}
 @keyframes pt-breathe{50%{transform:translateY(1.2px)}}
 @keyframes pt-talk{from{transform:scaleY(.15)}to{transform:scaleY(.95)}}
 

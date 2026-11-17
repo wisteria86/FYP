@@ -1,7 +1,8 @@
 // Original flat-style character portraits, drawn in code. Each character's look comes from their name and role.
 // The head, neck and shoulders share one frame: the head turns about the top of the neck, so it never comes apart.
-import { useMemo } from 'react'
-import { portraitTraits, REACTION_WORDS } from './portraitTraits.mjs'
+import { useEffect, useMemo, useRef } from 'react'
+import { portraitTraits, hash, REACTION_WORDS } from './portraitTraits.mjs'
+import { createLife, levels, onFrame } from './portraitLife.mjs'
 import './scene.css'
 
 const shade = (hex, amount) => {
@@ -149,8 +150,32 @@ function Eye({ x, eye, skin, look }) {
   </g>
 }
 
-export function Portrait({ name = '', role = '', state = 'idle', reaction = 'neutral', size = 160, className = '', decorative = false }) {
+// Runs the life engine for a portrait and writes its pose to CSS variables, without re-rendering.
+function useLife(ref, alive, name, inputs) {
+  const latest = useRef(inputs)
+  latest.current = inputs
+  useEffect(() => {
+    const svg = ref.current
+    if (!alive || !svg) return
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const life = createLife(hash(String(name).trim().toLowerCase()) || 1)
+    const set = (key, value) => svg.style.setProperty(key, value.toFixed(3))
+    svg.classList.add('alive')
+    const stop = onFrame(now => {
+      const { state, reaction, look } = latest.current
+      const pose = life.step(now, { state, reaction, look, voice: state === 'speaking' ? levels.voice : 0, driven: levels.driven, heard: state === 'listening' ? levels.heard : 0 })
+      set('--gx', pose.gazeX); set('--gy', pose.gazeY); set('--blink', pose.blink)
+      set('--hx', pose.headX); set('--hy', pose.headY + pose.nod); set('--turn', pose.turn)
+      set('--brow', pose.brow); set('--mo', pose.mouthOpen); set('--mw', pose.mouthWide)
+    })
+    return () => { stop(); svg.classList.remove('alive') }
+  }, [alive, name, ref])
+}
+
+export function Portrait({ name = '', role = '', state = 'idle', reaction = 'neutral', size = 160, className = '', decorative = false, alive = false, look }) {
   const t = useMemo(() => portraitTraits(name, role), [name, role])
+  const svgRef = useRef(null)
+  useLife(svgRef, alive, name, { state, reaction, look })
   const face = EXPRESSIONS[reaction] || EXPRESSIONS.neutral
   const W = t.faceWidth, H = t.faceHeight, L = 100 - W, R = 100 + W, top = CY - H, chin = CY + H
   const skinDark = shade(t.skin, -0.14), skinDeep = shade(t.skin, -0.24)
@@ -160,7 +185,7 @@ export function Portrait({ name = '', role = '', state = 'idle', reaction = 'neu
   const head = `M${L} ${CY} C${L} ${CY - H * 0.56} ${100 - W * 0.56} ${top} 100 ${top} C${100 + W * 0.56} ${top} ${R} ${CY - H * 0.56} ${R} ${CY}` +
     ` C${R} ${CY + H * 0.48} ${100 + W * 0.52} ${chin} 100 ${chin} C${100 - W * 0.52} ${chin} ${L} ${CY + H * 0.48} ${L} ${CY} Z`
   const label = decorative ? undefined : `${name}${role ? `, ${role}` : ''}, ${REACTION_WORDS[reaction] || REACTION_WORDS.neutral}`
-  return <svg className={`portrait ${className}`.trim()} data-state={state} data-reaction={reaction} viewBox="0 0 200 200" width={size} height={size}
+  return <svg ref={svgRef} className={`portrait ${className}`.trim()} data-state={state} data-reaction={reaction} viewBox="0 0 200 200" width={size} height={size}
     role={decorative ? undefined : 'img'} aria-label={label} aria-hidden={decorative ? 'true' : undefined} style={{ '--blink-delay': `${t.blinkDelay}ms` }}>
     <defs><clipPath id={clip}><circle cx="100" cy="100" r="100"/></clipPath></defs>
     <g clipPath={`url(#${clip})`}>
