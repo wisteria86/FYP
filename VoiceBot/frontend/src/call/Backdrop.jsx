@@ -60,9 +60,23 @@ const SCENES = {
   </>,
 }
 
+// Wallpapers from wallhaven.cc, shrunk to 1600px. Artists and links are in backdrops/CREDITS.md.
+const PICTURES = import.meta.glob('./backdrops/*.jpg', { eager: true, import: 'default' })
+const pictureFor = scene => PICTURES[`./backdrops/${scene}.jpg`]
+
 export function Backdrop({ archetype, className = '' }) {
   const scene = sceneFor(archetype)
-  return <svg className={`scene-backdrop ${className}`.trim()} data-scene={scene} viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  const picture = pictureFor(scene)
+  // The drawn scene stays underneath, so the stage is never blank while the picture loads or if it fails.
+  return <div className={`scene-backdrop ${className}`.trim()} data-scene={scene} aria-hidden="true">
+    <DrawnScene scene={scene}/>
+    {picture && <img className="scene-picture" src={picture} alt="" decoding="async" onError={event => { event.currentTarget.hidden = true }}/>}
+    <div className="scene-wash"/>
+  </div>
+}
+
+function DrawnScene({ scene }) {
+  return <svg className="scene-drawn" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid slice">
     <defs>
       <linearGradient id="bd-wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f7ebe2"/><stop offset="1" stopColor="#efdccf"/></linearGradient>
       <linearGradient id="bd-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fde8da"/><stop offset="1" stopColor="#f5cbbd"/></linearGradient>

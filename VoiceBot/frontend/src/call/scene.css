@@ -7,8 +7,8 @@
 .portrait .pt-eyes,.portrait .pt-open{transform-box:fill-box;transform-origin:center}
 .portrait .pt-eyes{animation:pt-blink 5.8s infinite;animation-delay:var(--blink-delay,0ms)}
 .portrait .pt-brow,.portrait .pt-lips{transition:d .35s var(--ease)}
-.portrait .pt-cheeks{opacity:0;transition:opacity .4s var(--ease)}
-.portrait .pt-cheeks.on{opacity:.38}
+.portrait .pt-cheeks{opacity:.28;transition:opacity .4s var(--ease)}
+.portrait .pt-cheeks.on{opacity:.9}
 .portrait .pt-open{transform:scaleY(0);opacity:0;transition:opacity .12s}
 .portrait .pt-halo{transition:opacity .4s var(--ease)}
 
@@ -50,7 +50,12 @@
 
 /* The scene: an illustrated setting behind the characters */
 .participant-stage{position:relative;isolation:isolate}
-.scene-backdrop{position:absolute;inset:0;width:100%;height:100%;z-index:-1;filter:blur(1.6px) saturate(.92);transform:scale(1.03);pointer-events:none}
+.scene-backdrop{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;border-radius:inherit}
+.scene-backdrop>*{position:absolute;inset:0;width:100%;height:100%}
+.scene-drawn{filter:blur(1.6px) saturate(.92);transform:scale(1.03)}
+/* The wallpaper is softly out of focus, like a camera on the characters, and warmed toward the app's cream. */
+.scene-picture{object-fit:cover;filter:blur(2.5px) saturate(.95) brightness(1.02);transform:scale(1.06)}
+.scene-wash{background:radial-gradient(ellipse at 50% 45%,#fff6ec26,#fff6ec00 60%),linear-gradient(180deg,#2a101818,#2a101833)}
 .single-participant{background:#f3e3d6}
 .participant-grid{background:#f0dfd2}
 .participant-grid .participant-tile{background:linear-gradient(160deg,#fffaf5b3,#f7e6dc8c);backdrop-filter:blur(7px);border:1px solid #ffffff80;box-shadow:0 10px 30px #4a001318}

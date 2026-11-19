@@ -2,7 +2,9 @@
 // Pure and dependency-free so it can be tested in Node.
 
 export const SKIN = ['#f6d7c3', '#eec1a1', '#d9a07a', '#b97a55', '#8d5a3b', '#6a4029']
-export const HAIR_COLOUR = ['#2a1712', '#3d2318', '#5a3420', '#7a4a2a', '#a8703f', '#1c1c22', '#6b6b70']
+export const HAIR_COLOUR = ['#2b1d2a', '#3a2620', '#5e3624', '#8a4630', '#b9814e', '#1f2238', '#5d6170', '#6e2a3c']
+export const IRIS = ['#7a4426', '#9a6a2e', '#3f7058', '#3f6290', '#8a3050', '#5f4c8a']
+export const ACCENT = ['#a8133a', '#c9a227', '#3d5a80', '#5d7f63']
 export const HAIR_STYLE = ['short', 'side', 'bun', 'long', 'curly', 'bob', 'buzz', 'scarf']
 export const ATTIRE = ['blazer', 'sweater', 'shirt', 'cardigan']
 export const ATTIRE_COLOUR = ['#5a1828', '#7a2335', '#2f3a4a', '#3c4b3f', '#6b4a3a', '#4a3550', '#8a5a44', '#24343f']
@@ -49,6 +51,8 @@ export function portraitTraits(name = '', role = '') {
     glasses: random() < 0.28,
     earrings: hairStyle !== 'scarf' && random() < 0.3,
     blinkDelay: Math.round(random() * 3000),
+    irisColour: pick(IRIS),
+    accent: pick(ACCENT),
   }
 }
 
