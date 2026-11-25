@@ -11,7 +11,7 @@ import {record,release} from './voiceTestCapture.mjs'
 export default function VoiceInputTest({request,runtime}){
   const [open,setOpen]=useState(false),[devices,setDevices]=useState([])
   const [device,setDevice]=useState(()=>localStorage.getItem('hikari-mic-id')||'')
-  const [mode,setMode]=useState('rnnoise')
+  const [mode,setMode]=useState('browser')
   const [controlLevel,setControlLevel]=useState(false),[gainDb,setGainDb]=useState(-6)
   const [meters,setMeters]=useState(null)
   const [expected,setExpected]=useState('Hello Hikari, I would like to practise my English today.')

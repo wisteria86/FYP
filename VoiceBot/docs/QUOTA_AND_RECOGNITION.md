@@ -125,3 +125,33 @@ rejoin the call to load the updated preference. This removes the extra decode
 from the default request path; provider cooldowns and generation/TTS latency are
 separate and unchanged. No physical end-to-end latency improvement is claimed
 until measured in a new call.
+
+## Follow-up: stop defaulting to RNNoise (25 November 2026)
+
+An offline test ran the RNNoise build that Hikari uses (48 kHz, 480-sample frames)
+over the accent test sets before Nemotron decoding. Error rates are word error
+rate at 560 ms lookahead.
+
+| Set | Raw audio | After RNNoise |
+|---|---|---|
+| South Asian Common Voice test | 8.37 | 22.00 |
+| EdAcc, South Asian speakers | 13.93 | 38.40 |
+| EdAcc, Urdu speakers | 17.54 | 48.66 |
+| EdAcc, mainstream US English | 13.30 | 17.66 |
+| LibriSpeech test-clean | 2.38 | 2.77 |
+
+RNNoise removed about 12% of loud speech frames on phone-quality recordings, and
+it hurt South Asian speakers most. The test audio was already 16 kHz, while live
+capture is raw 48 kHz, so the live effect may be smaller. Hikari's own raw
+recordings are needed to measure it.
+
+Changes:
+- The fallback for missing or unknown settings is now browser suppression.
+- The voice test page now starts on browser suppression.
+- Saved RNNoise or Browser + RNNoise choices move to browser suppression once,
+  under recognition policy version 3.
+
+Device, decoder, input mode and gain are preserved. RNNoise stays selectable, and
+a choice made after the migration persists. Browser (WebRTC) suppression itself
+was not measured offline. Compare it with "No noise suppression" on the voice
+test page.
